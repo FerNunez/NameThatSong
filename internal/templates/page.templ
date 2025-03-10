@@ -7,12 +7,23 @@ templ IndexPage() {
 			<script src="https://unpkg.com/htmx.org"></script>
 			<link rel="stylesheet" href="/static/css/style.css"/>
 			<script>
-                function setSearchValue(value) {
-                    document.querySelector('.search-input').value = value;
+                //function setSearchValue(value, data) {
+                //    document.querySelector('.search-input').value = value;
+                //    document.getElementById('search-results').innerHTML = '';
 
-                    document.getElementById('search-results').innerHTML = '';
-                }
-            </script>
+                //    document.querySelector('.artistId').value = data;
+                //    document.getElementById('artistId').innerHTML = '';
+                //}
+        function setSearchValue(name, id) {
+            const searchInput = document.querySelector('[name="search"]');  
+            const artistIdInput = document.querySelector('[name="artistId"]');  
+            
+            searchInput.value = name;
+            artistIdInput.value = id;  
+
+            document.getElementById('search-results').innerHTML = '';
+        }
+    </script>
 		</head>
 		<body>
 			@SearchInput()

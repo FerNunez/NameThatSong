@@ -164,12 +164,14 @@ func (cfg *SpotifyApi) RequestStartHandler(w http.ResponseWriter, r *http.Reques
 
 func (cfg *SpotifyApi) AlbumGridHttp(w http.ResponseWriter, r *http.Request) {
 
+
+
 	fmt.Println("", r.URL.RawQuery)
 	query := strings.ToLower(r.URL.Query().Get("search"))
-	fmt.Println("queyr:", query)
 
-	// fetch album
-	artistId := r.PathValue("search")
+	fmt.Println("queyr:", query)
+	artistId := strings.ToLower(r.URL.Query().Get("artistId"))
+
 	fmt.Println("artistId:", artistId)
 	if artistId == "" {
 		errmsg := fmt.Sprintln("no artist provided")
