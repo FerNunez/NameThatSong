@@ -1,0 +1,21 @@
+package templates
+
+templ IndexPage() {
+	<html>
+		<head>
+			<title>Search Dropdown</title>
+			<script src="https://unpkg.com/htmx.org"></script>
+			<link rel="stylesheet" href="/static/css/style.css"/>
+			<script>
+                function setSearchValue(value) {
+                    document.querySelector('.search-input').value = value;
+
+                    document.getElementById('search-results').innerHTML = '';
+                }
+            </script>
+		</head>
+		<body>
+			@SearchInput()
+		</body>
+	</html>
+}

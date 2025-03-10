@@ -1,0 +1,2 @@
+<html><head><title>Search Dropdown</title><script src=\"https://unpkg.com/htmx.org\"></script><link rel=\"stylesheet\" href=\"/static/css/style.css\"><script>\n                function setSearchValue(value) {\n                    document.querySelector('.search-input').value = value;\n\n                    document.getElementById('search-results').innerHTML = '';\n                }\n            </script></head><body>
+</body></html>
