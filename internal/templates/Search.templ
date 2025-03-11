@@ -16,11 +16,11 @@ templ SearchInput() {
 	<form class="max-w-md mx-auto">
 		<label for="default-search" class="mb-2 text-sm font-medium text-gray-900 sr-only dark:text-white">Search</label>
 		<div class="relative">
-			//<div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-			//	<svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
-			//		<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"></path>
-			//	</svg>
-			//</div>
+			<div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+				<svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+					<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"></path>
+				</svg>
+			</div>
 			<input type="search" name="search" hx-get="/search" hx-trigger="keyup changed delay:200ms" hx-target="#search-results" placeholder="Start typing..." id="default-search" class="search-input block w-full p-4 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" required/>
 			<input type="hidden" name="artistId"/>
 			<button hx-get="/search-albums" hx-trigger="click" hx-target="#album-results" hx-include="[name='search'], [name='artistId']" type="button" class="search-button text-white absolute end-2.5 bottom-2.5 bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Search</button>
@@ -36,7 +36,7 @@ templ SearchResults(results []base.Artist) {
 			<div
 				class="search-result-item inline-flex w-full px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
 				onclick={ templ.JSFuncCall("setSearchValue", result.Name, result.ID) }
-				data-id={result.ID}
+				data-id={ result.ID }
 			>
 				{ result.Name }
 			</div>
@@ -44,25 +44,10 @@ templ SearchResults(results []base.Artist) {
 	</div>
 }
 
-templ AlbumGrid(albums []Album) {
-	<div class="album-grid grid grid-cols-4 gap-4">
+templ AlbumGrid(albums []base.Album) {
+	<div class="relative album-grid grid grid-cols-4 gap-4 ">
 		for _, album := range albums {
-			<div class="album-card block max-w-sm p-6 bg-white border border-gray-100 rounded-lg shadow-sm hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700">
-				<label class="album-select">
-					<input
-						type="checkbox"
-						name="selectedAlbums"
-						value={ fmt.Sprint(album.ID) }
-						class="album-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-					/>
-					<span class="checkmark"></span>
-				</label>
-				<div class="album-info mb-2 text-xs font-bold tracking-tight text-gray-900 dark:text-white">
-					<h3>{ album.Title }</h3>
-					<p>{ album.Artist }</p>
-					<p>{ fmt.Sprint(album.Year) }</p>
-				</div>
-			</div>
+			@AlbumCard(album)
 		}
 	</div>
 	<button
@@ -76,4 +61,29 @@ templ AlbumGrid(albums []Album) {
 		Start
 	</button>
 	<div id="processing-results"></div>
+}
+
+templ AlbumCard(album base.Album) {
+	{{ class_selected := "album-card block p-0 bg-white border border-gray-100 rounded-lg shadow-sm hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700" }}
+	if album.Selected {
+		{{ class_selected = "album-card block p-0 bg-white border border-gray-100 rounded-lg shadow-sm hover:bg-gray-100 dark:bg-gray-700 dark:border-gray-700 dark:hover:bg-gray-700" }}
+	}
+	<div
+		class={ class_selected }
+		hx-trigger="click"
+		hx-post="/api/select-album"
+		hx-vals={ `{"albumID": "` + album.ID + `"}` }
+		value={ album.ID }
+    hx-swap="outerHTML" 
+	>
+		<div
+			class="flex container album-info mb-2 text-xs font-bold tracking-tight text-gray-900 dark:text-white"
+		>
+			<img src={ album.Images[0].URL } alt="Album Cover" class="w-20 h-20 rounded-lg"/>
+			<div class="p-1  rounded-sm ">
+				<h3>{ album.Name }</h3>
+				<p class="text-xs">{ fmt.Sprint(album.ReleaseDate.Year() ) }</p>
+			</div>
+		</div>
+	</div>
 }

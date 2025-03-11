@@ -28,3 +28,7 @@ type ArtistCache struct {
 	Artist     Artist
 	LastUpdate time.Time
 }
+
+func (ac *AlbumCache) ToggleSelect() {
+	ac.Album.Selected = !ac.Album.Selected
+}

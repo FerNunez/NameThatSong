@@ -47,6 +47,7 @@ type Album struct {
 	ReleaseDate      time.Time
 	URI              string
 	ArtistsFeatureID []string
+	Selected         bool
 }
 
 type Track struct {

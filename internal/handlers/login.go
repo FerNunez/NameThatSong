@@ -5,10 +5,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"goth/internal/base"
 	"goth/internal/templates"
+	"goth/internal/utils"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 // create a struct ApiHandler
@@ -164,14 +167,10 @@ func (cfg *SpotifyApi) RequestStartHandler(w http.ResponseWriter, r *http.Reques
 
 func (cfg *SpotifyApi) AlbumGridHttp(w http.ResponseWriter, r *http.Request) {
 
+	artistName := strings.ToLower(r.URL.Query().Get("search"))
+	fmt.Println("queyr:", artistName)
 
-
-	fmt.Println("", r.URL.RawQuery)
-	query := strings.ToLower(r.URL.Query().Get("search"))
-
-	fmt.Println("queyr:", query)
-	artistId := strings.ToLower(r.URL.Query().Get("artistId"))
-
+	artistId := r.URL.Query().Get("artistId")
 	fmt.Println("artistId:", artistId)
 	if artistId == "" {
 		errmsg := fmt.Sprintln("no artist provided")
@@ -210,48 +209,8 @@ func (cfg *SpotifyApi) AlbumGridHttp(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	type AlbumsResp struct {
-		Href     string      `json:"href"`
-		Limit    int         `json:"limit"`
-		Next     string      `json:"next"`
-		Offset   int         `json:"offset"`
-		Previous interface{} `json:"previous"`
-		Total    int         `json:"total"`
-		Items    []struct {
-			AlbumType        string   `json:"album_type"`
-			TotalTracks      int      `json:"total_tracks"`
-			AvailableMarkets []string `json:"available_markets"`
-			ExternalUrls     struct {
-				Spotify string `json:"spotify"`
-			} `json:"external_urls"`
-			Href   string `json:"href"`
-			ID     string `json:"id"`
-			Images []struct {
-				URL    string `json:"url"`
-				Height int    `json:"height"`
-				Width  int    `json:"width"`
-			} `json:"images"`
-			Name                 string `json:"name"`
-			ReleaseDate          string `json:"release_date"`
-			ReleaseDatePrecision string `json:"release_date_precision"`
-			Type                 string `json:"type"`
-			URI                  string `json:"uri"`
-			Artists              []struct {
-				ExternalUrls struct {
-					Spotify string `json:"spotify"`
-				} `json:"external_urls"`
-				Href string `json:"href"`
-				ID   string `json:"id"`
-				Name string `json:"name"`
-				Type string `json:"type"`
-				URI  string `json:"uri"`
-			} `json:"artists"`
-			AlbumGroup string `json:"album_group"`
-		} `json:"items"`
-	}
-
-	var albumResp AlbumsResp
-	err = json.NewDecoder(resp.Body).Decode(&albumResp)
+	var albumJson base.AlbumsJson
+	err = json.NewDecoder(resp.Body).Decode(&albumJson)
 	if err != nil {
 		errmsg := fmt.Sprintf("could not decode response: %v", err)
 		fmt.Println(errmsg)
@@ -260,13 +219,13 @@ func (cfg *SpotifyApi) AlbumGridHttp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	albumList := ""
-	for _, item := range albumResp.Items {
-		albumList += fmt.Sprintf("%v:%v\n", item.Name, item.ID)
-	}
+	albums, _ := utils.ParseAlbumsJson(albumJson)
+	// TODO: fix err
 
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(albumList))
+	// Adding to Cache
+	for _, album := range albums {
+		cfg.Cache.AlbumsCache[album.ID] = base.AlbumCache{Album: album, LastUpdate: time.Now()}
+	}
 
 	// Return the search results component
 	component := templates.AlbumGrid(albums)

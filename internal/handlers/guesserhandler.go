@@ -15,8 +15,6 @@ import (
 )
 
 func (api SpotifyApi) StartProcess(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("playing")
-
 	err := r.ParseForm()
 	if err != nil {
 		http.Error(w, "Error parsing form", http.StatusBadRequest)
@@ -136,6 +134,35 @@ func (cfg *SpotifyApi) RequestArtistListByNameHandler(w http.ResponseWriter, r *
 	}
 
 	component := templates.SearchResults(artistList)
+	component.Render(r.Context(), w)
+
+}
+
+func (cfg *SpotifyApi) AlbumSelection(w http.ResponseWriter, r *http.Request) {
+
+	// Get Album IDs
+	err := r.ParseForm()
+	if err != nil {
+		return
+	}
+	albumID := r.Form.Get("albumID")
+
+	// Add or remove
+	_, exists := cfg.SelectedAlbumsIDs[albumID]
+	if !exists {
+		fmt.Printf("adding %v\n", albumID)
+		cfg.SelectedAlbumsIDs[albumID] = 0
+	} else {
+		fmt.Printf("removing %v\n", albumID)
+		delete(cfg.SelectedAlbumsIDs, albumID)
+	}
+
+	// Update cache
+	albumCache := cfg.Cache.AlbumsCache[albumID]
+	albumCache.ToggleSelect()
+	cfg.Cache.AlbumsCache[albumID] = albumCache
+
+	component := templates.AlbumCard(albumCache.Album)
 	component.Render(r.Context(), w)
 
 }

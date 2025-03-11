@@ -1,9 +1,9 @@
 package main
 
 import (
+	"github.com/go-chi/chi/v5"
 	"goth/internal/handlers"
 	"net/http"
-	"github.com/go-chi/chi/v5"
 )
 
 func main() {
@@ -16,6 +16,8 @@ func main() {
 	r.Get("/", handlers.IndexHttp)
 	r.Get("/login", cfg.RequestUserAuthorizationHandler)
 	r.Get("/auth/callback", cfg.RequestUserAuthorizationCallbackHandler)
+
+	r.Post("/api/select-album", cfg.AlbumSelection)
 
 	r.Get("/search", cfg.RequestArtistListByNameHandler)
 	r.Get("/search-albums", cfg.AlbumGridHttp)

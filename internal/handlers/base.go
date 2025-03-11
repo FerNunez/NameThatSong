@@ -21,9 +21,10 @@ type ApiConfig struct {
 }
 
 type SpotifyApi struct {
-	Config      ApiConfig
-	Cache       base.ApiCache
-	MusicPlayer guesser.MusicPlayer
+	Config            ApiConfig
+	Cache             base.ApiCache
+	MusicPlayer       guesser.MusicPlayer
+	SelectedAlbumsIDs map[string]any
 }
 
 func NewSpotifyApi() SpotifyApi {
@@ -48,8 +49,9 @@ func NewSpotifyApi() SpotifyApi {
 	}
 
 	return SpotifyApi{
-		Config:      apiConfig,
-		Cache:       base.NewApiCache(),
-		MusicPlayer: guesser.MusicPlayer{},
+		Config:            apiConfig,
+		Cache:             base.NewApiCache(),
+		MusicPlayer:       guesser.MusicPlayer{},
+		SelectedAlbumsIDs: make(map[string]any),
 	}
 }
