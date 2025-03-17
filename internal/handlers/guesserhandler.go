@@ -6,6 +6,7 @@ import (
 	"goth/internal/base"
 	"goth/internal/templates"
 	"goth/internal/utils"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"sort"
@@ -13,8 +14,22 @@ import (
 	"time"
 )
 
-func (api SpotifyApi) StartProcess(w http.ResponseWriter, r *http.Request) {
+func (api *SpotifyApi) StartProcess(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Processing albums: %v\n", api.SelectedAlbumsIdsToTracksId)
+	// Set Music Player songs
+	listSongsId := []string{}
+	for _, listSongsIdByAlbum := range api.SelectedAlbumsIdsToTracksId {
+		listSongsId = append(listSongsId, listSongsIdByAlbum...)
+	}
+	rand.New(rand.NewSource(time.Now().UnixNano()))
+	rand.Shuffle(len(listSongsId), func(i, j int) {
+		listSongsId[i], listSongsId[j] = listSongsId[j], listSongsId[i]
+	})
+	api.MusicPlayer.Queue = listSongsId[:10]
+
+	for _, id := range api.MusicPlayer.Queue {
+		fmt.Printf("%v ", api.Cache.TracksCache[id].Track.Name)
+	}
 
 	musicPlayer := templates.MusicPlayer()
 	layout := templates.GuesserLayout(musicPlayer, "Player")
