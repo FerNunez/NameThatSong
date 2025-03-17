@@ -20,3 +20,7 @@ func (mp *MusicPlayer) popQueue() int {
 	}
 	return 0
 }
+
+func FillQueue(mp MusicPlayer, inputSongsId []int, numberSongs int) {
+
+}

@@ -100,3 +100,36 @@ func parseReleaseDate(dateStr, precision string) (time.Time, error) {
 
 	return time.Parse(layout, dateStr)
 }
+
+func ParseAlbumResponseToTracks(response base.GetAlbumTracksResponse, albumID string) []base.Track {
+	tracks := make([]base.Track, 0, len(response.Items))
+
+	for _, item := range response.Items {
+		// Extract artist IDs
+		artistIDs := make([]string, 0, len(item.Artists))
+		for _, artist := range item.Artists {
+			artistIDs = append(artistIDs, artist.ID)
+		}
+
+		tracks = append(tracks, base.Track{
+			DiscNumber:  item.DiscNumber,
+			DurationMs:  item.DurationMs,
+			Href:        item.Href,
+			ID:          item.ID,
+			IsPlayable:  item.IsPlayable,
+			Name:        item.Name,
+			TrackNumber: item.TrackNumber,
+			URI:         item.URI,
+			AlbumID:     albumID, // Passed as separate parameter
+			ArtistsID:   artistIDs,
+
+			// These fields don't exist in the source JSON - you might want to:
+			// 1. Remove them from Track struct if unused
+			// 2. Get from another source
+			// 3. Set to zero value as placeholder
+			Popularity: 0, // Not present in source JSON
+		})
+	}
+
+	return tracks
+}
