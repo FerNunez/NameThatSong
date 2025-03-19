@@ -25,6 +25,7 @@ func main() {
 
 	r.Get("/start", cfg.RequestStartHandler)
 
+	r.Post("/guess-track", cfg.GuessTrack)
 	server := &http.Server{
 		Handler: r,
 		Addr:    "127.0.0.1:8080",

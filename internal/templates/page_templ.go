@@ -29,7 +29,7 @@ func IndexPage() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<html><head><title>Search Dropdown</title><script src=\"https://unpkg.com/htmx.org\"></script><link rel=\"stylesheet\" href=\"/static/css/style.css\"><script>\n                //function setSearchValue(value, data) {\n                //    document.querySelector('.search-input').value = value;\n                //    document.getElementById('search-results').innerHTML = '';\n\n                //    document.querySelector('.artistId').value = data;\n                //    document.getElementById('artistId').innerHTML = '';\n                //}\n        function setSearchValue(name, id) {\n            const searchInput = document.querySelector('[name=\"search\"]');  \n            const artistIdInput = document.querySelector('[name=\"artistId\"]');  \n            \n            searchInput.value = name;\n            artistIdInput.value = id;  \n\n            document.getElementById('search-results').innerHTML = '';\n        }\n    </script></head><body>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<head><title>Search Dropdown</title><script src=\"https://unpkg.com/htmx.org\"></script><link rel=\"stylesheet\" href=\"/static/css/style.css\"><script>\n        function setSearchValue(name, id) {\n            const searchInput = document.querySelector('[name=\"search\"]');  \n            const artistIdInput = document.querySelector('[name=\"artistId\"]');  \n            \n            searchInput.value = name;\n            artistIdInput.value = id;  \n\n            document.getElementById('search-results').innerHTML = '';\n        }\n        function setGuessOption(name, id) {\n            const searchInput = document.querySelector('[name=\"guess\"]');  \n            \n            searchInput.value = name;\n            artistIdInput.value = id;  \n\n            document.getElementById('guess-results').innerHTML = '';\n        }\n\n    </script></head><div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -37,7 +37,7 @@ func IndexPage() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

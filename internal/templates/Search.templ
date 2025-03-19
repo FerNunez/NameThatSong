@@ -11,23 +11,53 @@ type Album struct {
 	Artist string
 	Year   int
 }
+templ GamePage(){
+  <div>
+    <div>
+    @SearchInput()
+    </div>
+    <div class="absolute bottom-0">
+    @MusicPlayer()
+    </div>
+    
+  </div>
+}
 
 templ SearchInput() {
-	<form class="max-w-md mx-auto">
-		<label for="default-search" class="mb-2 text-sm font-medium text-gray-900 sr-only dark:text-white">Search</label>
-		<div class="relative">
-			<div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-				<svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
-					<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"></path>
-				</svg>
+	<div class="relative">
+		<form class="max-w-md mx-auto">
+			<div class="relative overflow-hidden">
+				<div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+					<svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+						<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"></path>
+					</svg>
+				</div>
+				//  Input that that when you type it gets an option to /search and when send the response to search-results. 
+				<input
+					type="search"
+					name="search"
+					hx-get="/search"
+					hx-trigger="keyup changed delay:200ms"
+					hx-target="#search-results"
+					placeholder="Start typing..."
+					id="default-search"
+					class="search-input block w-full p-4 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+					required
+				/>
+				<input type="hidden" name="artistId"/>
+				<button
+					hx-get="/search-albums"
+					hx-trigger="click"
+					hx-target="#album-results"
+					hx-include="[name='search'], [name='artistId']"
+					type="button"
+					class="search-button  text-white absolute end-2.5 bottom-2.5 bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+				>Search</button>
 			</div>
-			<input type="search" name="search" hx-get="/search" hx-trigger="keyup changed delay:200ms" hx-target="#search-results" placeholder="Start typing..." id="default-search" class="search-input block w-full p-4 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" required/>
-			<input type="hidden" name="artistId"/>
-			<button hx-get="/search-albums" hx-trigger="click" hx-target="#album-results" hx-include="[name='search'], [name='artistId']" type="button" class="search-button text-white absolute end-2.5 bottom-2.5 bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Search</button>
-		</div>
-		<div id="search-results" class="search-results z-10  bg-white divide-y divide-gray-100 rounded-lg shadow-sm w-full dark:bg-gray-700 text-gray-700 dark:text-gray-200 "></div>
-	</form>
-	<div id="album-results" class="album-results py-2 max-w-9/10 mx-auto"></div>
+			<div id="search-results" class="search-results absolute z-10 float-right rounded-lg shadow-sm w-2/12 bg-white divide-y divide-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 "></div>
+		</form>
+		<div id="album-results" class="album-results py-2 max-w-9/10 mx-auto"></div>
+	</div>
 }
 
 templ SearchResults(results []base.Artist) {
@@ -60,7 +90,7 @@ templ AlbumGrid(albums []base.Album) {
 	>
 		Start
 	</button>
-	<div id="processing-results"></div>
+	<div id="processing-results" class="bg-center"></div>
 }
 
 templ AlbumCard(album base.Album) {
@@ -74,7 +104,7 @@ templ AlbumCard(album base.Album) {
 		hx-post="/api/select-album"
 		hx-vals={ `{"albumID": "` + album.ID + `"}` }
 		value={ album.ID }
-    hx-swap="outerHTML" 
+		hx-swap="outerHTML"
 	>
 		<div
 			class="flex container album-info mb-2 text-xs font-bold tracking-tight text-gray-900 dark:text-white"

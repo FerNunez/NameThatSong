@@ -1,19 +1,11 @@
 package templates
 
 templ IndexPage() {
-	<html>
 		<head>
 			<title>Search Dropdown</title>
 			<script src="https://unpkg.com/htmx.org"></script>
 			<link rel="stylesheet" href="/static/css/style.css"/>
 			<script>
-                //function setSearchValue(value, data) {
-                //    document.querySelector('.search-input').value = value;
-                //    document.getElementById('search-results').innerHTML = '';
-
-                //    document.querySelector('.artistId').value = data;
-                //    document.getElementById('artistId').innerHTML = '';
-                //}
         function setSearchValue(name, id) {
             const searchInput = document.querySelector('[name="search"]');  
             const artistIdInput = document.querySelector('[name="artistId"]');  
@@ -23,10 +15,18 @@ templ IndexPage() {
 
             document.getElementById('search-results').innerHTML = '';
         }
+        function setGuessOption(name, id) {
+            const searchInput = document.querySelector('[name="guess"]');  
+            
+            searchInput.value = name;
+            artistIdInput.value = id;  
+
+            document.getElementById('guess-results').innerHTML = '';
+        }
+
     </script>
 		</head>
-		<body>
+		<div>
 			@SearchInput()
-		</body>
-	</html>
+		</div>
 }

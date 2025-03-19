@@ -12,11 +12,11 @@ templ header(title string) {
 }
 
 templ footer() {
-	<footer class="bg-primary-600 p-4">Test</footer>
+	<footer class="   p-4 text-white mt-auto w-full ">Test</footer>
 }
 
 templ nav() {
-	<nav class="bg-primary-600 p-4">
+	<nav class="p-4">
 		<div class="container flex justify-between">
 			<ol class="flex space-x-4">
 				<li>
@@ -34,23 +34,19 @@ templ nav() {
 	</nav>
 }
 
-//templ Layout(contents templ.Component, title string) {
-//	<html>
-//		<div>
-//			@header(title)
-//			<body><h1 class="text-50xl font-extrabold text-blue-600">Hello world!  </h1></body>
-//		</div>
-//	</html>
-//}
 templ Layout(contents templ.Component, title string) {
-	@header(title)
-	<body class="flex flex-col h-full bg-slate-900">
-		@nav()
-		<main class="flex-1 container ">
-			@contents
-		</main>
-		@footer()
-		<script src="https://unpkg.com/htmx.org@2.0.3"></script>
-		<script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
-	</body>
+	<html class="bg-slate-900">
+		@header(title)
+		<body class=" min-h-screen flex flex-col h-full">
+			@nav()
+			<div class="w-full  justify-center">
+				<main>
+					@contents
+				</main>
+			</div>
+			@footer()
+			<script src="https://unpkg.com/htmx.org@2.0.3"></script>
+			<script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+		</body>
+	</html>
 }

@@ -209,3 +209,90 @@ func getAlbumsTracks(accessToken, albumId string) ([]base.Track, error) {
 	tracks := utils.ParseAlbumResponseToTracks(albumTracksResponse, albumId)
 	return tracks, nil
 }
+
+func (cfg *SpotifyApi) GuessTrack(w http.ResponseWriter, r *http.Request) {
+
+	// get query user written
+	requestQuery := r.URL.Query().Get("search")
+	if requestQuery == "" {
+		component := templates.SearchResults([]base.Artist{})
+		component.Render(r.Context(), w)
+
+	}
+	lowerQuery := strings.ToLower(requestQuery)
+	cleanedQuery := "artist:" + lowerQuery
+
+	// hittinh spotify for least
+	newUrl, err := url.Parse("https://api.spotify.com/v1/search")
+	if err != nil {
+		errmsg := fmt.Sprintf("Error parsing URL: %v", err)
+		fmt.Println(errmsg)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(errmsg))
+		return
+	}
+	urlQuery := newUrl.Query()
+	urlQuery.Set("type", "artist")
+	urlQuery.Set("q", cleanedQuery)
+
+	// Set request
+	newUrl.RawQuery = urlQuery.Encode()
+	req, err := http.NewRequest("GET", newUrl.String(), nil)
+	if err != nil {
+		errmsg := fmt.Sprintf("could not create request: %v", err)
+		fmt.Println(errmsg)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(errmsg))
+		return
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", cfg.Config.AccessToken))
+
+	// Set Response
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		errmsg := fmt.Sprintf("could not do request: %v", err)
+		fmt.Println(errmsg)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(errmsg))
+		return
+	}
+	if resp.StatusCode != http.StatusOK {
+		errmsg := fmt.Sprintf("could not get good status code: %v", resp.StatusCode)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(errmsg))
+		return
+	}
+	defer resp.Body.Close()
+
+	// Decode & Parse
+	var searchedArtistResp struct {
+		Artists base.ArtistsJson `json:"artists"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&searchedArtistResp)
+	if err != nil {
+		errmsg := fmt.Sprintf("could not decode response: %v", err)
+		fmt.Println(errmsg)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(errmsg))
+		return
+	}
+	artistList, _ := utils.ParseArtistsJson(searchedArtistResp.Artists)
+	sort.Slice(artistList, func(i, j int) bool {
+		return artistList[i].Popularity > artistList[j].Popularity
+	})
+
+	// Update Cache
+	for _, artist := range artistList {
+		if _, exists := cfg.Cache.ArtistCache[artist.ID]; !exists {
+			cfg.Cache.ArtistCache[artist.ID] = base.ArtistCache{
+				Artist:     artist,
+				LastUpdate: time.Now(),
+			}
+		}
+	}
+
+	component := templates.SearchResults(artistList)
+	component.Render(r.Context(), w)
+
+}

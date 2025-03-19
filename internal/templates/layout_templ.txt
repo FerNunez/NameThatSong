@@ -1,8 +1,9 @@
 <head><title>
 </title><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><script src=\"/static/script/htmx.min.js\"></script><script src=\"/static/script/response-targets.js\"></script><link rel=\"stylesheet\" href=\"/static/css/style.css\"></head>
-<footer class=\"bg-primary-600 p-4\">Test</footer>
-<nav class=\"bg-primary-600 p-4\"><div class=\"container flex justify-between\"><ol class=\"flex space-x-4\"><li><a class=\"text-gray-200\" href=\"/\">Home</a></li><li><a class=\"text-gray-200\" href=\"/about\">About</a></li><li><a class=\"text-gray-200\" href=\"/login\">Login</a></li></ol></div></nav>
-<body class=\"flex flex-col h-full bg-slate-900\">
-<main class=\"flex-1 container \">
-</main>
-<script src=\"https://unpkg.com/htmx.org@2.0.3\"></script><script src=\"https://unpkg.com/htmx.org/dist/ext/json-enc.js\"></script></body>
+<footer class=\"   p-4 text-white mt-auto w-full \">Test</footer>
+<nav class=\"p-4\"><div class=\"container flex justify-between\"><ol class=\"flex space-x-4\"><li><a class=\"text-gray-200\" href=\"/\">Home</a></li><li><a class=\"text-gray-200\" href=\"/about\">About</a></li><li><a class=\"text-gray-200\" href=\"/login\">Login</a></li></ol></div></nav>
+<html class=\"bg-slate-900\">
+<body class=\" min-h-screen flex flex-col h-full\">
+<div class=\"w-full  justify-center\"><main>
+</main></div>
+<script src=\"https://unpkg.com/htmx.org@2.0.3\"></script><script src=\"https://unpkg.com/htmx.org/dist/ext/json-enc.js\"></script></body></html>

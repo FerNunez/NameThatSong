@@ -6,4 +6,5 @@ tailwindcss
 
 *.templ.go
 static/css/style.css
+*templ.txt
 
