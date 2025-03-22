@@ -75,7 +75,7 @@ func ParseAlbumsJson(data base.AlbumsJson) ([]base.Album, error) {
 			ReleaseDate:      releaseDate,
 			URI:              item.URI,
 			ArtistsFeatureID: artistIDs,
-			Selected:         false,
+			Selected:         true,
 		}
 
 		albums = append(albums, album)
@@ -132,4 +132,44 @@ func ParseAlbumResponseToTracks(response base.GetAlbumTracksResponse, albumID st
 	}
 
 	return tracks
+}
+
+func ParserTracksResponse(searchTrackResponse base.SearchTrackResponse) ([]base.Track, []string, []string) {
+	var tracks []base.Track
+	var albumUris []string
+	var artistsNames []string
+
+	for _, item := range searchTrackResponse.Tracks.Items {
+		// Collect artist IDs
+		artistIDs := make([]string, 0, len(item.Artists))
+		artistsName := ""
+		for _, artist := range item.Artists {
+			artistIDs = append(artistIDs, artist.ID)
+
+			artistsName += artist.Name
+		}
+
+		albumUris = append(albumUris, item.Album.Images[0].URL)
+		artistsNames = append(artistsNames, artistsName)
+
+		// Create track with all fields
+		track := base.Track{
+			DiscNumber:  item.DiscNumber,
+			DurationMs:  item.DurationMs,
+			Href:        item.Href,
+			ID:          item.ID,
+			IsPlayable:  item.IsPlayable,
+			Name:        item.Name,
+			Popularity:  item.Popularity,
+			TrackNumber: item.TrackNumber,
+			URI:         item.URI,
+			AlbumID:     item.Album.ID,
+			ArtistsID:   artistIDs,
+			Selected:    false,
+		}
+
+		tracks = append(tracks, track)
+	}
+
+	return tracks, artistsNames, albumUris
 }

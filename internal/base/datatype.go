@@ -47,7 +47,8 @@ type Album struct {
 	ReleaseDate      time.Time
 	URI              string
 	ArtistsFeatureID []string
-	Selected         bool
+	// out of spotidy
+	Selected bool
 }
 
 type Track struct {
@@ -62,6 +63,8 @@ type Track struct {
 	URI         string
 	AlbumID     string
 	ArtistsID   []string
+	// out of spotidy
+	Selected bool
 }
 
 type TracksJson struct {

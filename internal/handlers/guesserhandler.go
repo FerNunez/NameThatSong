@@ -31,13 +31,11 @@ func (api *SpotifyApi) StartProcess(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("%v ", api.Cache.TracksCache[id].Track.Name)
 	}
 
-	musicPlayer := templates.MusicPlayer()
-	layout := templates.GuesserLayout(musicPlayer, "Player")
-	layout.Render(r.Context(), w)
+	w.Write([]byte("Added songs :)"))
 
 }
 
-func (cfg *SpotifyApi) RequestArtistListByNameHandler(w http.ResponseWriter, r *http.Request) {
+func (cfg *SpotifyApi) SearchHelper(w http.ResponseWriter, r *http.Request) {
 
 	// get query user written
 	requestQuery := r.URL.Query().Get("search")
@@ -210,6 +208,78 @@ func getAlbumsTracks(accessToken, albumId string) ([]base.Track, error) {
 	return tracks, nil
 }
 
+func (cfg *SpotifyApi) GuessHelper(w http.ResponseWriter, r *http.Request) {
+
+	// get query
+	requestQuery := r.URL.Query().Get("guess")
+	if requestQuery == "" {
+		component := templates.SearchResults([]base.Artist{})
+		component.Render(r.Context(), w)
+
+	}
+	lowerQuery := strings.ToLower(requestQuery)
+	cleanedQuery := "track:" + lowerQuery
+
+	// hit search endpoint spoti
+	newUrl, err := url.Parse("https://api.spotify.com/v1/search")
+	if err != nil {
+		errmsg := fmt.Sprintf("Error parsing URL: %v", err)
+		fmt.Println(errmsg)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(errmsg))
+		return
+	}
+	urlQuery := newUrl.Query()
+	urlQuery.Set("type", "track")
+	urlQuery.Set("q", cleanedQuery)
+
+	// Set request
+	newUrl.RawQuery = urlQuery.Encode()
+	req, err := http.NewRequest("GET", newUrl.String(), nil)
+	if err != nil {
+		errmsg := fmt.Sprintf("could not create request: %v", err)
+		fmt.Println(errmsg)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(errmsg))
+		return
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", cfg.Config.AccessToken))
+
+	// Set Response
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		errmsg := fmt.Sprintf("could not do request: %v", err)
+		fmt.Println(errmsg)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(errmsg))
+		return
+	}
+	if resp.StatusCode != http.StatusOK {
+		errmsg := fmt.Sprintf("could not get good status code: %v", resp.StatusCode)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(errmsg))
+		return
+	}
+	defer resp.Body.Close()
+
+	var searchTrackResponse base.SearchTrackResponse
+	err = json.NewDecoder(resp.Body).Decode(&searchTrackResponse)
+	if err != nil {
+		errmsg := fmt.Sprintf("could not decode response: %v", err)
+		fmt.Println(errmsg)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(errmsg))
+		return
+	}
+
+	tracks, artistNames, albumUris := utils.ParserTracksResponse(searchTrackResponse)
+
+
+	guesserHelperList := templates.GuessHelperList(tracks, artistNames, albumUris)
+	guesserHelperList.Render(r.Context(), w)
+}
+
 func (cfg *SpotifyApi) GuessTrack(w http.ResponseWriter, r *http.Request) {
 
 	// get query user written
@@ -222,7 +292,6 @@ func (cfg *SpotifyApi) GuessTrack(w http.ResponseWriter, r *http.Request) {
 	lowerQuery := strings.ToLower(requestQuery)
 	cleanedQuery := "artist:" + lowerQuery
 
-	// hittinh spotify for least
 	newUrl, err := url.Parse("https://api.spotify.com/v1/search")
 	if err != nil {
 		errmsg := fmt.Sprintf("Error parsing URL: %v", err)
