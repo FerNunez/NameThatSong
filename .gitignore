@@ -4,7 +4,7 @@ tmp
 tailwindcss
 
 
-*.templ.go
+**/*.templ.go
 static/css/style.css
 *templ.txt
 
