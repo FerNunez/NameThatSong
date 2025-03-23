@@ -27,7 +27,7 @@ func main() {
 
 	r.Get("/guess-helper", cfg.GuessHelper)
 	r.Post("/guess-track", cfg.GuessTrack)
-	//r.PUT("/select-track", cfg.GuessTrack)
+	r.Post("/select-track", cfg.SelectTrack)
 	server := &http.Server{
 		Handler: r,
 		Addr:    "127.0.0.1:8080",

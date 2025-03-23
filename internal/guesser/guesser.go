@@ -13,13 +13,17 @@ func NewMusicPlayer() MusicPlayer {
 
 func (mp *MusicPlayer) Next() bool {
 	if len(mp.Queue) > 0 {
+
+
+
+
 		mp.Current = mp.Queue[0]
 		mp.Queue = mp.Queue[1:]
-		fmt.Println("current song; ", mp.Current)
+		fmt.Println("Current goign song; ", mp.Current)
 		return true
 	}
 
-		fmt.Println("NO NEW SONG " )
+	fmt.Println("Empty QUEUE ")
 	return false
 }
 

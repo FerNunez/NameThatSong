@@ -133,7 +133,6 @@ func (cfg *SpotifyApi) RequestUserAuthorizationCallbackHandler(w http.ResponseWr
 
 func (cfg *SpotifyApi) RequestStartHandler(w http.ResponseWriter, r *http.Request) {
 
-	fmt.Println("am Here?")
 	type PlaySongRequest struct {
 		Uris       []string `json:"uris"`
 		PositionMs int      `json:"position_ms"`
@@ -146,7 +145,6 @@ func (cfg *SpotifyApi) RequestStartHandler(w http.ResponseWriter, r *http.Reques
 		PositionMs: 0,
 	}
 
-	fmt.Println("asd: ", psr.Uris)
 	dat, err := json.Marshal(psr)
 	if err != nil {
 		fmt.Println("HELP")

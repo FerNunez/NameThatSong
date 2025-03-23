@@ -20,7 +20,6 @@ func ParseArtistsJson(data base.ArtistsJson) ([]base.Artist, error) {
 			Popularity:     item.Popularity,
 			Type:           item.Type,
 			URI:            item.URI,
-			AlbumsID:       []string{}, // Initialize empty slice for album IDs
 		}
 
 		// Convert nested images to Image struct
@@ -43,7 +42,7 @@ func ParseAlbumsJson(data base.AlbumsJson) ([]base.Album, error) {
 	for _, item := range data.Items {
 
 		// Parse release date with precision handling
-		releaseDate, err := parseReleaseDate(item.ReleaseDate, item.ReleaseDatePrecision)
+		releaseDate, err := ParseReleaseDate(item.ReleaseDate, item.ReleaseDatePrecision)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse release date for album %s: %v", item.ID, err)
 		}
@@ -85,7 +84,7 @@ func ParseAlbumsJson(data base.AlbumsJson) ([]base.Album, error) {
 
 }
 
-func parseReleaseDate(dateStr, precision string) (time.Time, error) {
+func ParseReleaseDate(dateStr, precision string) (time.Time, error) {
 	var layout string
 	switch precision {
 	case "year":
@@ -107,6 +106,9 @@ func ParseAlbumResponseToTracks(response base.GetAlbumTracksResponse, albumID st
 	for _, item := range response.Items {
 		// Extract artist IDs
 		artistIDs := make([]string, 0, len(item.Artists))
+		if len(item.Artists) <= 0{
+			panic("artists 0")
+		}
 		for _, artist := range item.Artists {
 			artistIDs = append(artistIDs, artist.ID)
 		}
@@ -118,58 +120,13 @@ func ParseAlbumResponseToTracks(response base.GetAlbumTracksResponse, albumID st
 			ID:          item.ID,
 			IsPlayable:  item.IsPlayable,
 			Name:        item.Name,
+			Popularity:  0, // Not present in source JSON
 			TrackNumber: item.TrackNumber,
 			URI:         item.URI,
 			AlbumID:     albumID, // Passed as separate parameter
 			ArtistsID:   artistIDs,
-
-			// These fields don't exist in the source JSON - you might want to:
-			// 1. Remove them from Track struct if unused
-			// 2. Get from another source
-			// 3. Set to zero value as placeholder
-			Popularity: 0, // Not present in source JSON
 		})
 	}
 
 	return tracks
-}
-
-func ParserTracksResponse(searchTrackResponse base.SearchTrackResponse) ([]base.Track, []string, []string) {
-	var tracks []base.Track
-	var albumUris []string
-	var artistsNames []string
-
-	for _, item := range searchTrackResponse.Tracks.Items {
-		// Collect artist IDs
-		artistIDs := make([]string, 0, len(item.Artists))
-		artistsName := ""
-		for _, artist := range item.Artists {
-			artistIDs = append(artistIDs, artist.ID)
-
-			artistsName += artist.Name
-		}
-
-		albumUris = append(albumUris, item.Album.Images[0].URL)
-		artistsNames = append(artistsNames, artistsName)
-
-		// Create track with all fields
-		track := base.Track{
-			DiscNumber:  item.DiscNumber,
-			DurationMs:  item.DurationMs,
-			Href:        item.Href,
-			ID:          item.ID,
-			IsPlayable:  item.IsPlayable,
-			Name:        item.Name,
-			Popularity:  item.Popularity,
-			TrackNumber: item.TrackNumber,
-			URI:         item.URI,
-			AlbumID:     item.Album.ID,
-			ArtistsID:   artistIDs,
-			Selected:    false,
-		}
-
-		tracks = append(tracks, track)
-	}
-
-	return tracks, artistsNames, albumUris
 }

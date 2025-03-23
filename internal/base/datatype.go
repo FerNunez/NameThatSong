@@ -23,6 +23,14 @@ type Image struct {
 	Width  int
 }
 
+func NewImage(url string, height int, width int) Image {
+	return Image{
+		URL:    url,
+		Height: height,
+		Width:  width,
+	}
+}
+
 type Artist struct {
 	TotalFollowers int
 	Genres         []string
@@ -33,7 +41,6 @@ type Artist struct {
 	Popularity     int
 	Type           string
 	URI            string
-	AlbumsID       []string
 }
 
 type Album struct {
@@ -64,7 +71,9 @@ type Track struct {
 	AlbumID     string
 	ArtistsID   []string
 	// out of spotidy
-	Selected bool
+	Selected   bool
+	AlbumName  string
+	ArtistName []string
 }
 
 type TracksJson struct {

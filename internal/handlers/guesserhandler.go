@@ -109,8 +109,8 @@ func (cfg *SpotifyApi) SearchHelper(w http.ResponseWriter, r *http.Request) {
 
 	// Update Cache
 	for _, artist := range artistList {
-		if _, exists := cfg.Cache.ArtistCache[artist.ID]; !exists {
-			cfg.Cache.ArtistCache[artist.ID] = base.ArtistCache{
+		if _, exists := cfg.Cache.ArtistsCache[artist.ID]; !exists {
+			cfg.Cache.ArtistsCache[artist.ID] = base.ArtistCache{
 				Artist:     artist,
 				LastUpdate: time.Now(),
 			}
@@ -217,8 +217,9 @@ func (cfg *SpotifyApi) GuessHelper(w http.ResponseWriter, r *http.Request) {
 		component.Render(r.Context(), w)
 
 	}
-	lowerQuery := strings.ToLower(requestQuery)
-	cleanedQuery := "track:" + lowerQuery
+
+	// Parse track /a artist /b album
+	cleanedQuery := utils.ParseGuessText(requestQuery)
 
 	// hit search endpoint spoti
 	newUrl, err := url.Parse("https://api.spotify.com/v1/search")
@@ -273,8 +274,7 @@ func (cfg *SpotifyApi) GuessHelper(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tracks, artistNames, albumUris := utils.ParserTracksResponse(searchTrackResponse)
-
+	tracks, artistNames, albumUris := cfg.ParserTracksResponse(searchTrackResponse)
 
 	guesserHelperList := templates.GuessHelperList(tracks, artistNames, albumUris)
 	guesserHelperList.Render(r.Context(), w)
@@ -353,8 +353,8 @@ func (cfg *SpotifyApi) GuessTrack(w http.ResponseWriter, r *http.Request) {
 
 	// Update Cache
 	for _, artist := range artistList {
-		if _, exists := cfg.Cache.ArtistCache[artist.ID]; !exists {
-			cfg.Cache.ArtistCache[artist.ID] = base.ArtistCache{
+		if _, exists := cfg.Cache.ArtistsCache[artist.ID]; !exists {
+			cfg.Cache.ArtistsCache[artist.ID] = base.ArtistCache{
 				Artist:     artist,
 				LastUpdate: time.Now(),
 			}
@@ -363,5 +363,52 @@ func (cfg *SpotifyApi) GuessTrack(w http.ResponseWriter, r *http.Request) {
 
 	component := templates.SearchResults(artistList)
 	component.Render(r.Context(), w)
+
+}
+
+func (cfg *SpotifyApi) SelectTrack(w http.ResponseWriter, r *http.Request) {
+
+	// Get Album IDs
+	err := r.ParseForm()
+	if err != nil {
+		return
+	}
+	trackID := r.Form.Get("trackID")
+
+	track, err := cfg.Cache.RetrieveTrack(trackID)
+	if err != nil {
+		errmsg := fmt.Errorf("cant find track %v", err)
+		println(errmsg)
+	}
+	track.Selected = !track.Selected
+	cfg.Cache.InsertTrack(track.ID, track)
+
+	album, err := cfg.Cache.RetrieveAlbum(track.AlbumID)
+	if err != nil {
+		errmsg := fmt.Errorf("cant find album %v", err)
+		println(errmsg)
+	}
+
+	if len(track.ArtistsID) <= 0 {
+		panic("no artists available")
+	}
+	artist, err := cfg.Cache.RetrieveArtist(track.ArtistsID[0])
+	if err != nil {
+		errmsg := fmt.Errorf("cant find artist %v", err)
+		println(errmsg)
+	}
+
+	fmt.Printf("track name: %v\n", track.Name)
+	fmt.Printf("album name: %v\n", album.Name)
+	fmt.Printf("artist name: %v\n", artist.Name)
+	if len(album.Images) <= 0 {
+		panic("album has no image in select track")
+	}
+	fmt.Println("url: ", album.Images[0].URL)
+	gocComponent := templates.GuessOptionCard(track.ID, track.Name, album.Images[0].URL, artist.Name, track.Selected)
+	gocComponent.Render(r.Context(), w)
+	//templates.GuessOptionCard()
+	////component := templates.GuessOptionCard(albumCache.Album)
+	//component.Render(r.Context(), w)
 
 }

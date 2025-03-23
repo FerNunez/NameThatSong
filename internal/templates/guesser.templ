@@ -72,27 +72,33 @@ templ GuesserInterface() {
 	</form>
 }
 
-templ GuessHelperList(trackList []base.Track, artistsNames []string, albumUris []string) {
+templ GuessHelperList(trackList []base.Track, artistsNames []string, albumUrl []string) {
 	<div class="guess-helper-list">
 		for idx, track := range trackList {
-			//onclick={ templ.JSFuncCall("setGuessOption", track.Name, track.ID) }
-			{{ fmt.Println(" Track selected") }}
-			{{ class_selected := "search-result-item inline-flex w-full px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white" }}
-			if track.Selected {
-				{{ fmt.Println(" Track not selected") }}
-				{{ class_selected = "search-result-item inline-flex w-full px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white" }}
-			}
-			<div
-				class={ class_selected }
-				hx-get="/select-track"
-				data-id={ track.ID }
-			>
-				<img src={ albumUris[idx] } alt="Album Cover" class="w-12 h-12 rounded-lg"/>
-				<div class="px-4">
-					<h1 class="text-white font-bold">{ track.Name }</h1>
-					<p class="text-gray-400">{ artistsNames[idx] }</p>
-				</div>
-			</div>
+			@GuessOptionCard(track.ID, track.Name, albumUrl[idx], artistsNames[idx], track.Selected)
 		}
+	</div>
+}
+
+templ GuessOptionCard(trackID, trackName, albumUrl, artistsNames string, selected bool) {
+	//onclick={ templ.JSFuncCall("setGuessOption", track.Name, track.ID) }
+	{{ class_selected := "search-result-item inline-flex w-full px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white" }}
+	if selected {
+		{{ fmt.Println(" Track selected") }}
+		{{ class_selected = "search-result-item inline-flex w-full px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-white" }}
+	}
+	<div
+		class={ class_selected }
+		hx-trigger="click"
+		hx-post="/select-track"
+		hx-vals={ `{"trackID": "` + trackID + `"}` }
+		value={ trackID }
+		hx-swap="outerHTML"
+	>
+		<img src={ albumUrl } alt="Album Cover" class="w-12 h-12 rounded-lg"/>
+		<div class="px-4">
+			<h1 class="text-white font-bold">{ trackName }</h1>
+			<p class="text-gray-400">{ artistsNames }</p>
+		</div>
 	</div>
 }
