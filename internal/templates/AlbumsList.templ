@@ -1,0 +1,25 @@
+package templates
+
+import (
+	"goth/internal/base"
+)
+
+// AlbumsList renders a list of albums in a grid layout
+templ AlbumsList(albums []base.Album) {
+	<div class="relative album-grid grid grid-cols-4 gap-4">
+		for _, album := range albums {
+			@AlbumCard(album)
+		}
+	</div>
+	<button
+		class="start-button focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
+		type="button"
+		hx-post="/start-process"
+		hx-trigger="click"
+		hx-target="#processing-results"
+		hx-include="[name='selectedAlbums']"
+	>
+		Start
+	</button>
+	<div id="processing-results" class="bg-center text-green-500"></div>
+} 
