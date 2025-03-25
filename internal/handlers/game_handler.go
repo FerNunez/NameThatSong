@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"goth/internal/base"
@@ -9,6 +10,7 @@ import (
 	"goth/internal/service"
 	"goth/internal/templates"
 	"goth/internal/utils"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -16,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/a-h/templ"
 	"github.com/joho/godotenv"
 )
 
@@ -23,12 +26,21 @@ import (
 type GameHandler struct {
 	GameService *service.GameService
 	Cache       *SessionCache
+	// Authentication config
+	ClientID     string
+	ClientSecret string
+	RedirectURI  string
+	State        string
+	AccessToken  string
+	RefreshToken string
+	DeviceID     string
 }
 
 // SessionCache caches artists and albums for the UI
 type SessionCache struct {
 	ArtistsCache map[string]ArtistCache
 	AlbumsCache  map[string]AlbumCache
+	TracksCache  map[string]TrackCache
 }
 
 // ArtistCache caches artist details
@@ -43,6 +55,12 @@ type AlbumCache struct {
 	LastUpdate time.Time
 }
 
+// TrackCache caches track details
+type TrackCache struct {
+	Track      base.Track
+	LastUpdate time.Time
+}
+
 // NewGameHandler creates a new game handler
 func NewGameHandler() (*GameHandler, error) {
 	// Load environment variables
@@ -53,18 +71,26 @@ func NewGameHandler() (*GameHandler, error) {
 
 	clientID := os.Getenv("CLIENT_ID")
 	clientSecret := os.Getenv("CLIENT_SECRET")
+	redirectURI := "http://127.0.0.1:8080/auth/callback"
 
 	if clientID == "" || clientSecret == "" {
 		return nil, fmt.Errorf("missing Spotify credentials in .env file")
+	}
+
+	// Generate a random state for OAuth
+	state, err := utils.GenerateState(16)
+	if err != nil {
+		return nil, fmt.Errorf("error generating state: %v", err)
 	}
 
 	// Create a default session
 	cache := &SessionCache{
 		ArtistsCache: make(map[string]ArtistCache),
 		AlbumsCache:  make(map[string]AlbumCache),
+		TracksCache:  make(map[string]TrackCache),
 	}
 
-	// In a real application, you'd get these from a token exchange/session
+	// For now, create with empty tokens - they'll be set after auth
 	accessToken := ""
 	refreshToken := ""
 	deviceID := ""
@@ -84,9 +110,175 @@ func NewGameHandler() (*GameHandler, error) {
 	gameService := service.NewGameService(musicPlayer, songProvider)
 
 	return &GameHandler{
-		GameService: gameService,
-		Cache:       cache,
+		GameService:  gameService,
+		Cache:        cache,
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		RedirectURI:  redirectURI,
+		State:        state,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		DeviceID:     deviceID,
 	}, nil
+}
+
+// IndexHandler renders the main page
+func (h *GameHandler) IndexHandler(w http.ResponseWriter, r *http.Request) {
+	component := templates.IndexPage()
+	layout := templates.Layout(component, "NameThatSong")
+	layout.Render(r.Context(), w)
+}
+
+// AuthHandler handles the Spotify OAuth login flow
+func (h *GameHandler) AuthHandler(w http.ResponseWriter, r *http.Request) {
+	// Build the authorization URL
+	authURL := "https://accounts.spotify.com/authorize"
+	u, err := url.Parse(authURL)
+	if err != nil {
+		http.Error(w, "Error parsing URL", http.StatusInternalServerError)
+		return
+	}
+
+	// Add query parameters
+	q := u.Query()
+	q.Set("response_type", "code")
+	q.Set("client_id", h.ClientID)
+	q.Set("scope", "user-read-private user-read-email streaming user-modify-playback-state user-read-playback-state")
+	q.Set("redirect_uri", h.RedirectURI)
+	q.Set("state", h.State)
+	u.RawQuery = q.Encode()
+
+	// Redirect to Spotify
+	http.Redirect(w, r, u.String(), http.StatusFound)
+}
+
+// AuthCallbackHandler handles the callback from Spotify after login
+func (h *GameHandler) AuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
+	// Check state to prevent CSRF
+	state := r.URL.Query().Get("state")
+	if state != h.State {
+		http.Error(w, "State mismatch", http.StatusBadRequest)
+		return
+	}
+
+	// Get the authorization code
+	code := r.URL.Query().Get("code")
+	if code == "" {
+		http.Error(w, "No code provided", http.StatusBadRequest)
+		return
+	}
+
+	// Exchange code for tokens
+	tokenURL := "https://accounts.spotify.com/api/token"
+	data := url.Values{}
+	data.Set("grant_type", "authorization_code")
+	data.Set("code", code)
+	data.Set("redirect_uri", h.RedirectURI)
+
+	req, err := http.NewRequest("POST", tokenURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error creating request: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	auth := base64.StdEncoding.EncodeToString([]byte(h.ClientID + ":" + h.ClientSecret))
+	req.Header.Set("Authorization", "Basic "+auth)
+
+	// Send request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error getting token: %v", err), http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Parse response
+	var tokenResponse struct {
+		AccessToken  string `json:"access_token"`
+		TokenType    string `json:"token_type"`
+		ExpiresIn    int    `json:"expires_in"`
+		RefreshToken string `json:"refresh_token"`
+		Scope        string `json:"scope"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResponse); err != nil {
+		http.Error(w, fmt.Sprintf("Error parsing token response: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Store tokens
+	h.AccessToken = tokenResponse.AccessToken
+	h.RefreshToken = tokenResponse.RefreshToken
+
+	fmt.Println("AccessToken: ", h.AccessToken)
+	fmt.Println("RefreshToken: ", h.RefreshToken)
+
+	// Get available devices
+	h.DeviceID = h.getFirstAvailableDevice()
+
+	// Update the GameService with the new tokens
+	// This is a bit of a hack since we're type asserting here
+	// In a production app, you'd likely use a proper DI container or recreate components
+	h.GameService.Player.(*player.SpotifyPlayer).AccessToken = h.AccessToken
+	h.GameService.Player.(*player.SpotifyPlayer).DeviceID = h.DeviceID
+
+	// Update the provider as well
+	h.GameService.SongProvider.(*provider.SpotifySongProvider).AccessToken = h.AccessToken
+	h.GameService.SongProvider.(*provider.SpotifySongProvider).RefreshToken = h.RefreshToken
+
+	// Redirect back to the main page
+	http.Redirect(w, r, "/", http.StatusFound)
+}
+
+// getFirstAvailableDevice gets the first available Spotify device
+func (h *GameHandler) getFirstAvailableDevice() string {
+	// Call Spotify API to get available devices
+	deviceURL := "https://api.spotify.com/v1/me/player/devices"
+	req, err := http.NewRequest("GET", deviceURL, nil)
+	if err != nil {
+		fmt.Printf("Error creating device request: %v\n", err)
+		return ""
+	}
+
+	req.Header.Set("Authorization", "Bearer "+h.AccessToken)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("Error getting devices: %v\n", err)
+		return ""
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("Error reading response body: %v\n", err)
+		return ""
+	}
+
+	var deviceResponse struct {
+		Devices []struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"devices"`
+	}
+
+	if err := json.Unmarshal(body, &deviceResponse); err != nil {
+		fmt.Printf("Error parsing device response: %v\n", err)
+		return ""
+	}
+
+	if len(deviceResponse.Devices) > 0 {
+		deviceID := deviceResponse.Devices[0].ID
+		fmt.Printf("Using device: %s\n", deviceResponse.Devices[0].Name)
+		return deviceID
+	}
+
+	fmt.Println("No devices available")
+	return ""
 }
 
 // SearchArtists handles artist search requests
@@ -102,7 +294,6 @@ func (h *GameHandler) SearchArtists(w http.ResponseWriter, r *http.Request) {
 
 	// Clean up the query
 	cleanedQuery := "artist:" + strings.ToLower(query)
-	fmt.Println("got artist?:", cleanedQuery)
 
 	// Call Spotify API
 	apiURL, err := url.Parse("https://api.spotify.com/v1/search")
@@ -122,16 +313,8 @@ func (h *GameHandler) SearchArtists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get access token from the provider
-	// For simplicity, we'll assume there's a method to get the token
-	// In a real app, this would come from authentication
-	// Let's assume something like this exists:
-	accessToken := h.GameService.Player.(*player.SpotifyPlayer).AccessToken
-
-	fmt.Println("accessToken from search artist", accessToken)
-
 	// Set Authorization header
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", h.AccessToken))
 
 	// Make the request
 	client := &http.Client{}
@@ -224,11 +407,8 @@ func (h *GameHandler) GetArtistAlbums(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get access token
-	accessToken := h.GameService.Player.(*player.SpotifyPlayer).AccessToken
-
 	// Set Authorization header
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", h.AccessToken))
 
 	// Make the request
 	client := &http.Client{}
@@ -314,13 +494,9 @@ func (h *GameHandler) GetArtistAlbums(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Return results component
-	// If templates.AlbumsList doesn't exist yet, you'll need to create it
-	// For now we'll use AlbumCard for each album
-	for _, album := range albums {
-		component := templates.AlbumCard(album)
-		component.Render(r.Context(), w)
-	}
+	// Return albums grid
+	component := templates.AlbumGrid(albums)
+	component.Render(r.Context(), w)
 }
 
 // SelectAlbum handles album selection
@@ -358,13 +534,22 @@ func (h *GameHandler) SelectAlbum(w http.ResponseWriter, r *http.Request) {
 
 // StartGame handles game start
 func (h *GameHandler) StartGame(w http.ResponseWriter, r *http.Request) {
+	// Get all selected albums
+	selectedAlbums := h.GameService.GetSelectedAlbums()
+	if len(selectedAlbums) == 0 {
+		http.Error(w, "No albums selected", http.StatusBadRequest)
+		return
+	}
+
+	// Start the game
 	err := h.GameService.StartGame()
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error starting game: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	w.Write([]byte("Game started successfully"))
+	// Send successful response
+	w.Write([]byte("Game started successfully! Press Play to begin."))
 }
 
 // PlayGame handles play button
@@ -378,33 +563,280 @@ func (h *GameHandler) PlayGame(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Playback started"))
 }
 
-// MakeGuess handles user guesses
-func (h *GameHandler) MakeGuess(w http.ResponseWriter, r *http.Request) {
-	guess := r.URL.Query().Get("guess")
+// GuessHelper handles searching for tracks to guess
+func (h *GameHandler) GuessHelper(w http.ResponseWriter, r *http.Request) {
+	// Get the query term
+	query := r.URL.Query().Get("guess")
+	if query == "" {
+		// Return empty results
+		w.Write([]byte(""))
+		return
+	}
+
+	// Format the query for track search
+	cleanedQuery := utils.ParseGuessText(query)
+
+	// Call Spotify API to search for tracks
+	apiURL, err := url.Parse("https://api.spotify.com/v1/search")
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error parsing URL: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	q := apiURL.Query()
+	q.Set("type", "track")
+	q.Set("q", cleanedQuery)
+	q.Set("limit", "5") // Limit to 5 results
+	apiURL.RawQuery = q.Encode()
+
+	req, err := http.NewRequest("GET", apiURL.String(), nil)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error creating request: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Set Authorization header
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", h.AccessToken))
+
+	// Make the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error making request: %v", err), http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, fmt.Sprintf("Spotify API returned error: %v", resp.Status), resp.StatusCode)
+		return
+	}
+
+	// Parse response
+	var searchResponse base.SearchTrackResponse
+	if err := json.NewDecoder(resp.Body).Decode(&searchResponse); err != nil {
+		http.Error(w, fmt.Sprintf("Error decoding response: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Process the tracks
+	tracks, artistsNames, albumUrls := h.parseTracks(searchResponse)
+
+	// Return results component
+	component := templates.GuessHelperList(tracks, artistsNames, albumUrls)
+	component.Render(r.Context(), w)
+}
+
+// parseTracks converts API response to track data
+func (h *GameHandler) parseTracks(response base.SearchTrackResponse) ([]base.Track, []string, []string) {
+	var tracks []base.Track
+	var albumUrls []string
+	var artistsNames []string
+
+	for _, item := range response.Tracks.Items {
+		// Process album
+		albumJson := item.Album
+		images := make([]base.Image, len(albumJson.Images))
+		for _, img := range albumJson.Images {
+			images = append(images, base.NewImage(img.URL, img.Height, img.Width))
+		}
+
+		releaseDate, _ := utils.ParseReleaseDate(albumJson.ReleaseDate, albumJson.ReleaseDatePrecision)
+		artistIDs := make([]string, len(item.Artists))
+		for i, artist := range item.Artists {
+			artistIDs[i] = artist.ID
+		}
+
+		album := base.Album{
+			AlbumType:        albumJson.AlbumType,
+			TotalTracks:      0,
+			AvailableMarkets: albumJson.AvailableMarkets,
+			Href:             albumJson.Href,
+			ID:               albumJson.ID,
+			Images:           images,
+			Name:             albumJson.Name,
+			ReleaseDate:      releaseDate,
+			URI:              albumJson.URI,
+			ArtistsFeatureID: artistIDs,
+			Selected:         false,
+		}
+
+		// Update album cache
+		h.Cache.AlbumsCache[album.ID] = AlbumCache{
+			Album:      album,
+			LastUpdate: time.Now(),
+		}
+
+		// Process artists
+		for _, artistJson := range item.Artists {
+			artist := base.Artist{
+				TotalFollowers: 0,
+				Genres:         []string{"Unknown"},
+				Href:           artistJson.Href,
+				ID:             artistJson.ID,
+				Images:         nil,
+				Name:           artistJson.Name,
+				Popularity:     0,
+				Type:           artistJson.Type,
+				URI:            artistJson.URI,
+			}
+
+			// Update artist cache
+			h.Cache.ArtistsCache[artistJson.ID] = ArtistCache{
+				Artist:     artist,
+				LastUpdate: time.Now(),
+			}
+		}
+
+		// Collect artist names and album image
+		artistsName := ""
+		for _, artist := range item.Artists {
+			if artistsName != "" {
+				artistsName += ", "
+			}
+			artistsName += artist.Name
+		}
+
+		if len(item.Album.Images) <= 0 {
+			// Use a placeholder if no image
+			albumUrls = append(albumUrls, "https://via.placeholder.com/300")
+		} else {
+			albumUrls = append(albumUrls, item.Album.Images[0].URL)
+		}
+		artistsNames = append(artistsNames, artistsName)
+
+		// Create track
+		track := base.Track{
+			DiscNumber:  item.DiscNumber,
+			DurationMs:  item.DurationMs,
+			Href:        item.Href,
+			ID:          item.ID,
+			IsPlayable:  item.IsPlayable,
+			Name:        item.Name,
+			Popularity:  item.Popularity,
+			TrackNumber: item.TrackNumber,
+			URI:         item.URI,
+			AlbumID:     item.Album.ID,
+			ArtistsID:   artistIDs,
+			Selected:    false,
+		}
+
+		// Update track cache
+		h.Cache.TracksCache[track.ID] = TrackCache{
+			Track:      track,
+			LastUpdate: time.Now(),
+		}
+
+		tracks = append(tracks, track)
+	}
+
+	return tracks, artistsNames, albumUrls
+}
+
+// SelectTrack handles track selection for guessing
+func (h *GameHandler) SelectTrack(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		return
+	}
+
+	trackID := r.Form.Get("trackID")
+	if trackID == "" {
+		http.Error(w, "Track ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Get the current track being played
+	currentSong := h.GameService.Player.GetCurrentSong()
+	if currentSong == nil {
+		http.Error(w, "No song is currently playing", http.StatusBadRequest)
+		return
+	}
+
+	// Check if the guess is correct
+	correct := currentSong.ID == trackID
+
+	// Get track info from cache
+	track, exists := h.Cache.TracksCache[trackID]
+	if !exists {
+		http.Error(w, "Track not found in cache", http.StatusNotFound)
+		return
+	}
+
+	// Update track selection state
+	track.Track.Selected = true
+	h.Cache.TracksCache[trackID] = track
+
+	// Return a customized response based on correctness
+	var component templ.Component
+	var artistName string
+
+	// Find the artist name
+	for _, artistID := range track.Track.ArtistsID {
+		if artist, ok := h.Cache.ArtistsCache[artistID]; ok {
+			if artistName != "" {
+				artistName += ", "
+			}
+			artistName += artist.Artist.Name
+		}
+	}
+
+	// Get album image URL
+	albumURL := ""
+	if album, ok := h.Cache.AlbumsCache[track.Track.AlbumID]; ok {
+		if len(album.Album.Images) > 0 {
+			albumURL = album.Album.Images[0].URL
+		}
+	}
+
+	if correct {
+		// Render correct guess component (to be created)
+		// For now, just render the track with a different style
+		component = templates.GuessOptionCard(track.Track.ID, track.Track.Name+" - CORRECT!", albumURL, artistName, true)
+
+		// Skip to next song after a delay
+		go func() {
+			time.Sleep(3 * time.Second)
+			h.GameService.SkipSong()
+		}()
+	} else {
+		// Render incorrect guess component
+		component = templates.GuessOptionCard(track.Track.ID, track.Track.Name+" - Try again!", albumURL, artistName, false)
+	}
+
+	component.Render(r.Context(), w)
+}
+
+// GuessTrack is a legacy handler still needed for the frontend
+func (h *GameHandler) GuessTrack(w http.ResponseWriter, r *http.Request) {
+	guess := r.FormValue("guess")
 	if guess == "" {
 		http.Error(w, "Guess is required", http.StatusBadRequest)
 		return
 	}
 
+	// Process the guess using the new service
 	correct, actualSong, err := h.GameService.MakeGuess(guess)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error processing guess: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	result := struct {
-		Correct    bool   `json:"correct"`
-		ActualSong string `json:"actualSong"`
-		Score      int    `json:"score"`
-	}{
-		Correct:    correct,
-		ActualSong: actualSong,
-		Score:      h.GameService.GetScore(),
+	// Return a simple response
+	var message string
+	if correct {
+		message = fmt.Sprintf("Correct! The song is '%s'", actualSong)
+
+		// Skip to next song after a delay
+		go func() {
+			time.Sleep(3 * time.Second)
+			h.GameService.SkipSong()
+		}()
+	} else {
+		message = "Incorrect. Try again!"
 	}
 
-	// Return JSON response
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+	w.Write([]byte(message))
 }
 
 // SkipSong handles skip button
