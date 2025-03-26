@@ -598,6 +598,11 @@ func (h *GameHandler) GuessHelper(w http.ResponseWriter, r *http.Request) {
 	// Process the tracks
 	tracks, artistsNames, albumUrls := h.parseTracks(searchResponse)
 
+	// Sort tracks by popularity in descending order
+	sort.Slice(tracks, func(i, j int) bool {
+		return tracks[i].Popularity > tracks[j].Popularity
+	})
+
 	// Return results component
 	component := templates.GuessHelperList(tracks, artistsNames, albumUrls)
 	component.Render(r.Context(), w)

@@ -276,6 +276,8 @@ func (cfg *SpotifyApi) GuessHelper(w http.ResponseWriter, r *http.Request) {
 
 	tracks, artistNames, albumUris := cfg.ParserTracksResponse(searchTrackResponse)
 
+	// Note: Tracks are already sorted by popularity in descending order in ParserTracksResponse
+
 	guesserHelperList := templates.GuessHelperList(tracks, artistNames, albumUris)
 	guesserHelperList.Render(r.Context(), w)
 }

@@ -6,6 +6,7 @@ import (
 	"goth/internal/guesser"
 	"goth/internal/utils"
 	"os"
+	"sort"
 
 	"github.com/joho/godotenv"
 )
@@ -143,6 +144,11 @@ func (cfg *SpotifyApi) ParserTracksResponse(searchTrackResponse base.SearchTrack
 
 		tracks = append(tracks, track)
 	}
+
+	// Sort tracks by popularity in descending order
+	sort.Slice(tracks, func(i, j int) bool {
+		return tracks[i].Popularity > tracks[j].Popularity
+	})
 
 	return tracks, artistsNames, albumUris
 }
