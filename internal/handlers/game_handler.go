@@ -10,7 +10,6 @@ import (
 	"goth/internal/service"
 	"goth/internal/templates"
 	"goth/internal/utils"
-	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -18,9 +17,10 @@ import (
 	"strings"
 	"time"
 
+	"slices"
+
 	"github.com/a-h/templ"
 	"github.com/joho/godotenv"
-	"slices"
 )
 
 // GameHandler handles the game flow
@@ -96,16 +96,14 @@ func NewGameHandler() (*GameHandler, error) {
 	refreshToken := ""
 	deviceID := ""
 
-	// Create song provider
-	songProvider := provider.NewSpotifySongProvider(
-		accessToken,
-		refreshToken,
-		clientID,
-		clientSecret,
-	)
+	// Create music service client
+	musicServiceClient := provider.NewSpotifyMusicServiceClient(accessToken, refreshToken, clientID, clientSecret, deviceID)
 
 	// Create music player
-	musicPlayer := player.NewSpotifyPlayer(deviceID, accessToken)
+	musicPlayer := player.NewSpotifyPlayer(musicServiceClient)
+
+	// Create song provider
+	songProvider := provider.NewSpotifySongProvider(accessToken, refreshToken, clientID, clientSecret)
 
 	// Create game service
 	gameService := service.NewGameService(musicPlayer, songProvider)
@@ -220,11 +218,20 @@ func (h *GameHandler) AuthCallbackHandler(w http.ResponseWriter, r *http.Request
 	// Get available devices
 	h.DeviceID = h.getFirstAvailableDevice()
 
-	// Update the GameService with the new tokens
-	// This is a bit of a hack since we're type asserting here
-	// In a production app, you'd likely use a proper DI container or recreate components
-	h.GameService.Player.(*player.SpotifyPlayer).AccessToken = h.AccessToken
-	h.GameService.Player.(*player.SpotifyPlayer).DeviceID = h.DeviceID
+	// Create a new music service client with updated tokens
+	musicServiceClient := provider.NewSpotifyMusicServiceClient(
+		h.AccessToken,
+		h.RefreshToken,
+		h.ClientID,
+		h.ClientSecret,
+		h.DeviceID,
+	)
+
+	// Create a new player with the updated music service client
+	musicPlayer := player.NewSpotifyPlayer(musicServiceClient)
+
+	// Update the GameService with the new player
+	h.GameService.Player = musicPlayer
 
 	// Update the provider as well
 	h.GameService.SongProvider.(*provider.SpotifySongProvider).AccessToken = h.AccessToken
@@ -236,50 +243,23 @@ func (h *GameHandler) AuthCallbackHandler(w http.ResponseWriter, r *http.Request
 
 // getFirstAvailableDevice gets the first available Spotify device
 func (h *GameHandler) getFirstAvailableDevice() string {
-	// Call Spotify API to get available devices
-	deviceURL := "https://api.spotify.com/v1/me/player/devices"
-	req, err := http.NewRequest("GET", deviceURL, nil)
+	// Instead of directly calling the Spotify API, create a temporary music service client
+	tempClient := provider.NewSpotifyMusicServiceClient(
+		h.AccessToken,
+		h.RefreshToken,
+		h.ClientID,
+		h.ClientSecret,
+		"", // Empty device ID
+	)
+
+	// Use the client to get the active device
+	deviceID, err := tempClient.GetActiveDevice()
 	if err != nil {
-		fmt.Printf("Error creating device request: %v\n", err)
+		fmt.Printf("Error getting active device: %v\n", err)
 		return ""
 	}
 
-	req.Header.Set("Authorization", "Bearer "+h.AccessToken)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Printf("Error getting devices: %v\n", err)
-		return ""
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Printf("Error reading response body: %v\n", err)
-		return ""
-	}
-
-	var deviceResponse struct {
-		Devices []struct {
-			ID   string `json:"id"`
-			Name string `json:"name"`
-		} `json:"devices"`
-	}
-
-	if err := json.Unmarshal(body, &deviceResponse); err != nil {
-		fmt.Printf("Error parsing device response: %v\n", err)
-		return ""
-	}
-
-	if len(deviceResponse.Devices) > 0 {
-		deviceID := deviceResponse.Devices[0].ID
-		fmt.Printf("Using device: %s\n", deviceResponse.Devices[0].Name)
-		return deviceID
-	}
-
-	fmt.Println("No devices available")
-	return ""
+	return deviceID
 }
 
 // SearchArtists handles artist search requests

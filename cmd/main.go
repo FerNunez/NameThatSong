@@ -8,23 +8,9 @@ import (
 	"os"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/joho/godotenv"
 )
 
 func main() {
-	// Load environment variables
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
-	}
-
-	// Get Spotify credentials from environment
-	clientID := os.Getenv("CLIENT_ID")
-	clientSecret := os.Getenv("CLIENT_SECRET")
-
-	if clientID == "" || clientSecret == "" {
-		log.Fatal("Missing Spotify credentials in .env file")
-	}
 
 	// Create new router
 	r := chi.NewRouter()

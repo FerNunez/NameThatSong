@@ -40,3 +40,15 @@ type SongProvider interface {
 	// Get all songs for multiple albums
 	GetSongsByAlbumIDs(albumIDs []string) (map[string][]Song, error)
 }
+
+// MusicServiceClient defines the interface for interacting with a music service API
+type MusicServiceClient interface {
+	// Playback control
+	PlaySong(songID string) error
+	PausePlayback() error
+	ResumePlayback() error
+	SkipToNext() error
+
+	// Get the currently active device ID
+	GetActiveDevice() (string, error)
+}
