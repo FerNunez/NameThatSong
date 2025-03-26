@@ -770,6 +770,50 @@ func (h *GameHandler) SelectTrack(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// If the albumURL is empty or invalid, fetch it from the Spotify API
+	if albumURL == "" {
+		// Try to get the album image URL from the Spotify API
+		apiURL := fmt.Sprintf("https://api.spotify.com/v1/albums/%s", track.Track.AlbumID)
+		req, err := http.NewRequest("GET", apiURL, nil)
+		if err == nil {
+			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", h.AccessToken))
+			client := &http.Client{}
+			resp, err := client.Do(req)
+			if err == nil && resp.StatusCode == http.StatusOK {
+				defer resp.Body.Close()
+
+				var albumResponse struct {
+					Images []struct {
+						URL string `json:"url"`
+					} `json:"images"`
+				}
+
+				if err := json.NewDecoder(resp.Body).Decode(&albumResponse); err == nil {
+					if len(albumResponse.Images) > 0 {
+						albumURL = albumResponse.Images[0].URL
+
+						// Update the cache with this album image
+						if album, ok := h.Cache.AlbumsCache[track.Track.AlbumID]; ok {
+							if len(album.Album.Images) == 0 {
+								images := make([]base.Image, len(albumResponse.Images))
+								for i, img := range albumResponse.Images {
+									images[i] = base.Image{URL: img.URL}
+								}
+								album.Album.Images = images
+								h.Cache.AlbumsCache[track.Track.AlbumID] = album
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// If we still don't have an album URL, use a placeholder
+		if albumURL == "" {
+			albumURL = "https://via.placeholder.com/300"
+		}
+	}
+
 	if correct {
 		// Render correct guess component (to be created)
 		// For now, just render the track with a different style
