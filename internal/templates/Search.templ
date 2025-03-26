@@ -5,13 +5,23 @@ import (
 	"goth/internal/base"
 )
 
+// min returns the smaller of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 type Album struct {
 	ID     int
 	Title  string
 	Artist string
 	Year   int
 }
-templ GamePage(){
+
+templ GamePage() {
+	// Empty component for now
 }
 
 templ SearchInput() {
@@ -23,87 +33,245 @@ templ SearchInput() {
 						<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"></path>
 					</svg>
 				</div>
-				//  Input that that when you type it gets an option to /search and when send the response to search-results. 
-				<input
-					type="search"
-					name="search"
-					hx-get="/search-helper"
-					hx-trigger="keyup changed delay:200ms"
-					hx-target="#search-results"
-					placeholder="Start typing..."
-					id="default-search"
-					class="search-input block w-full p-4 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-					required
-				/>
+				<input type="search" name="search" hx-get="/search-helper" hx-trigger="keyup changed delay:200ms" hx-target="#search-results" placeholder="Start typing..." id="default-search" class="search-input block w-full p-4 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" required/>
 				<input type="hidden" name="artist-id"/>
-				<button
-					hx-get="/search-albums"
-					hx-trigger="click"
-					hx-target="#album-results"
-					hx-include="[name='search'], [name='artist-id']"
-					type="button"
-					class="search-button  text-white absolute end-2.5 bottom-2.5 bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-				>Search</button>
+				<button hx-get="/search-albums" hx-trigger="click" hx-target="#album-dropdown-content" hx-include="[name='search'], [name='artist-id']" type="button" class="search-button text-white absolute end-2.5 bottom-2.5 bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Search</button>
 			</div>
 			<div id="search-results" class="search-results absolute z-10 float-right rounded-lg shadow-sm w-2/12 bg-white divide-y divide-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 "></div>
 		</form>
-		<div id="album-results" class="album-results py-2 max-w-9/10 mx-auto"></div>
+		
+		<div id="album-dropdown" class="album-dropdown mt-4">
+			<div id="album-dropdown-content" class="album-dropdown-content"></div>
+		</div>
+		
+		<div id="processing-results" class="bg-center text-green-500 mt-4"></div>
 	</div>
 }
 
 templ SearchResults(results []base.Artist) {
 	<div class="search-results-list">
 		for _, result := range results {
-			<div
-				class="search-result-item inline-flex w-full px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
+			<div class="search-result-item inline-flex w-full px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white" 
 				onclick={ templ.JSFuncCall("setSearchValue", result.Name, result.ID) }
-				data-id={ result.ID }
-			>
+				data-id={ result.ID }>
 				{ result.Name }
 			</div>
 		}
 	</div>
 }
 
-templ AlbumGrid(albums []base.Album) {
-	<div class="relative album-grid grid grid-cols-4 gap-4 ">
-		for _, album := range albums {
-			@AlbumCard(album)
-		}
+// AlbumDropdown is the new dropdown component for albums
+templ AlbumDropdown(albums []base.Album) {
+	<div class="relative">
+		<div class="album-dropdown-inner overflow-hidden bg-gray-900 p-4 rounded-lg shadow-lg">
+			<h2 class="text-white text-lg font-bold mb-3">Albums</h2>
+			<div id="album-scroll-wrapper" class="album-scroll-wrapper flex justify-start overflow-x-auto pb-4 pt-2 px-2" style="scroll-behavior: smooth; -webkit-overflow-scrolling: touch;">
+				<div id="albums-container" class="flex flex-row items-start pl-4">
+					if len(albums) > 0 {
+						@AlbumBatch(albums, 0, len(albums))
+					} else {
+						<div class="text-white text-center w-full py-4">No albums found</div>
+					}
+				</div>
+			</div>
+			<div class="album-controls flex justify-between mt-4">
+				<button id="scroll-left-btn" class="scroll-left-btn text-white bg-gray-700 hover:bg-gray-800 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-gray-600 dark:hover:bg-gray-700 dark:focus:ring-gray-800 flex items-center">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+					</svg>
+					Previous
+				</button>
+				<button class="start-button focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-6 py-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800" 
+					type="button" 
+					hx-post="/start-process" 
+					hx-trigger="click" 
+					hx-target="#processing-results" 
+					hx-include="[name='selectedAlbums']"
+					onclick="toggleAlbumDropdown()">Start</button>
+				<button id="scroll-right-btn" class="scroll-right-btn text-white bg-gray-700 hover:bg-gray-800 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-gray-600 dark:hover:bg-gray-700 dark:focus:ring-gray-800 flex items-center">
+					Next
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+					</svg>
+				</button>
+			</div>
+		</div>
+		
+		<button id="toggle-album-button" 
+			class="toggle-album-btn hidden mt-3 text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+			onclick="toggleAlbumDropdown()">
+			Show Albums
+		</button>
 	</div>
-	<button
-		class="start-button focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
-		type="button"
-		hx-post="/start-process"
-		hx-trigger="click"
-		hx-target="#processing-results"
-		hx-include="[name='selectedAlbums']"
-	>
-		Start
-	</button>
-	<div id="processing-results" class="bg-center text-green-500"></div>
+	
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			// Get references to the scroll elements
+			const scrollWrapper = document.getElementById('album-scroll-wrapper');
+			const scrollLeftBtn = document.getElementById('scroll-left-btn');
+			const scrollRightBtn = document.getElementById('scroll-right-btn');
+			const artistId = document.querySelector('input[name="artist-id"]')?.value;
+			
+			if (scrollWrapper && scrollLeftBtn && scrollRightBtn) {
+				// Add scrollbar styling
+				scrollWrapper.style.scrollbarWidth = 'thin';
+				scrollWrapper.style.scrollbarColor = '#4B5563 transparent';
+				
+				// Setup scroll buttons
+				scrollLeftBtn.addEventListener('click', function() {
+					scrollWrapper.scrollBy({ left: -400, behavior: 'smooth' });
+				});
+				
+				scrollRightBtn.addEventListener('click', function() {
+					scrollWrapper.scrollBy({ left: 400, behavior: 'smooth' });
+				});
+				
+				// Setup scroll event for detecting when near end
+				scrollWrapper.addEventListener('scroll', function() {
+					if (isNearEnd(scrollWrapper)) {
+						// Request more albums when near the end of scrolling
+						if (artistId) {
+							fetchMoreAlbums(artistId);
+						}
+					}
+				});
+			}
+			
+			// Add toggle album dropdown functionality
+			const toggleButton = document.getElementById('toggle-album-button');
+			if (toggleButton) {
+				toggleButton.addEventListener('click', toggleAlbumDropdown);
+			}
+		});
+		
+		// Function to toggle the album dropdown
+		function toggleAlbumDropdown() {
+			const dropdown = document.querySelector('.album-dropdown-inner');
+			const toggleButton = document.getElementById('toggle-album-button');
+			
+			if (dropdown.style.display === 'none') {
+				dropdown.style.display = 'block';
+				toggleButton.textContent = 'Hide Albums';
+			} else {
+				dropdown.style.display = 'none';
+				toggleButton.textContent = 'Show Albums';
+				toggleButton.classList.remove('hidden');
+			}
+		}
+		
+		// Global variables to track album loading
+		let offset = 0;
+		let isLoading = false;
+		let allAlbumsLoaded = false;
+		
+		// Function to fetch more albums
+		function fetchMoreAlbums(artistId) {
+			if (isLoading || allAlbumsLoaded) return;
+			
+			isLoading = true;
+			offset += 20; // Assuming batch size of 20
+			
+			// Add a temporary loading indicator
+			const albumsContainer = document.getElementById('albums-container');
+			const loadingIndicator = document.createElement('div');
+			loadingIndicator.id = 'temp-loading';
+			loadingIndicator.className = 'flex items-center justify-center ml-4 mr-2 my-3';
+			loadingIndicator.style.minWidth = '80px';
+			loadingIndicator.innerHTML = '<div class="loading-spinner border-t-2 border-b-2 border-green-500 rounded-full w-8 h-8 animate-spin"></div>';
+			albumsContainer.appendChild(loadingIndicator);
+			
+			// Fetch more albums with offset
+			fetch(`/get-albums?artist-id=${artistId}&offset=${offset}`)
+				.then(response => response.text())
+				.then(html => {
+					// Remove the loading indicator
+					const tempLoading = document.getElementById('temp-loading');
+					if (tempLoading) {
+						tempLoading.remove();
+					}
+					
+					// If no more albums, mark as complete
+					if (html.trim() === "" || html.includes("No albums found")) {
+						allAlbumsLoaded = true;
+						return;
+					}
+					
+					// Append the new albums to the container
+					const tempContainer = document.createElement('div');
+					tempContainer.innerHTML = html;
+					
+					// Extract the album cards and append them
+					const albumCards = tempContainer.querySelectorAll('.album-card');
+					if (albumCards.length === 0) {
+						allAlbumsLoaded = true;
+					} else {
+						albumCards.forEach(card => {
+							albumsContainer.appendChild(card);
+						});
+					}
+					
+					isLoading = false;
+				})
+				.catch(error => {
+					console.error('Error fetching more albums:', error);
+					isLoading = false;
+					
+					// Remove loading indicator on error
+					const tempLoading = document.getElementById('temp-loading');
+					if (tempLoading) {
+						tempLoading.remove();
+					}
+				});
+		}
+		
+		// Function to check if scroll is near the end
+		function isNearEnd(el, threshold = 300) {
+			return el.scrollWidth - el.scrollLeft - el.clientWidth < threshold;
+		}
+		
+		// Add the setSearchValue function if it doesn't exist
+		if (typeof setSearchValue !== 'function') {
+			function setSearchValue(name, id) {
+				document.querySelector('input[name="search"]').value = name;
+				document.querySelector('input[name="artist-id"]').value = id;
+				document.getElementById('search-results').innerHTML = '';
+			}
+		}
+	</script>
+}
+
+// AlbumBatch renders a batch of albums
+templ AlbumBatch(albums []base.Album, start, end int) {
+	for i := start; i < end; i++ {
+		@AlbumCard(albums[i])
+	}
 }
 
 templ AlbumCard(album base.Album) {
-	{{ class_selected := "album-card block p-0 bg-white border border-gray-100 rounded-lg shadow-sm hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700" }}
+	{{ class_selected := "album-card block bg-white border border-gray-200 rounded-lg shadow-md hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 flex-shrink-0 mx-3 my-2 transition-all duration-200 transform hover:scale-105" }}
 	if album.Selected {
-		{{ class_selected = "album-card block p-0 bg-white border border-gray-100 rounded-lg shadow-sm hover:bg-gray-100 dark:bg-gray-700 dark:border-gray-700 dark:hover:bg-gray-700" }}
+		{{ class_selected = "album-card block bg-white border-2 border-green-500 rounded-lg shadow-md hover:bg-gray-100 dark:bg-gray-700 dark:border-green-500 dark:hover:bg-gray-700 flex-shrink-0 mx-3 my-2 transition-all duration-200 transform hover:scale-105" }}
 	}
 	<div
 		class={ class_selected }
+		style="width: 200px;"
 		hx-trigger="click"
 		hx-post="/api/select-album"
 		hx-vals={ `{"albumID": "` + album.ID + `"}` }
 		value={ album.ID }
 		hx-swap="outerHTML"
 	>
-		<div
-			class="flex container album-info mb-2 text-xs font-bold tracking-tight text-gray-900 dark:text-white"
-		>
-			<img src={ album.Images[0].URL } alt="Album Cover" class="w-20 h-20 rounded-lg"/>
-			<div class="p-1  rounded-sm ">
-				<h3>{ album.Name }</h3>
-				<p class="text-xs">{ fmt.Sprint(album.ReleaseDate.Year() ) }</p>
+		<div class="flex flex-col items-center p-3 text-center">
+			<div class="album-image-container mb-4">
+				<img 
+					src={ album.Images[0].URL } 
+					alt="Album Cover" 
+					class="w-36 h-36 rounded-md shadow-sm object-cover"
+				/>
+			</div>
+			<div class="album-text-container text-center w-full pt-2 px-2">
+				<h3 class="font-bold text-sm text-gray-900 dark:text-white truncate w-full">{ album.Name }</h3>
+				<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{ fmt.Sprint(album.ReleaseDate.Year()) }</p>
 			</div>
 		</div>
 	</div>

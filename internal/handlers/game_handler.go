@@ -380,8 +380,20 @@ func (h *GameHandler) GetArtistAlbums(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Call Spotify API
-	apiURL := fmt.Sprintf("https://api.spotify.com/v1/artists/%s/albums", artistID)
+	// Get offset for pagination
+	offset := 0
+	offsetStr := r.URL.Query().Get("offset")
+	if offsetStr != "" {
+		if parsedOffset, err := fmt.Sscanf(offsetStr, "%d", &offset); err != nil || parsedOffset < 1 {
+			offset = 0
+		}
+	}
+
+	// API parameters
+	limit := 20 // Number of albums to fetch per request
+
+	// Call Spotify API - filter to only include albums (not singles or EPs)
+	apiURL := fmt.Sprintf("https://api.spotify.com/v1/artists/%s/albums?offset=%d&limit=%d&include_groups=album", artistID, offset, limit)
 
 	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
@@ -422,10 +434,24 @@ func (h *GameHandler) GetArtistAlbums(w http.ResponseWriter, r *http.Request) {
 				Width  int    `json:"width"`
 			} `json:"images"`
 		} `json:"items"`
+		Total int `json:"total"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&albumsResponse); err != nil {
 		http.Error(w, fmt.Sprintf("Error decoding response: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// If no albums are returned, send empty response for subsequent requests
+	if len(albumsResponse.Items) == 0 {
+		if offset > 0 {
+			// This is a pagination request with no more albums
+			w.Write([]byte(""))
+			return
+		}
+		// This is an initial request with no albums
+		component := templates.AlbumBatch([]base.Album{}, 0, 0)
+		component.Render(r.Context(), w)
 		return
 	}
 
@@ -470,9 +496,16 @@ func (h *GameHandler) GetArtistAlbums(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Return albums grid
-	component := templates.AlbumGrid(albums)
-	component.Render(r.Context(), w)
+	// Return albums - initial request gets full dropdown, pagination requests get just album batch
+	if offset > 0 {
+		// For pagination, just return the batch of albums
+		component := templates.AlbumBatch(albums, 0, len(albums))
+		component.Render(r.Context(), w)
+	} else {
+		// Initial request gets the full dropdown
+		component := templates.AlbumDropdown(albums)
+		component.Render(r.Context(), w)
+	}
 }
 
 // SelectAlbum handles album selection
@@ -500,7 +533,7 @@ func (h *GameHandler) SelectAlbum(w http.ResponseWriter, r *http.Request) {
 		albumCache.Album.Selected = !albumCache.Album.Selected
 		h.Cache.AlbumsCache[albumID] = albumCache
 
-		// Return updated album card
+		// Return updated album card with the new UI
 		component := templates.AlbumCard(albumCache.Album)
 		component.Render(r.Context(), w)
 	} else {

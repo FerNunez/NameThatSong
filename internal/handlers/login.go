@@ -324,7 +324,7 @@ func (cfg *SpotifyApi) AlbumGridHttp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return the search results component
-	component := templates.AlbumGrid(albums)
+	component := templates.AlbumDropdown(albums)
 	component.Render(r.Context(), w)
 }
 
