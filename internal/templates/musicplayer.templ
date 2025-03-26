@@ -35,7 +35,12 @@ templ MusicPlayer() {
 						<path d="M8 5v14l11-7z"></path>
 					</svg>
 				</button>
-				<button class="p-2 hover:bg-zinc-700 rounded-full">
+				<button
+					class="p-2 hover:bg-zinc-700 rounded-full"
+					hx-put="/skip"
+					hx-trigger="click"
+					hx-swap="none"
+				>
 					<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
 					</svg>

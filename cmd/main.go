@@ -39,7 +39,7 @@ func main() {
 	r.Get("/guess-helper", gameHandler.GuessHelper)
 	r.Post("/guess-track", gameHandler.GuessTrack)
 	r.Post("/select-track", gameHandler.SelectTrack)
-	r.Get("/skip", gameHandler.SkipSong)
+	r.Put("/skip", gameHandler.SkipSong)
 
 	// Start the server
 	port := os.Getenv("PORT")
