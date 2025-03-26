@@ -907,3 +907,15 @@ func (h *GameHandler) SkipSong(w http.ResponseWriter, r *http.Request) {
 
 	w.Write([]byte("Skipped to next song"))
 }
+
+// ClearQueue handles clearing the music player queue
+func (h *GameHandler) ClearQueue(w http.ResponseWriter, r *http.Request) {
+	// Clear the queue in the game service
+	err := h.GameService.ClearQueue()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error clearing queue: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write([]byte("Queue cleared successfully"))
+}

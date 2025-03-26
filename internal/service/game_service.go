@@ -15,6 +15,7 @@ type GameService struct {
 	SelectedAlbums map[string]bool
 	CurrentGuess   string
 	Score          int
+	IsActive       bool
 }
 
 // NewGameService creates a new game service
@@ -25,6 +26,7 @@ func NewGameService(player player.MusicPlayer, provider player.SongProvider) *Ga
 		SelectedAlbums: make(map[string]bool),
 		CurrentGuess:   "",
 		Score:          0,
+		IsActive:       false,
 	}
 }
 
@@ -123,4 +125,18 @@ func (s *GameService) GetScore() int {
 // SkipSong skips to the next song
 func (s *GameService) SkipSong() error {
 	return s.Player.Skip()
+}
+
+// ClearQueue clears the current music queue
+func (s *GameService) ClearQueue() error {
+	// Clear the player's queue
+	s.Player.ClearQueue()
+
+	// Clear selected albums
+	s.SelectedAlbums = make(map[string]bool)
+
+	// Reset active game status
+	s.IsActive = false
+
+	return nil
 }

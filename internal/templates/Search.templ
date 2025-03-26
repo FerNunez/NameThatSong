@@ -87,7 +87,7 @@ templ AlbumDropdown(albums []base.Album) {
 					hx-trigger="click" 
 					hx-target="#processing-results" 
 					hx-include="[name='selectedAlbums']"
-					onclick="toggleAlbumDropdown()">Start</button>
+					onclick="toggleAlbumDropdown()">Add</button>
 				<button id="scroll-right-btn" class="scroll-right-btn text-white bg-gray-700 hover:bg-gray-800 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-gray-600 dark:hover:bg-gray-700 dark:focus:ring-gray-800 flex items-center">
 					Next
 					<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -97,11 +97,20 @@ templ AlbumDropdown(albums []base.Album) {
 			</div>
 		</div>
 		
-		<button id="toggle-album-button" 
-			class="toggle-album-btn hidden mt-3 text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-			onclick="toggleAlbumDropdown()">
-			Show Albums
-		</button>
+		<div class="flex mt-3 space-x-2">
+			<button id="toggle-album-button" 
+				class="toggle-album-btn hidden text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+				onclick="toggleAlbumDropdown()">
+				Show Albums
+			</button>
+			<button id="clear-queue-button" 
+				class="clear-queue-btn text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
+				hx-post="/clear-queue"
+				hx-trigger="click"
+				hx-target="#processing-results">
+				Clear Queue
+			</button>
+		</div>
 	</div>
 	
 	<script>
