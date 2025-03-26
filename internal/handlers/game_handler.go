@@ -20,6 +20,7 @@ import (
 
 	"github.com/a-h/templ"
 	"github.com/joho/godotenv"
+	"slices"
 )
 
 // GameHandler handles the game flow
@@ -392,9 +393,10 @@ func (h *GameHandler) SearchArtists(w http.ResponseWriter, r *http.Request) {
 
 // GetArtistAlbums gets albums for an artist
 func (h *GameHandler) GetArtistAlbums(w http.ResponseWriter, r *http.Request) {
-	artistID := r.URL.Query().Get("artist_id")
+	artistID := r.URL.Query().Get("artist-id")
 	if artistID == "" {
 		http.Error(w, "Artist ID is required", http.StatusBadRequest)
+		fmt.Println("no album")
 		return
 	}
 
@@ -463,13 +465,7 @@ func (h *GameHandler) GetArtistAlbums(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Check if the album is selected
-		selected := false
-		for _, id := range h.GameService.GetSelectedAlbums() {
-			if id == item.ID {
-				selected = true
-				break
-			}
-		}
+		selected := slices.Contains(h.GameService.GetSelectedAlbums(), item.ID)
 
 		album := base.Album{
 			ID:               item.ID,
