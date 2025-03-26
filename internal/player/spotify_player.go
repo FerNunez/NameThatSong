@@ -1,9 +1,12 @@
 package player
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"time"
 )
 
@@ -68,6 +71,44 @@ func (p *SpotifyPlayer) Play() error {
 	// Example implementation:
 	// Call Spotify API to play the song at p.Queue[p.CurrentIndex].URI on device p.DeviceID
 	fmt.Printf("Playing song: %s on device: %s\n", p.Queue[p.CurrentIndex].Name, p.DeviceID)
+
+	type PlaySongRequest struct {
+		Uris       []string `json:"uris"`
+		PositionMs int      `json:"position_ms"`
+	}
+
+	psr := PlaySongRequest{
+		Uris:       []string{fmt.Sprintf("spotify:track:%v", p.Queue[p.CurrentIndex].ID)},
+		PositionMs: 0,
+	}
+
+	dat, err := json.Marshal(psr)
+	if err != nil {
+		fmt.Println("HELP")
+	}
+
+	// Set request
+	req, err := http.NewRequest("PUT", "https://api.spotify.com/v1/me/player/play", bytes.NewBuffer(dat))
+	if err != nil {
+		errmsg := fmt.Sprintf("could not create request for me: %v", err)
+		fmt.Println(errmsg)
+		return err
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", p.AccessToken))
+	req.Header.Set("Content-Type", "application/json")
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		errmsg := fmt.Sprintf("could not do request for me: %v", err)
+		fmt.Println(errmsg)
+		return err
+	}
+	if resp.StatusCode != http.StatusNoContent {
+		errmsg := fmt.Sprintf("could not get good status code: %v", resp.StatusCode)
+		fmt.Println(errmsg)
+
+		return errors.New(errmsg)
+	}
 
 	p.Playing = true
 	return nil
