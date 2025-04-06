@@ -11,6 +11,15 @@ type SpotifyCache struct {
 	TrackMap          map[string]spotify_api.TrackData
 }
 
+func NewSpotifyCache() *SpotifyCache {
+	return &SpotifyCache{
+		ArtistToAlbumsMap: map[string][]string{},
+		AlbumMap:          map[string]spotify_api.AlbumData{},
+		AlbumToTracksMap:  map[string][]string{},
+		TrackMap:          map[string]spotify_api.TrackData{},
+	}
+}
+
 func (c *SpotifyCache) GetArtistData(id string) (spotify_api.ArtistData, error) {
 
 	return spotify_api.ArtistData{}, nil

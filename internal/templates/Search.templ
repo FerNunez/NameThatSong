@@ -1,9 +1,6 @@
 package templates
 
-import (
-	"fmt"
-	"goth/internal/base"
-)
+import "goth/internal/spotify_api"
 
 // min returns the smaller of two integers
 func min(a, b int) int {
@@ -56,13 +53,13 @@ templ SearchInput() {
 	</div>
 }
 
-templ SearchResults(results []base.Artist) {
+templ SearchResults(results []spotify_api.ArtistData) {
 	<div class="search-results-list">
 		for _, result := range results {
 			<div
 				class="search-result-item inline-flex w-full px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-				onclick={ templ.JSFuncCall("setSearchValue", result.Name, result.ID) }
-				data-id={ result.ID }
+				onclick={ templ.JSFuncCall("setSearchValue", result.Name, result.Id) }
+				data-id={ result.Id }
 			>
 				{ result.Name }
 			</div>
@@ -71,14 +68,14 @@ templ SearchResults(results []base.Artist) {
 }
 
 // AlbumDropdown is the new dropdown component for albums
-templ AlbumDropdown(albums []base.Album) {
+templ AlbumDropdown(albums []spotify_api.AlbumData, selectedAlbums map[string]bool) {
 	<div class="relative">
 		<div class="album-dropdown-inner overflow-hidden bg-gray-900 p-4 rounded-lg shadow-lg">
 			<h2 class="text-white text-lg font-bold mb-3">Select albums</h2>
 			<div id="album-scroll-wrapper" class="album-scroll-wrapper flex justify-start overflow-x-auto pb-4 pt-2 px-2" style="scroll-behavior: smooth; -webkit-overflow-scrolling: touch;">
 				<div id="albums-container" class="flex flex-row items-start pl-4">
 					if len(albums) > 0 {
-						@AlbumBatch(albums, 0, len(albums))
+						@AlbumBatch(albums, 0, len(albums), selectedAlbums)
 					} else {
 						<div class="text-white text-center w-full py-4">No albums found</div>
 					}
@@ -134,21 +131,21 @@ templ AlbumDropdown(albums []base.Album) {
 			const scrollLeftBtn = document.getElementById('scroll-left-btn');
 			const scrollRightBtn = document.getElementById('scroll-right-btn');
 			const artistId = document.querySelector('input[name="artist-id"]')?.value;
-			
+
 			if (scrollWrapper && scrollLeftBtn && scrollRightBtn) {
 				// Add scrollbar styling
 				scrollWrapper.style.scrollbarWidth = 'thin';
 				scrollWrapper.style.scrollbarColor = '#4B5563 transparent';
-				
+
 				// Setup scroll buttons
 				scrollLeftBtn.addEventListener('click', function() {
 					scrollWrapper.scrollBy({ left: -400, behavior: 'smooth' });
 				});
-				
+
 				scrollRightBtn.addEventListener('click', function() {
 					scrollWrapper.scrollBy({ left: 400, behavior: 'smooth' });
 				});
-				
+
 				// Setup scroll event for detecting when near end
 				scrollWrapper.addEventListener('scroll', function() {
 					if (isNearEnd(scrollWrapper)) {
@@ -159,19 +156,19 @@ templ AlbumDropdown(albums []base.Album) {
 					}
 				});
 			}
-			
+
 			// Add toggle album dropdown functionality
 			const toggleButton = document.getElementById('toggle-album-button');
 			if (toggleButton) {
 				toggleButton.addEventListener('click', toggleAlbumDropdown);
 			}
 		});
-		
+
 		// Function to toggle the album dropdown
 		function toggleAlbumDropdown() {
 			const dropdown = document.querySelector('.album-dropdown-inner');
 			const toggleButton = document.getElementById('toggle-album-button');
-			
+
 			if (dropdown.style.display === 'none') {
 				dropdown.style.display = 'block';
 				toggleButton.textContent = 'Hide Albums';
@@ -181,19 +178,19 @@ templ AlbumDropdown(albums []base.Album) {
 				toggleButton.classList.remove('hidden');
 			}
 		}
-		
+
 		// Global variables to track album loading
 		let offset = 0;
 		let isLoading = false;
 		let allAlbumsLoaded = false;
-		
+
 		// Function to fetch more albums
 		function fetchMoreAlbums(artistId) {
 			if (isLoading || allAlbumsLoaded) return;
-			
+
 			isLoading = true;
 			offset += 20; // Assuming batch size of 20
-			
+
 			// Add a temporary loading indicator
 			const albumsContainer = document.getElementById('albums-container');
 			const loadingIndicator = document.createElement('div');
@@ -202,7 +199,7 @@ templ AlbumDropdown(albums []base.Album) {
 			loadingIndicator.style.minWidth = '80px';
 			loadingIndicator.innerHTML = '<div class="loading-spinner border-t-2 border-b-2 border-green-500 rounded-full w-8 h-8 animate-spin"></div>';
 			albumsContainer.appendChild(loadingIndicator);
-			
+
 			// Fetch more albums with offset
 			fetch(`/get-albums?artist-id=${artistId}&offset=${offset}`)
 				.then(response => response.text())
@@ -212,17 +209,17 @@ templ AlbumDropdown(albums []base.Album) {
 					if (tempLoading) {
 						tempLoading.remove();
 					}
-					
+
 					// If no more albums, mark as complete
 					if (html.trim() === "" || html.includes("No albums found")) {
 						allAlbumsLoaded = true;
 						return;
 					}
-					
+
 					// Append the new albums to the container
 					const tempContainer = document.createElement('div');
 					tempContainer.innerHTML = html;
-					
+
 					// Extract the album cards and append them
 					const albumCards = tempContainer.querySelectorAll('.album-card');
 					if (albumCards.length === 0) {
@@ -232,13 +229,13 @@ templ AlbumDropdown(albums []base.Album) {
 							albumsContainer.appendChild(card);
 						});
 					}
-					
+
 					isLoading = false;
 				})
 				.catch(error => {
 					console.error('Error fetching more albums:', error);
 					isLoading = false;
-					
+
 					// Remove loading indicator on error
 					const tempLoading = document.getElementById('temp-loading');
 					if (tempLoading) {
@@ -246,12 +243,12 @@ templ AlbumDropdown(albums []base.Album) {
 					}
 				});
 		}
-		
+
 		// Function to check if scroll is near the end
 		function isNearEnd(el, threshold = 300) {
 			return el.scrollWidth - el.scrollLeft - el.clientWidth < threshold;
 		}
-		
+
 		// Add the setSearchValue function if it doesn't exist
 		if (typeof setSearchValue !== 'function') {
 			function setSearchValue(name, id) {
@@ -264,15 +261,16 @@ templ AlbumDropdown(albums []base.Album) {
 }
 
 // AlbumBatch renders a batch of albums
-templ AlbumBatch(albums []base.Album, start, end int) {
-	for i := start; i < end; i++ {
-		@AlbumCard(albums[i])
+templ AlbumBatch(albums []spotify_api.AlbumData, start, end int, selectedAlbums map[string]bool) {
+	for _, album := range albums {
+		{{ _, selected := selectedAlbums[album.ID] }}
+		@AlbumCard(album, selected)
 	}
 }
 
-templ AlbumCard(album base.Album) {
+templ AlbumCard(album spotify_api.AlbumData, selected bool) {
 	{{ class_selected := "album-card block bg-white border border-gray-200 rounded-lg shadow-md hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 flex-shrink-0 mx-3 my-2 transition-all duration-200 transform hover:scale-105" }}
-	if album.Selected {
+	if selected {
 		{{ class_selected = "album-card block bg-white border-2 border-green-500 rounded-lg shadow-md hover:bg-gray-100 dark:bg-gray-700 dark:border-green-500 dark:hover:bg-gray-700 flex-shrink-0 mx-3 my-2 transition-all duration-200 transform hover:scale-105" }}
 	}
 	<div
@@ -287,14 +285,14 @@ templ AlbumCard(album base.Album) {
 		<div class="flex flex-col items-center p-3 text-center">
 			<div class="album-image-container mb-4">
 				<img
-					src={ album.Images[0].URL }
+					src={ album.ImagesURL }
 					alt="Album Cover"
 					class="w-36 h-36 rounded-md shadow-sm object-cover"
 				/>
 			</div>
 			<div class="album-text-container text-center w-full pt-2 px-2">
 				<h3 class="font-bold text-sm text-gray-900 dark:text-white truncate w-full">{ album.Name }</h3>
-				<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{ fmt.Sprint(album.ReleaseDate.Year()) }</p>
+				<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{ album.ReleaseDate }</p>
 			</div>
 		</div>
 	</div>

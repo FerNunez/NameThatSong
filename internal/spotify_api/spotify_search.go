@@ -11,7 +11,7 @@ import (
 
 func (p *SpotifySongProvider) SearchArtistsByName(name string) ([]ArtistData, error) {
 
-	fmt.Println("Got query: name, ", name)
+	limit := "50"
 	artistQuery := "artist:" + strings.ToLower(name)
 
 	// Call Spotify API
@@ -22,6 +22,7 @@ func (p *SpotifySongProvider) SearchArtistsByName(name string) ([]ArtistData, er
 	q := apiURL.Query()
 	q.Set("type", "artist")
 	q.Set("q", artistQuery)
+	q.Set("limit", limit)
 	apiURL.RawQuery = q.Encode()
 
 	req, err := http.NewRequest("GET", apiURL.String(), nil)
@@ -69,10 +70,15 @@ func (p *SpotifySongProvider) SearchArtistsByName(name string) ([]ArtistData, er
 	artists := make([]ArtistData, 0, len(searchArtistResponse.Artists.Items))
 	for _, a := range searchArtistResponse.Artists.Items {
 
+		// TODO: add here and temp url???
+		imageUrl := ""
+		if len(a.Images) > 0 {
+			imageUrl = a.Images[0].URL
+		}
 		artistInfo := ArtistData{
 			Id:         a.ID,
 			Name:       a.Name,
-			ImageUrl:   a.Images[0].URL,
+			ImageUrl:   imageUrl,
 			Popularity: a.Popularity,
 		}
 		artists = append(artists, artistInfo)
@@ -81,8 +87,6 @@ func (p *SpotifySongProvider) SearchArtistsByName(name string) ([]ArtistData, er
 	sort.Slice(artists, func(i, j int) bool {
 		return artists[i].Popularity > artists[j].Popularity
 	})
-
-	fmt.Println(artists)
 
 	return artists, nil
 }

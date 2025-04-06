@@ -12,7 +12,7 @@ type GameService struct {
 	MusicPlayer    *player.MusicPlayer
 	SpotifyApi     *spotify_api.SpotifySongProvider
 	AlbumSelection map[string]bool
-	Cache          cache.SpotifyCache
+	Cache          *cache.SpotifyCache
 }
 
 // NewGameService creates a new game service
@@ -21,21 +21,19 @@ func NewGameService(player *player.MusicPlayer, provider *spotify_api.SpotifySon
 		MusicPlayer:    player,
 		SpotifyApi:     provider,
 		AlbumSelection: make(map[string]bool),
+		Cache:          cache.NewSpotifyCache(),
 	}
 }
 
 // SelectAlbum selects or deselects an album
-func (s *GameService) AddAlbum(albumID string) error {
-	if len(s.AlbumSelection) == 0 {
-		return errors.New("album selection is empty")
-	}
+func (s *GameService) ToggleAlbumSelection(albumID string) bool {
 
 	if _, exists := s.AlbumSelection[albumID]; exists {
 		delete(s.AlbumSelection, albumID)
-	} else {
-		s.AlbumSelection[albumID] = true
+		return false
 	}
-	return nil
+	s.AlbumSelection[albumID] = true
+	return true
 }
 
 // GetSelectedAlbums returns the currently selected albums

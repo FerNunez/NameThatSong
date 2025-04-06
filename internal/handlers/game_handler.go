@@ -3,7 +3,6 @@ package handlers
 import (
 	"fmt"
 	"github.com/joho/godotenv"
-	"goth/internal/base"
 	"goth/internal/music_player"
 	"goth/internal/service"
 	"goth/internal/spotify_api"
@@ -102,14 +101,17 @@ func (h *GameHandler) SearchArtists(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("search")
 	if query == "" {
 		// Return empty results component
-		component := templates.SearchResults([]base.Artist{})
+		component := templates.SearchResults([]spotify_api.ArtistData{})
 		component.Render(r.Context(), w)
 		return
 	}
 
 	artists, err := h.GameService.SearchArtists(query)
-	if err != nil {
+	if err != nil || len(artists) == 0 {
 		// TODO: SEND ERROR TO REQUEST
+		component := templates.SearchResults([]spotify_api.ArtistData{})
+		component.Render(r.Context(), w)
+		return
 	}
 
 	// Sort by popularity
@@ -118,30 +120,29 @@ func (h *GameHandler) SearchArtists(w http.ResponseWriter, r *http.Request) {
 	})
 
 	// Return results component
-	// FIX ME
-	//component := templates.SearchResults(artists)
-	//component.Render(r.Context(), w)
+	component := templates.SearchResults(artists)
+	component.Render(r.Context(), w)
 }
 
 // GetArtistAlbums gets albums for an artist
 func (h *GameHandler) GetArtistAlbums(w http.ResponseWriter, r *http.Request) {
 	artistID := r.URL.Query().Get("artist-id")
+	fmt.Println("got artist ID", artistID)
 	if artistID == "" {
 		http.Error(w, "Artist ID is required", http.StatusBadRequest)
+		return
+	}
+
+	albums, err := h.GameService.GetArtistsAlbum(artistID)
+	//albums, err := h.GameService.SpotifyApi.FetchAlbumByArtistID(artistID)
+	if err != nil {
+		http.Error(w, "Cant retrieve Artist ID albums", http.StatusBadRequest)
 		fmt.Println("no album")
 		return
 	}
 
-	// 	// Return albums - initial request gets full dropdown, pagination requests get just album batch
-	// 	if offset > 0 {
-	// 		// For pagination, just return the batch of albums
-	// 		component := templates.AlbumBatch(albums, 0, len(albums))
-	// 		component.Render(r.Context(), w)
-	// 	} else {
-	// 		// Initial request gets the full dropdown
-	// 		component := templates.AlbumDropdown(albums)
-	// 		component.Render(r.Context(), w)
-	// 	}
+	component := templates.AlbumDropdown(albums, h.GameService.AlbumSelection)
+	component.Render(r.Context(), w)
 }
 
 // SelectAlbum handles album selection
@@ -158,11 +159,14 @@ func (h *GameHandler) SelectAlbum(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Toggle album selection
-	err := h.GameService.AddAlbum(albumID)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error selecting album: %v", err), http.StatusInternalServerError)
-		return
+	toggle := h.GameService.ToggleAlbumSelection(albumID)
+
+	album, ok := h.GameService.Cache.AlbumMap[albumID]
+	if !ok {
+		panic("album should be in cache")
 	}
+	component := templates.AlbumCard(album, toggle)
+	component.Render(r.Context(), w)
 
 	// // Update UI state
 	// 	component := templates.AlbumCard(albumCache.Album)
