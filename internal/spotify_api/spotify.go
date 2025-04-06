@@ -1,6 +1,6 @@
 package spotify_api
 
-type ArtistInfo struct {
+type ArtistData struct {
 	Id         string
 	Name       string
 	ImageUrl   string
@@ -13,15 +13,19 @@ type SpotifySongProvider struct {
 	RefreshToken string
 	ClientID     string
 	ClientSecret string
+	RedirectURI  string
+	State        string
 }
 
 // NewSpotifySongProvider creates a new SpotifySongProvider
-func NewSpotifySongProvider(accessToken, refreshToken, clientID, clientSecret string) *SpotifySongProvider {
+func NewSpotifySongProvider(clientID, clientSecret string, redirectURI string, state string) *SpotifySongProvider {
 	return &SpotifySongProvider{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
+		AccessToken:  "",
+		RefreshToken: "",
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
+		RedirectURI:  redirectURI,
+		State:        state,
 	}
 }
 

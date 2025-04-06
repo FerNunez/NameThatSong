@@ -25,8 +25,8 @@ func main() {
 	fileServer := http.FileServer(http.Dir("./static"))
 	r.Handle("/static/*", http.StripPrefix("/static/", fileServer))
 
-	// Routes
 	r.Get("/", gameHandler.IndexHandler)
+	// Auth Routes
 	r.Get("/login", gameHandler.AuthHandler)
 	r.Get("/auth/callback", gameHandler.AuthCallbackHandler)
 
@@ -39,8 +39,8 @@ func main() {
 	r.Get("/guess-helper", gameHandler.GuessHelper)
 	r.Post("/guess-track", gameHandler.GuessTrack)
 	r.Post("/select-track", gameHandler.SelectTrack)
-	r.Put("/skip", gameHandler.SkipSong)
-	r.Post("/clear-queue", gameHandler.ClearQueue)
+	//r.Put("/skip", gameHandler.SkipSong)
+	// r.Post("/clear-queue", gameHandler.ClearQueue)
 
 	// Start the server
 	port := os.Getenv("PORT")

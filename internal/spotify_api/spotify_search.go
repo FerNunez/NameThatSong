@@ -9,8 +9,9 @@ import (
 	"strings"
 )
 
-func (p *SpotifySongProvider) SearchArtistsByName(name string) ([]ArtistInfo, error) {
+func (p *SpotifySongProvider) SearchArtistsByName(name string) ([]ArtistData, error) {
 
+	fmt.Println("Got query: name, ", name)
 	artistQuery := "artist:" + strings.ToLower(name)
 
 	// Call Spotify API
@@ -65,10 +66,10 @@ func (p *SpotifySongProvider) SearchArtistsByName(name string) ([]ArtistInfo, er
 	}
 
 	// Convert to ArtistInfo
-	artists := make([]ArtistInfo, 0, len(searchArtistResponse.Artists.Items))
+	artists := make([]ArtistData, 0, len(searchArtistResponse.Artists.Items))
 	for _, a := range searchArtistResponse.Artists.Items {
 
-		artistInfo := ArtistInfo{
+		artistInfo := ArtistData{
 			Id:         a.ID,
 			Name:       a.Name,
 			ImageUrl:   a.Images[0].URL,
@@ -81,7 +82,7 @@ func (p *SpotifySongProvider) SearchArtistsByName(name string) ([]ArtistInfo, er
 		return artists[i].Popularity > artists[j].Popularity
 	})
 
+	fmt.Println(artists)
+
 	return artists, nil
 }
-
-
