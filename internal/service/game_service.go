@@ -14,7 +14,8 @@ type GameService struct {
 	SpotifyApi      *spotify_api.SpotifySongProvider
 	AlbumSelection  map[string]bool
 	ArtistSelection map[string]uint8
-	TrackPoolId     []string
+	TracksToPlayId  []string
+	TracksOptions   []spotify_api.TrackData
 	Cache           *cache.SpotifyCache
 }
 
@@ -119,14 +120,38 @@ func (s GameService) GetAlbumTracks(albumId string) ([]spotify_api.TrackData, er
 
 // StartGame prepares the game with selected albums
 func (s *GameService) StartGame() error {
-	fmt.Println("Game Started!")
 	if len(s.AlbumSelection) <= 0 {
 		return errors.New("Empty album selection")
 	}
 
-	fmt.Println(len(s.AlbumSelection))
-	//trackId := s.MusicPlayer.Queue[s.MusicPlayer.CurrentIndex]
-	//s.SpotifyApi.PlaySong(trackId)
+	for artistId := range s.ArtistSelection {
+		albumsId, ok := s.Cache.ArtistToAlbumsMap[artistId]
+		if !ok {
+			panic(fmt.Sprintf("artistId to albumId map should have artist: %v", artistId))
+		}
+
+		for _, albumId := range albumsId {
+			tracksData, err := s.GetAlbumTracks(albumId)
+			if err != nil {
+				return err
+			}
+			s.TracksOptions = append(s.TracksOptions, tracksData...)
+
+			_, exists := s.AlbumSelection[albumId]
+			if exists {
+				for _, track := range tracksData {
+					s.TracksToPlayId = append(s.TracksToPlayId, track.ID)
+				}
+			}
+		}
+
+	}
+
+	s.MusicPlayer.Queue = append(s.MusicPlayer.Queue, s.TracksToPlayId...)
+	s.MusicPlayer.Shuffle()
+	trackId := s.MusicPlayer.Queue[s.MusicPlayer.CurrentIndex]
+	s.SpotifyApi.PlaySong(trackId)
+
 	return nil
 }
 
