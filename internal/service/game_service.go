@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"goth/internal/cache"
 	"goth/internal/music_player"
 	"goth/internal/spotify_api"
@@ -9,31 +10,47 @@ import (
 
 // GameService coordinates the song provider and music player
 type GameService struct {
-	MusicPlayer    *player.MusicPlayer
-	SpotifyApi     *spotify_api.SpotifySongProvider
-	AlbumSelection map[string]bool
-	Cache          *cache.SpotifyCache
+	MusicPlayer     *player.MusicPlayer
+	SpotifyApi      *spotify_api.SpotifySongProvider
+	AlbumSelection  map[string]bool
+	ArtistSelection map[string]uint8
+	TrackPoolId     []string
+	Cache           *cache.SpotifyCache
 }
 
 // NewGameService creates a new game service
 func NewGameService(player *player.MusicPlayer, provider *spotify_api.SpotifySongProvider) *GameService {
 	return &GameService{
-		MusicPlayer:    player,
-		SpotifyApi:     provider,
-		AlbumSelection: make(map[string]bool),
-		Cache:          cache.NewSpotifyCache(),
+		MusicPlayer:     player,
+		SpotifyApi:      provider,
+		AlbumSelection:  make(map[string]bool),
+		ArtistSelection: make(map[string]uint8),
+		Cache:           cache.NewSpotifyCache(),
 	}
 }
 
 // SelectAlbum selects or deselects an album
-func (s *GameService) ToggleAlbumSelection(albumID string) bool {
+func (s *GameService) ToggleAlbumSelection(albumID string, artistId string) bool {
 
+	isSelected := false
 	if _, exists := s.AlbumSelection[albumID]; exists {
 		delete(s.AlbumSelection, albumID)
-		return false
+
+		if occurrances, exists := s.ArtistSelection[artistId]; exists {
+			s.ArtistSelection[artistId] -= 1
+			if occurrances == 1 {
+				delete(s.ArtistSelection, artistId)
+			}
+			return false
+		}
+	} else {
+		s.AlbumSelection[albumID] = true
+		isSelected = true
+		s.ArtistSelection[artistId] += 1
 	}
+
 	s.AlbumSelection[albumID] = true
-	return true
+	return isSelected
 }
 
 // GetSelectedAlbums returns the currently selected albums
@@ -102,12 +119,14 @@ func (s GameService) GetAlbumTracks(albumId string) ([]spotify_api.TrackData, er
 
 // StartGame prepares the game with selected albums
 func (s *GameService) StartGame() error {
+	fmt.Println("Game Started!")
 	if len(s.AlbumSelection) <= 0 {
 		return errors.New("Empty album selection")
 	}
 
-	trackId := s.MusicPlayer.Queue[s.MusicPlayer.CurrentIndex]
-	s.SpotifyApi.PlaySong(trackId)
+	fmt.Println(len(s.AlbumSelection))
+	//trackId := s.MusicPlayer.Queue[s.MusicPlayer.CurrentIndex]
+	//s.SpotifyApi.PlaySong(trackId)
 	return nil
 }
 

@@ -141,7 +141,7 @@ func (h *GameHandler) GetArtistAlbums(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	component := templates.AlbumDropdown(albums, h.GameService.AlbumSelection)
+	component := templates.AlbumDropdown(albums, h.GameService.AlbumSelection, artistID)
 	component.Render(r.Context(), w)
 }
 
@@ -157,20 +157,23 @@ func (h *GameHandler) SelectAlbum(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Album ID is required", http.StatusBadRequest)
 		return
 	}
+	artistID := r.Form.Get("artistID")
+	if artistID == "" {
+		http.Error(w, "Album ID is required", http.StatusBadRequest)
+		return
+	}
+	fmt.Println("artistID", artistID)
 
 	// Toggle album selection
-	toggle := h.GameService.ToggleAlbumSelection(albumID)
+	toggle := h.GameService.ToggleAlbumSelection(albumID, artistID)
+	fmt.Println("# of artists", len(h.GameService.ArtistSelection))
 
 	album, ok := h.GameService.Cache.AlbumMap[albumID]
 	if !ok {
 		panic("album should be in cache")
 	}
-	component := templates.AlbumCard(album, toggle)
+	component := templates.AlbumCard(album, toggle, artistID)
 	component.Render(r.Context(), w)
-
-	// // Update UI state
-	// 	component := templates.AlbumCard(albumCache.Album)
-	// 	component.Render(r.Context(), w)
 }
 
 // StartGame handles game start

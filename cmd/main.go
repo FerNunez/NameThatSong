@@ -34,7 +34,7 @@ func main() {
 	r.Get("/search-helper", gameHandler.SearchArtists)
 	r.Get("/search-albums", gameHandler.GetArtistAlbums)
 	r.Post("/api/select-album", gameHandler.SelectAlbum)
-	//r.Post("/start-process", gameHandler.StartGame)
+	r.Post("/start-process", gameHandler.StartGame)
 	//r.Get("/play", gameHandler.PlayGame)
 	//r.Get("/guess-helper", gameHandler.GuessHelper)
 	//r.Post("/guess-track", gameHandler.GuessTrack)
