@@ -36,7 +36,8 @@ func main() {
 	r.Post("/api/select-album", gameHandler.SelectAlbum)
 	r.Post("/start-process", gameHandler.StartGame)
 	//r.Get("/play", gameHandler.PlayGame)
-	//r.Get("/guess-helper", gameHandler.GuessHelper)
+	//TODO: add only songs of artists here
+	r.Get("/guess-helper", gameHandler.GuessHelper)
 	//r.Post("/guess-track", gameHandler.GuessTrack)
 	//r.Post("/select-track", gameHandler.SelectTrack)
 	//r.Put("/skip", gameHandler.SkipSong)

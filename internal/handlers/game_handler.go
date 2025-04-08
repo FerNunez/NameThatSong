@@ -203,97 +203,37 @@ func (h *GameHandler) PlayGame(w http.ResponseWriter, r *http.Request) {
 // GuessHelper handles searching for tracks to guess
 func (h *GameHandler) GuessHelper(w http.ResponseWriter, r *http.Request) {
 	// TODO: FIX THIS
-	// // Get the query term
-	// query := r.URL.Query().Get("guess")
-	// if query == "" {
-	// 	// Return empty results
-	// 	w.Write([]byte(""))
-	// 	return
+	// Get the query term
+	query := r.URL.Query().Get("guess")
+	if query == "" {
+		// Return empty results
+		w.Write([]byte(""))
+		return
+	}
+
+	// for _, track := range h.GameService.TracksOptions {
+	// 	fmt.Println("t:", track.Name)
 	// }
+
+	guessOptions, err := h.GameService.FilterTrackOptions(query)
+	if err != nil {
+		return
+	}
+
+	// for _, track := range guessOptions {
+	// 	fmt.Printf("o: %v, id: %v,\n", track.Name, track.ID)
 	//
-	// // Format the query for track search
-	// cleanedQuery := utils.ParseGuessText(query)
-	//
-	// // Create artist cache structure from the handler's cache
-	// artistCacheMap := make(map[string]struct{ Name string })
-	// for id, artistCache := range h.Cache.ArtistsCache {
-	// 	artistCacheMap[id] = struct{ Name string }{Name: artistCache.Artist.Name}
 	// }
-	//
-	// // Check if we have selected albums
-	// selectedArtistNames := h.GameService.GetArtistsFromSelectedAlbums(h.AlbumsToArtists, artistCacheMap)
-	//
-	// // Call Spotify API to search for tracks
-	// apiURL, err := url.Parse("https://api.spotify.com/v1/search")
-	// if err != nil {
-	// 	http.Error(w, fmt.Sprintf("Error parsing URL: %v", err), http.StatusInternalServerError)
-	// 	return
-	// }
-	//
-	// q := apiURL.Query()
-	// q.Set("type", "track")
-	//
-	// // If we have selected artists, limit search to them
-	// if len(selectedArtistNames) > 0 {
-	// 	// Format the query to include artist filter (Spotify allows query format like "track:love artist:queen")
-	// 	artistQuery := ""
-	// 	for i, artistName := range selectedArtistNames {
-	// 		if i > 0 {
-	// 			artistQuery += " OR "
-	// 		}
-	// 		artistQuery += "artist:\"" + artistName + "\""
-	// 	}
-	// 	if artistQuery != "" {
-	// 		cleanedQuery = cleanedQuery + " " + artistQuery
-	// 	}
-	// }
-	//
-	// q.Set("q", cleanedQuery)
-	// q.Set("limit", "5") // Limit to 5 results
-	// apiURL.RawQuery = q.Encode()
-	//
-	// req, err := http.NewRequest("GET", apiURL.String(), nil)
-	// if err != nil {
-	// 	http.Error(w, fmt.Sprintf("Error creating request: %v", err), http.StatusInternalServerError)
-	// 	return
-	// }
-	//
-	// // Set Authorization header
-	// req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", h.AccessToken))
-	//
-	// // Make the request
-	// client := &http.Client{}
-	// resp, err := client.Do(req)
-	// if err != nil {
-	// 	http.Error(w, fmt.Sprintf("Error making request: %v", err), http.StatusInternalServerError)
-	// 	return
-	// }
-	// defer resp.Body.Close()
-	//
-	// if resp.StatusCode != http.StatusOK {
-	// 	http.Error(w, fmt.Sprintf("Spotify API returned error: %v", resp.Status), resp.StatusCode)
-	// 	return
-	// }
-	//
-	// // Parse response
-	// var searchResponse base.SearchTrackResponse
-	// if err := json.NewDecoder(resp.Body).Decode(&searchResponse); err != nil {
-	// 	http.Error(w, fmt.Sprintf("Error decoding response: %v", err), http.StatusInternalServerError)
-	// 	return
-	// }
-	//
-	// // Process the tracks
-	// tracks, artistsNames, albumUrls := h.parseTracks(searchResponse)
-	// println(tracks)
+
 	//
 	// // Sort tracks by popularity in descending order
 	// sort.Slice(tracks, func(i, j int) bool {
 	// 	return tracks[i].Popularity > tracks[j].Popularity
 	// })
 	//
-	// // Return results component
-	// component := templates.GuessHelperList(tracks, artistsNames, albumUrls)
-	// component.Render(r.Context(), w)
+	// Return results component
+	component := templates.GuessHelperList(tracks, artistsNames, albumUrls)
+	component.Render(r.Context(), w)
 }
 
 // parseTracks converts API response to track data

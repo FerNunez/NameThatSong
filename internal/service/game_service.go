@@ -6,6 +6,7 @@ import (
 	"goth/internal/cache"
 	"goth/internal/music_player"
 	"goth/internal/spotify_api"
+	"strings"
 )
 
 // GameService coordinates the song provider and music player
@@ -153,6 +154,33 @@ func (s *GameService) StartGame() error {
 	s.SpotifyApi.PlaySong(trackId)
 
 	return nil
+}
+
+func (s *GameService) FilterTrackOptions(trackGuess string) ([]spotify_api.TrackData, error) {
+	if len(s.TracksOptions) < 0 {
+		return nil, errors.New("empty tracks options")
+	}
+
+	guessOptions := []spotify_api.TrackData{}
+	for _, artistData := range s.TracksOptions {
+		addTrack := true
+		guessWord := strings.Split(strings.ToLower(trackGuess), " ")
+		artistNameLowered := strings.ToLower(artistData.Name)
+
+		for _, word := range guessWord {
+			if !strings.Contains(artistNameLowered, word) {
+				addTrack = false
+				break
+			}
+		}
+
+		if addTrack {
+			guessOptions = append(guessOptions, artistData)
+		}
+
+	}
+
+	return guessOptions, nil
 }
 
 // PlayGame starts playback
