@@ -2,22 +2,20 @@ package templates
 
 templ MusicPlayer() {
 	<!-- Main Player Container -->
-	<div class="flex p-2 gap-2 h-[8vh] min-h-[100px] w-full  items-center justify-center rounded-3xl   bg-gray-600">
+	<div class="flex p-2 gap-2 h-[8vh] min-h-[100px] w-full items-center justify-center rounded-3xl bg-gray-600">
 		<!-- Left Sidebar -->
-		<div class="w-1/6 p-1 flex gap-2 flex-row">
+		<div class="p-1 flex gap-2 flex-row items-center w-1/3">
+			// album photo
 			<img src="https://picsum.photos/200" alt="Album Cover" class="w-20 h-20 rounded-lg"/>
-			<div class="flex flex-col items-center gap-4">
-				// album photo
-				<div class="text-center hover:bg-gray-100 ">
-					// Song Ttile
-					<h2 class="font-bold text-sm">???</h2>
-					// ARtist name
-					<p class="text-zinc-400 text-xs">???</p>
-				</div>
+			<div class="flex flex-col justify-center ml-4 w-full">
+				// Song Title
+				<h2 id="guess-title" class="font-bold text-2xl mb-1 text-white drop-shadow-lg"></h2>
+				// Artist name
+				<p id="guess-artist" class="text-zinc-400 text-xl">???</p>
 			</div>
 		</div>
 		<!-- Main Player Content -->
-		<div class="flex-1 flex flex-col items-center justify-center ">
+		<div class="flex-1 flex flex-col items-center justify-center">
 			<!-- Controls -->
 			<div class="flex items-center gap-6">
 				<button class="p-2 hover:bg-zinc-700 rounded-full">
@@ -58,7 +56,7 @@ templ MusicPlayer() {
 			</div>
 		</div>
 		<!-- Right Stats Sidebar -->
-		<div class="w-1/8 p-1 ">
+		<div class="w-1/8 p-1">
 			<div class="space-y-0.5">
 				<div>
 					<h3 class="font-bold text-lg">Stats</h3>

@@ -29,13 +29,13 @@ templ IndexPage() {
 		<div>
 			@SearchInput()
 		</div>
-		<div class="fixed bottom-10 left-1/2 transform -translate-x-1/2 w-full flex justify-center">
+		<div class="fixed bottom-3/8 left-1/2 transform -translate-x-1/2 w-full flex justify-center">
 			<div class="w-full flex-1 flex flex-col items-center gap-4">
+				<div class="w-full max-w-6xl px-4">
+					@MusicPlayer()
+				</div>
 				<div class="w-full max-w-2xl px-4">
 					@GuesserInterface()
-				</div>
-				<div class="w-full max-w-4xl px-4">
-					@MusicPlayer()
 				</div>
 			</div>
 		</div>

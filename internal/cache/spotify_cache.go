@@ -9,6 +9,8 @@ type SpotifyCache struct {
 	AlbumMap          map[string]spotify_api.AlbumData
 	AlbumToTracksMap  map[string][]string
 	TrackMap          map[string]spotify_api.TrackData
+	TrackIdToAlbumId  map[string]string
+	AlbumIdToArtistId map[string]string
 }
 
 func NewSpotifyCache() *SpotifyCache {

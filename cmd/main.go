@@ -37,8 +37,8 @@ func main() {
 	r.Post("/start-process", gameHandler.StartGame)
 	//r.Get("/play", gameHandler.PlayGame)
 	//TODO: add only songs of artists here
-	r.Get("/guess-helper", gameHandler.GuessHelper)
-	//r.Post("/guess-track", gameHandler.GuessTrack)
+	//r.Get("/guess-helper", gameHandler.GuessHelper)
+	r.Post("/guess-track", gameHandler.GuessTrack)
 	//r.Post("/select-track", gameHandler.SelectTrack)
 	//r.Put("/skip", gameHandler.SkipSong)
 	// r.Post("/clear-queue", gameHandler.ClearQueue)

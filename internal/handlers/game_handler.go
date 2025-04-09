@@ -105,6 +105,7 @@ func (h *GameHandler) SearchArtists(w http.ResponseWriter, r *http.Request) {
 		component.Render(r.Context(), w)
 		return
 	}
+	fmt.Println("search artist: ", query)
 
 	artists, err := h.GameService.SearchArtists(query)
 	if err != nil || len(artists) == 0 {
@@ -166,7 +167,6 @@ func (h *GameHandler) SelectAlbum(w http.ResponseWriter, r *http.Request) {
 
 	// Toggle album selection
 	toggle := h.GameService.ToggleAlbumSelection(albumID, artistID)
-	fmt.Println("# of artists", len(h.GameService.ArtistSelection))
 
 	album, ok := h.GameService.Cache.AlbumMap[albumID]
 	if !ok {
@@ -202,38 +202,66 @@ func (h *GameHandler) PlayGame(w http.ResponseWriter, r *http.Request) {
 
 // GuessHelper handles searching for tracks to guess
 func (h *GameHandler) GuessHelper(w http.ResponseWriter, r *http.Request) {
-	// TODO: FIX THIS
-	// Get the query term
-	query := r.URL.Query().Get("guess")
-	if query == "" {
-		// Return empty results
-		w.Write([]byte(""))
-		return
-	}
-
-	// for _, track := range h.GameService.TracksOptions {
-	// 	fmt.Println("t:", track.Name)
+	// // TODO: FIX THIS
+	// // Get the query term
+	// query := r.URL.Query().Get("guess")
+	// if query == "" {
+	// 	// Return empty results
+	// 	w.Write([]byte(""))
+	// 	return
 	// }
-
-	guessOptions, err := h.GameService.FilterTrackOptions(query)
-	if err != nil {
-		return
-	}
-
+	//
+	// // for _, track := range h.GameService.TracksOptions {
+	// // 	fmt.Println("t:", track.Name)
+	// // }
+	//
+	// guessOptions, err := h.GameService.FilterTrackOptions(query)
+	// if err != nil {
+	// 	return
+	// }
+	//
+	// // for _, track := range guessOptions {
+	// // 	fmt.Printf("o: %v, id: %v,\n", track.Name, track.ID)
+	// //
+	// // }
+	//
+	// //
+	// // // Sort tracks by popularity in descending order
+	// // sort.Slice(tracks, func(i, j int) bool {
+	// // 	return tracks[i].Popularity > tracks[j].Popularity
+	// // })
+	// //
+	// // Return results component
+	//
+	// artists := make([]spotify_api.ArtistData, 0, len(guessOptions))
+	// albums := make([]spotify_api.AlbumData, 0, len(guessOptions))
 	// for _, track := range guessOptions {
-	// 	fmt.Printf("o: %v, id: %v,\n", track.Name, track.ID)
 	//
+	// 	albumId, ok := h.GameService.Cache.TrackIdToAlbumId[track.ID]
+	// 	if !ok {
+	// 		panic("album id should already have in cahce")
+	// 	}
+	// 	album, ok := h.GameService.Cache.AlbumMap[albumId]
+	// 	if !ok {
+	// 		panic("album id should already have in cahce")
+	// 	}
+	// 	albums = append(albums, album)
+	//
+	// 	_artistId, ok := h.GameService.Cache.AlbumIdToArtistId[albumId]
+	// 	if !ok {
+	// 		panic("artist id should already have in cahce")
+	// 	}
+	// 	// album, ok := h.GameService.Cache.ArtistToAlbumsMap[albumId]
+	// 	// if !ok {
+	// 	// 	panic("album id should already have in cahce")
+	// 	// }
+	// 	albums = append(albums, album)
+	// 	artists = append(artists, spotify_api.ArtistData{})
 	// }
-
 	//
-	// // Sort tracks by popularity in descending order
-	// sort.Slice(tracks, func(i, j int) bool {
-	// 	return tracks[i].Popularity > tracks[j].Popularity
-	// })
-	//
-	// Return results component
-	component := templates.GuessHelperList(tracks, artistsNames, albumUrls)
-	component.Render(r.Context(), w)
+	// artist := h.GameService.Cache.AlbumIdToArtistId
+	// component := templates.GuessHelperList(guessOptions, artists, albums)
+	// component.Render(r.Context(), w)
 }
 
 // parseTracks converts API response to track data
@@ -357,12 +385,21 @@ func (h *GameHandler) SelectTrack(w http.ResponseWriter, r *http.Request) {
 
 // GuessTrack is a legacy handler still needed for the frontend
 func (h *GameHandler) GuessTrack(w http.ResponseWriter, r *http.Request) {
-	// guess := r.FormValue("guess")
-	// if guess == "" {
-	// 	http.Error(w, "Guess is required", http.StatusBadRequest)
-	// 	return
-	// }
-	//
+	guess := r.FormValue("guess")
+	if guess == "" {
+		http.Error(w, "Guess is required", http.StatusBadRequest)
+		return
+	}
+	fmt.Println("guess: ", guess)
+
+	result, err := h.GameService.UserGuess(guess)
+	if err != nil {
+		http.Error(w, "Guess user error", http.StatusBadRequest)
+		return
+	}
+	fmt.Println("result:", result)
+	w.Write([]byte(result))
+
 	// // Process the guess using the new service
 	// correct, actualSong, err := h.GameService.MakeGuess(guess)
 	// if err != nil {
