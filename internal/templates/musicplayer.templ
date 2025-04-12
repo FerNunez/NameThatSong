@@ -1,13 +1,13 @@
 package templates
 
 import (
-	"goth/internal/game"
+	"goth/internal/service"
 	"strconv"
 )
 
-templ MusicPlayer(guessState *game.GuessState) {
-	{{ title := guessState.Title.ShowGuessState() }}
-	{{ points := guessState.GetPoints() }}
+templ MusicPlayer(g *service.GameService) {
+	{{ title := g.GuessState.Title.ShowGuessState() }}
+	{{ points := g.GuessState.GetPoints() }}
 	<!-- Main Player Container -->
 	<div id="music-player" class="flex p-2 gap-2 h-[8vh] min-h-[100px] w-full items-center justify-center rounded-3xl bg-gray-600">
 		<!-- Left Sidebar -->

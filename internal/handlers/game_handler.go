@@ -54,7 +54,7 @@ func NewGameHandler() (*GameHandler, error) {
 
 // IndexHandler renders the main page
 func (h *GameHandler) IndexHandler(w http.ResponseWriter, r *http.Request) {
-	component := templates.IndexPage(h.GameService.GuessState)
+	component := templates.IndexPage(h.GameService)
 	layout := templates.Layout(component, "NameThatSong")
 	layout.Render(r.Context(), w)
 }
@@ -186,7 +186,7 @@ func (h *GameHandler) StartGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mp := templates.MusicPlayer(h.GameService.GuessState)
+	mp := templates.MusicPlayer(h.GameService)
 	mp.Render(r.Context(), w)
 }
 
@@ -397,7 +397,8 @@ func (h *GameHandler) GuessTrack(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Guess user error", http.StatusBadRequest)
 		return
 	}
-	mp := templates.MusicPlayer(h.GameService.GuessState)
+	fmt.Println("points", h.GameService.GuessState.GetPoints())
+	mp := templates.MusicPlayer(h.GameService)
 	mp.Render(r.Context(), w)
 
 }

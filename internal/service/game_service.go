@@ -24,7 +24,7 @@ type GameService struct {
 
 // NewGameService creates a new game service
 func NewGameService(player *player.MusicPlayer, provider *spotify_api.SpotifySongProvider) *GameService {
-	guessState := game.NewGameState("asd")
+	guessState := game.NewGameState()
 	return &GameService{
 		MusicPlayer:     player,
 		SpotifyApi:      provider,
@@ -169,7 +169,7 @@ func (s *GameService) StartGame() error {
 	}
 
 	// guessSong process:
-	s.GuessState = game.NewGameState(track.Name)
+	s.GuessState.SetTitle(track.Name)
 	s.SpotifyApi.PlaySong(trackId)
 
 	// Debug
@@ -224,7 +224,7 @@ func (s *GameService) UserGuess(guess string) (string, error) {
 
 		// guessSong process:
 		fmt.Println("new song to guess title", track.Name)
-		s.GuessState = game.NewGameState(track.Name)
+		s.GuessState.SetTitle(track.Name)
 		err = s.SpotifyApi.PlaySong(nextTrackId)
 		if err != nil {
 			return "", err

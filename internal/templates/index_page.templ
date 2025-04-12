@@ -1,8 +1,8 @@
 package templates
 
-import "goth/internal/game"
+import "goth/internal/service"
 
-templ IndexPage(guessState *game.GuessState) {
+templ IndexPage(g *service.GameService) {
 	<head>
 		<title>Search Dropdown</title>
 		<script src="https://unpkg.com/htmx.org"></script>
@@ -34,7 +34,7 @@ templ IndexPage(guessState *game.GuessState) {
 		<div class="fixed bottom-3/8 left-1/2 transform -translate-x-1/2 w-full flex justify-center">
 			<div class="w-full flex-1 flex flex-col items-center gap-4">
 				<div class="w-full max-w-6xl px-4">
-					@MusicPlayer(guessState)
+					@MusicPlayer(g)
 				</div>
 				<div class="w-full max-w-2xl px-4">
 					@GuesserInterface()

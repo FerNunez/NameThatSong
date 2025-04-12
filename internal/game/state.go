@@ -10,12 +10,16 @@ type GuessState struct {
 	correctGuesses int
 }
 
-func NewGameState(trackName string) *GuessState {
+func NewGameState() *GuessState {
 	return &GuessState{
-		Title:          NewTitleGuessState(trackName),
+		Title:          NewTitleGuessState(""),
 		points:         0,
 		correctGuesses: 0,
 	}
+}
+
+func (g *GuessState) SetTitle(trackName string) {
+	g.Title = NewTitleGuessState(trackName)
 }
 
 type TitleGuessState struct {
