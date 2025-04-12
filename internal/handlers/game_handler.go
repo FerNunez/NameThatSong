@@ -54,7 +54,7 @@ func NewGameHandler() (*GameHandler, error) {
 
 // IndexHandler renders the main page
 func (h *GameHandler) IndexHandler(w http.ResponseWriter, r *http.Request) {
-	component := templates.IndexPage()
+	component := templates.IndexPage(h.GameService.GuessState)
 	layout := templates.Layout(component, "NameThatSong")
 	layout.Render(r.Context(), w)
 }
