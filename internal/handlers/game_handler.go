@@ -390,38 +390,14 @@ func (h *GameHandler) GuessTrack(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Guess is required", http.StatusBadRequest)
 		return
 	}
-	fmt.Println("guess: ", guess)
 
 	result, err := h.GameService.UserGuess(guess)
 	if err != nil {
 		http.Error(w, "Guess user error", http.StatusBadRequest)
 		return
 	}
-	fmt.Println("result:", result)
 	w.Write([]byte(result))
 
-	// // Process the guess using the new service
-	// correct, actualSong, err := h.GameService.MakeGuess(guess)
-	// if err != nil {
-	// 	http.Error(w, fmt.Sprintf("Error processing guess: %v", err), http.StatusInternalServerError)
-	// 	return
-	// }
-	//
-	// // Return a simple response
-	// var message string
-	// if correct {
-	// 	message = fmt.Sprintf("Correct! The song is '%s'", actualSong)
-	//
-	// 	// Skip to next song after a delay
-	// 	go func() {
-	// 		time.Sleep(3 * time.Second)
-	// 		h.GameService.SkipSong()
-	// 	}()
-	// } else {
-	// 	message = "Incorrect. Try again!"
-	// }
-	//
-	// w.Write([]byte(message))
 }
 
 // SkipSong handles skip button

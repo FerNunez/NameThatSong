@@ -1,7 +1,6 @@
 package game
 
 import (
-	"fmt"
 	"strings"
 	"unicode"
 
@@ -10,11 +9,6 @@ import (
 
 type GuessState struct {
 	title *TitleGuessState
-}
-
-func (g GuessState) ShowState() {
-	fmt.Println("Current Guess state title RealTitle: ", g.title.RealTitle)
-	fmt.Println("Current Guess state map: ", g.title.TitleAliveWords)
 }
 
 func NewGameState(trackName string) *GuessState {
@@ -38,7 +32,10 @@ func NewTitleGuessState(titleName string) *TitleGuessState {
 
 	for _, w := range words {
 		wNormalized := CleanText(w)
-		fmt.Printf("w: %v, wNorm: %v", w, wNormalized)
+
+		if wNormalized == "" {
+			continue
+		}
 		wordsCounts[wNormalized] += 1
 	}
 
@@ -49,10 +46,6 @@ func NewTitleGuessState(titleName string) *TitleGuessState {
 }
 
 func (g *GuessState) Guess(text string) (string, bool) {
-
-	fmt.Println("Guessing... ", text)
-	fmt.Println("Current Guess state title RealTitle: ", g.title.RealTitle)
-	fmt.Println("Current Guess state map: ", g.title.TitleAliveWords)
 
 	// update Guess
 	g.title.updateGuessState(text)
@@ -78,44 +71,108 @@ func (t *TitleGuessState) updateGuessState(text string) {
 
 func (t TitleGuessState) showGuessState() string {
 
-	if len(t.TitleAliveWords) == 0 {
-		return t.RealTitle
-	}
-
-	output := ""
-
-	wordsInTitle := strings.Split(t.RealTitle, " ")
-	if len(wordsInTitle) <= 0 {
-		panic("title hsould have words?")
-	}
-	for _, w := range wordsInTitle {
-		wLow := CleanText(strings.ToLower(w))
-		_, exits := t.TitleAliveWords[wLow]
-		if !exits {
-			output += w + " "
-		} else {
-			for range len(w) {
-				output += "_ "
-			}
-			output += "    "
-		}
-	}
-
-	return output
+	return ProcessState(t.RealTitle, t.TitleAliveWords)
 }
 
 func CleanText(s string) string {
+	// Split by spaces and symbols
+	parts := strings.FieldsFunc(s, func(r rune) bool {
+		return unicode.IsSpace(r) || (!unicode.IsLetter(r) && !unicode.IsNumber(r))
+	})
+
+	// Clean each part
+	cleanedParts := make([]string, 0, len(parts))
+	for _, part := range parts {
+		// Normalize to decomposed form (NFD)
+		t := norm.NFD.String(part)
+		result := make([]rune, 0, len(t))
+
+		for _, r := range t {
+			// Skip diacritical marks
+			if unicode.Is(unicode.Mn, r) {
+				continue
+			}
+			result = append(result, r)
+		}
+
+		if len(result) > 0 {
+			cleanedParts = append(cleanedParts, string(result))
+		}
+	}
+
+	return strings.Join(cleanedParts, " ")
+}
+
+func RemoveAccent(s string) string {
 	// Normalize to decomposed form (NFD)
 	t := norm.NFD.String(s)
 	result := make([]rune, 0, len(t))
-
 	for _, r := range t {
 		// Skip diacritical marks
-		if unicode.Is(unicode.Mn, r) || (!unicode.IsLetter(r) && !unicode.IsNumber(r)) {
+		if unicode.Is(unicode.Mn, r) {
 			continue
 		}
 		result = append(result, r)
 	}
-
 	return string(result)
+}
+
+func RemoveParenthesis(s string) string {
+
+	splitted := strings.SplitN(s, "(", 2)
+
+	if len(splitted) > 1 {
+		if !strings.Contains(splitted[1], ")") {
+			return strings.Join(splitted, "(")
+		}
+	}
+	return splitted[0]
+
+}
+
+func RemoveAfterWord(s string, w string) string {
+	if s == "" {
+		return ""
+	}
+	splitted := strings.Split(s, w)
+	return splitted[0]
+}
+
+func ProcessState(original string, aliveWords map[string]uint8) string {
+
+	if len(aliveWords) == 0 {
+		return original
+	}
+
+	solution := ""
+	words := strings.Split(original, " ")
+	for _, w := range words {
+
+		// remove symbol
+		noSymbol := ""
+		for _, r := range strings.ToLower(w) {
+			// remove symbol
+			if unicode.IsLetter(r) || unicode.IsNumber(r) {
+				noSymbol += string(r)
+			}
+		}
+
+		_, ok := aliveWords[noSymbol]
+		if !ok {
+			solution += w
+		} else {
+
+			for _, r := range w {
+				// is symbol
+				if !unicode.IsLetter(r) && !unicode.IsNumber(r) {
+					solution += string(r)
+				} else {
+					solution += "_ "
+				}
+			}
+		}
+		solution += " "
+	}
+
+	return strings.Trim(solution, " ")
 }
