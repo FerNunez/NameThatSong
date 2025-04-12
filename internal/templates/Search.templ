@@ -125,7 +125,7 @@ templ AlbumDropdown(albums []spotify_api.AlbumData, selectedAlbums map[string]bo
 					type="button"
 					hx-post="/start-process"
 					hx-trigger="click"
-					hx-target="#processing-results"
+					hx-target="#music-player"
 					hx-include="[name='selectedAlbums']"
 					onclick="toggleAlbumDropdown()"
 				>Add</button>

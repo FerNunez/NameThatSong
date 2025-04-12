@@ -6,10 +6,10 @@ import (
 )
 
 templ GuesserInterface() {
-	<form 
+	<form
 		class="max-w-md mx-auto"
 		hx-post="/guess-track"
-		hx-target="#guess-title"
+		hx-target="#music-player"
 		hx-trigger="submit"
 		_="on submit halt the event"
 	>

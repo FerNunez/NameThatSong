@@ -186,8 +186,8 @@ func (h *GameHandler) StartGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Send successful response
-	w.Write([]byte("Game started successfully! Press Play to begin."))
+	mp := templates.MusicPlayer(h.GameService.GuessState)
+	mp.Render(r.Context(), w)
 }
 
 // PlayGame handles play button
@@ -392,31 +392,14 @@ func (h *GameHandler) GuessTrack(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.GameService.UserGuess(guess)
+	_, err := h.GameService.UserGuess(guess)
 	if err != nil {
 		http.Error(w, "Guess user error", http.StatusBadRequest)
 		return
 	}
+	mp := templates.MusicPlayer(h.GameService.GuessState)
+	mp.Render(r.Context(), w)
 
-	// Check if the guess was correct
-	_, correct := h.GameService.GuessState.Guess(guess)
-	if correct {
-		// Update stats
-		points := h.GameService.GuessState.GetPoints()
-		correctGuesses := h.GameService.GuessState.GetCorrectGuesses()
-
-		fmt.Printf("correct guesses: %v, points; %v", points, correctGuesses)
-		// Return a response that includes the result and stats update
-		response := fmt.Sprintf(`<div id="guess-title">%s</div>
-			<script>
-				document.getElementById('points').textContent = '%d';
-				document.getElementById('correct-guesses').textContent = '%d';
-				showSuccess();
-			</script>`, result, points, correctGuesses)
-		w.Write([]byte(response))
-	} else {
-		w.Write([]byte(result))
-	}
 }
 
 // SkipSong handles skip button
