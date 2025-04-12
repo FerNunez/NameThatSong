@@ -63,15 +63,33 @@ templ MusicPlayer() {
 					<div class="mt-2 space-y-0.5">
 						<div class="flex justify-between">
 							<span class="text-zinc-400">Points:</span>
-							<span class="font-bold">0</span>
+							<span id="points" class="font-bold">0</span>
 						</div>
 						<div class="flex justify-between">
 							<span class="text-zinc-400">Correct:</span>
-							<span class="font-bold">0</span>
+							<span id="correct-guesses" class="font-bold">0</span>
 						</div>
 					</div>
 				</div>
 			</div>
 		</div>
 	</div>
+	<!-- Success Animation -->
+	<div id="success-animation" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 hidden">
+		<div class="bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-bounce">
+			<svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+			</svg>
+			<p class="text-center font-bold">Correct!</p>
+		</div>
+	</div>
+	<script>
+		function showSuccess() {
+			const animation = document.getElementById('success-animation');
+			animation.classList.remove('hidden');
+			setTimeout(() => {
+				animation.classList.add('hidden');
+			}, 2000);
+		}
+	</script>
 }

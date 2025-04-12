@@ -8,14 +8,17 @@ import (
 )
 
 type GuessState struct {
-	title *TitleGuessState
+	title          *TitleGuessState
+	points         int
+	correctGuesses int
 }
 
 func NewGameState(trackName string) *GuessState {
 	return &GuessState{
-		title: NewTitleGuessState(trackName),
+		title:          NewTitleGuessState(trackName),
+		points:         0,
+		correctGuesses: 0,
 	}
-
 }
 
 type TitleGuessState struct {
@@ -25,18 +28,16 @@ type TitleGuessState struct {
 
 func NewTitleGuessState(titleName string) *TitleGuessState {
 	// array of words
-	words := strings.Split((strings.ToLower(titleName)), " ")
+	words := strings.Split(CleanText(titleName), " ")
 
 	// count ords
 	wordsCounts := make(map[string]uint8, len(words))
 
 	for _, w := range words {
-		wNormalized := CleanText(w)
-
-		if wNormalized == "" {
+		if w == "" {
 			continue
 		}
-		wordsCounts[wNormalized] += 1
+		wordsCounts[w] += 1
 	}
 
 	return &TitleGuessState{
@@ -46,11 +47,25 @@ func NewTitleGuessState(titleName string) *TitleGuessState {
 }
 
 func (g *GuessState) Guess(text string) (string, bool) {
-
 	// update Guess
 	g.title.updateGuessState(text)
 
-	return g.title.showGuessState(), len(g.title.TitleAliveWords) == 0
+	// Check if all words are guessed
+	allGuessed := len(g.title.TitleAliveWords) == 0
+	if allGuessed {
+		g.points += 100 // Award 100 points for a correct guess
+		g.correctGuesses++
+	}
+
+	return g.title.showGuessState(), allGuessed
+}
+
+func (g *GuessState) GetPoints() int {
+	return g.points
+}
+
+func (g *GuessState) GetCorrectGuesses() int {
+	return g.correctGuesses
 }
 
 func (t *TitleGuessState) updateGuessState(text string) {
@@ -75,32 +90,13 @@ func (t TitleGuessState) showGuessState() string {
 }
 
 func CleanText(s string) string {
-	// Split by spaces and symbols
-	parts := strings.FieldsFunc(s, func(r rune) bool {
-		return unicode.IsSpace(r) || (!unicode.IsLetter(r) && !unicode.IsNumber(r))
-	})
+	cleanText := RemoveParenthesis(strings.ToLower(s))
+	cleanText = RemoveAfterWord(cleanText, "-")
+	cleanText = RemoveAfterWord(cleanText, "feat.")
+	cleanText = RemoveAfterWord(cleanText, "feature")
+	cleanText = RemoveAccent(cleanText)
 
-	// Clean each part
-	cleanedParts := make([]string, 0, len(parts))
-	for _, part := range parts {
-		// Normalize to decomposed form (NFD)
-		t := norm.NFD.String(part)
-		result := make([]rune, 0, len(t))
-
-		for _, r := range t {
-			// Skip diacritical marks
-			if unicode.Is(unicode.Mn, r) {
-				continue
-			}
-			result = append(result, r)
-		}
-
-		if len(result) > 0 {
-			cleanedParts = append(cleanedParts, string(result))
-		}
-	}
-
-	return strings.Join(cleanedParts, " ")
+	return cleanText
 }
 
 func RemoveAccent(s string) string {
@@ -135,6 +131,7 @@ func RemoveAfterWord(s string, w string) string {
 		return ""
 	}
 	splitted := strings.Split(s, w)
+
 	return splitted[0]
 }
 

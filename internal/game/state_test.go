@@ -70,6 +70,7 @@ func TestRemoveWord(t *testing.T) {
 		{"remove feat.", "Hello feat. tu mama", "feat.", "Hello "},
 		{"remove feature", "Hello feature tu mama", "feature", "Hello "},
 		{"remove featurastico", "Hello featurastico tu mama", "feat.", "Hello featurastico tu mama"},
+		{"remove - ", "Hello - tu mama", "-", "Hello "},
 	}
 
 	for _, tt := range tests {
@@ -90,12 +91,12 @@ func TestProcessState(t *testing.T) {
 	}{
 		{
 			"Hello world!",
-			map[string]uint8{"Hello": 1},
+			map[string]uint8{"hello": 1},
 			"_ _ _ _ _  world!", // Replace Hello with underscore, keep 'world!' as it is
 		},
 		{
 			"Go programming is fun!",
-			map[string]uint8{"Go": 1, "fun": 1},
+			map[string]uint8{"go": 1, "fun": 1},
 			"_ _  programming is _ _ _ !", // Replace 'Go' and 'fun' with underscores
 		},
 		{
@@ -105,7 +106,7 @@ func TestProcessState(t *testing.T) {
 		},
 		{
 			"Test123 is here!",
-			map[string]uint8{"Test123": 1},
+			map[string]uint8{"test123": 1},
 			"_ _ _ _ _ _ _  is here!", // Replace 'Test123' with underscore, keep 'is here!' intact
 		},
 		{

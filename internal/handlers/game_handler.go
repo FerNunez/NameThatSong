@@ -2,8 +2,7 @@ package handlers
 
 import (
 	"fmt"
-	"github.com/joho/godotenv"
-	"goth/internal/music_player"
+	player "goth/internal/music_player"
 	"goth/internal/service"
 	"goth/internal/spotify_api"
 	"goth/internal/templates"
@@ -11,6 +10,8 @@ import (
 	"net/http"
 	"os"
 	"sort"
+
+	"github.com/joho/godotenv"
 )
 
 // GameHandler handles the game flow
@@ -383,7 +384,7 @@ func (h *GameHandler) SelectTrack(w http.ResponseWriter, r *http.Request) {
 	// component.Render(r.Context(), w)
 }
 
-// GuessTrack is a legacy handler still needed for the frontend
+// GuessTrack handles the user's guess
 func (h *GameHandler) GuessTrack(w http.ResponseWriter, r *http.Request) {
 	guess := r.FormValue("guess")
 	if guess == "" {
@@ -396,8 +397,26 @@ func (h *GameHandler) GuessTrack(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Guess user error", http.StatusBadRequest)
 		return
 	}
-	w.Write([]byte(result))
 
+	// Check if the guess was correct
+	_, correct := h.GameService.GuessState.Guess(guess)
+	if correct {
+		// Update stats
+		points := h.GameService.GuessState.GetPoints()
+		correctGuesses := h.GameService.GuessState.GetCorrectGuesses()
+
+		fmt.Printf("correct guesses: %v, points; %v", points, correctGuesses)
+		// Return a response that includes the result and stats update
+		response := fmt.Sprintf(`<div id="guess-title">%s</div>
+			<script>
+				document.getElementById('points').textContent = '%d';
+				document.getElementById('correct-guesses').textContent = '%d';
+				showSuccess();
+			</script>`, result, points, correctGuesses)
+		w.Write([]byte(response))
+	} else {
+		w.Write([]byte(result))
+	}
 }
 
 // SkipSong handles skip button

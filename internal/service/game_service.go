@@ -172,7 +172,6 @@ func (s *GameService) StartGame() error {
 
 	// Debug
 	println("track Name:", track.Name)
-	s.GuessState.ShowState()
 
 	return nil
 }
