@@ -9,7 +9,7 @@ templ MusicPlayer(g *service.GameService) {
 	{{ title := g.GuessState.Title.ShowGuessState() }}
 	{{ points := g.GuessState.GetPoints() }}
 	<!-- Main Player Container -->
-	<div id="music-player" class="flex p-2 gap-2 h-[8vh] min-h-[100px] w-full items-center justify-center rounded-3xl bg-gray-600">
+	<div id="music-player" class="flex p-2 gap-1 h-[8vh] min-h-[100px] w-full items-center justify-center rounded-3xl bg-gray-600">
 		<!-- Left Sidebar -->
 		<div class="p-1 flex gap-2 flex-row items-center w-1/3">
 			// album photo
@@ -22,16 +22,16 @@ templ MusicPlayer(g *service.GameService) {
 			</div>
 		</div>
 		<!-- Main Player Content -->
-		<div class="flex-1 flex flex-col items-center justify-center">
+		<div class="flex-1 flex flex-col items-center justify-center ">
 			<!-- Controls -->
-			<div class="flex items-center gap-6">
-				<button class="p-2 hover:bg-zinc-700 rounded-full">
+			<div class="flex items-center gap-4">
+				<button class="p-1 hover:bg-zinc-700 rounded-full">
 					<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
 					</svg>
 				</button>
 				<button
-					class="p-4 bg-white text-zinc-900 rounded-full hover:bg-zinc-200"
+					class="p-3 bg-white text-zinc-900 rounded-full hover:bg-zinc-200"
 					hx-get="/play"
 					hx-trigger="click"
 					hx-swap="none"
@@ -41,7 +41,7 @@ templ MusicPlayer(g *service.GameService) {
 					</svg>
 				</button>
 				<button
-					class="p-2 hover:bg-zinc-700 rounded-full"
+					class="p-1 hover:bg-zinc-700 rounded-full"
 					hx-put="/skip"
 					hx-trigger="click"
 					hx-swap="none"
@@ -62,30 +62,29 @@ templ MusicPlayer(g *service.GameService) {
 				</div>
 			</div>
 		</div>
-		<!-- Right Stats Sidebar -->
-		<div class="w-1/8 p-1">
-			<div class="space-y-0.5">
-				<div>
-					<h3 class="font-bold text-lg">Stats</h3>
-					<div class="mt-2 space-y-0.5">
-						<div class="flex justify-between">
-							<span class="text-zinc-400">Points:</span>
-							<span id="points" class="font-bold">{ strconv.Itoa(points) }</span>
-						</div>
-						<div class="flex justify-between">
-							<span class="text-zinc-400">Correct:</span>
-							<span id="correct-guesses" class="font-bold">0</span>
-						</div>
-					</div>
+		<!-- Remaining Songs Section -->
+		<div class="w-24 flex flex-col justify-center overflow-hidden -ml-8">
+			<div class="text-center">
+				<h3 class="font-bold text-lg text-zinc-400">Songs</h3>
+				<div class="mt-0">
+					<h2 id="remaining-songs" class="font-bold text-7xl leading-none text-white">{ strconv.Itoa(len(g.MusicPlayer.Queue) - g.MusicPlayer.CurrentIndex) }</h2>
 				</div>
 			</div>
 		</div>
-		<div class="w-1/8 p-1">
+		<!-- Stats Section -->
+		<div class="w-24 p-1">
 			<div class="space-y-0.5">
 				<div>
-					<h3 class="font-bold text-base">Remaining Songs</h3>
-					<div class="mt-2">
-						<h2 id="remaining-songs" class="font-bold text-7xl">{ strconv.Itoa(len(g.MusicPlayer.Queue) - g.MusicPlayer.CurrentIndex) }</h2>
+					<h3 class="font-bold text-zinc-400 text-lg">Stats</h3>
+					<div class="mt-2 space-y-0.5">
+						<div class="flex justify-between">
+							<span class="text-zinc-400">Points:</span>
+							<span id="points" class="font-bold text-white">{ strconv.Itoa(points) }</span>
+						</div>
+						<div class="flex justify-between">
+							<span class="text-zinc-400">Correct:</span>
+							<span id="correct-guesses" class="font-bold text-white">0</span>
+						</div>
 					</div>
 				</div>
 			</div>
