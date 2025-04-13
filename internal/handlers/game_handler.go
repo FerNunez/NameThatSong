@@ -407,4 +407,8 @@ func (h *GameHandler) GuessTrack(w http.ResponseWriter, r *http.Request) {
 // func (h *GameHandler) SkipSong(w http.ResponseWriter, r *http.Request) { }
 
 // ClearQueue handles clearing the music player queue
-// func (h *GameHandler) ClearQueue(w http.ResponseWriter, r *http.Request) { }
+func (h *GameHandler) ClearQueue(w http.ResponseWriter, r *http.Request) {
+
+	h.GameService.ClearQueue()
+
+}

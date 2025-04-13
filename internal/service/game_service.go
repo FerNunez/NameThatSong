@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"goth/internal/cache"
 	"goth/internal/game"
-	"goth/internal/music_player"
+	player "goth/internal/music_player"
 	"goth/internal/spotify_api"
 	"strings"
 )
@@ -77,22 +77,35 @@ func (s GameService) GetArtistsAlbum(artistId string) ([]spotify_api.AlbumData, 
 	// check if artist already known
 	albumsIds, exist := s.Cache.ArtistToAlbumsMap[artistId]
 	if !exist {
+		// get artist trop track
+		albumTopTrack, topTracks, err := s.SpotifyApi.CreateAlbumFromTopTracks(artistId)
+		if err != nil {
+			return nil, err
+		}
+
 		albums, err := s.SpotifyApi.FetchAlbumByArtistID(artistId)
 		if err != nil {
 			return nil, err
 		}
 
 		// update Artist to albumMaps
-		albumsIds = make([]string, 0, len(albums))
+		albumsIds = make([]string, 0, len(albums)+1)
+		albumsIds = append(albumsIds, albumTopTrack.ID)
+		s.Cache.AlbumMap[albumTopTrack.ID] = albumTopTrack
 		for _, album := range albums {
 			s.Cache.AlbumMap[album.ID] = album
 			albumsIds = append(albumsIds, album.ID)
-
 			// s.Cache.AlbumIdToArtistId[album.ID] = artistId
 		}
 		s.Cache.ArtistToAlbumsMap[artistId] = albumsIds
 
-		// todo: add this album to artist
+		// associate AlbumID for top tracks
+		tracksIds := make([]string, 0, len(topTracks))
+		for _, track := range topTracks {
+			s.Cache.TrackMap[track.ID] = track
+			tracksIds = append(tracksIds, track.ID)
+		}
+		s.Cache.AlbumToTracksMap[albumTopTrack.ID] = tracksIds
 	}
 
 	albums := make([]spotify_api.AlbumData, 0, len(albumsIds))
@@ -247,4 +260,9 @@ func (s *GameService) UserGuess(guess string) (string, error) {
 //func (s *GameService) SkipSong() error {}
 
 // ClearQueue clears the current music queue
-//func (s *GameService) ClearQueue() error { }
+func (s *GameService) ClearQueue() error {
+	s.AlbumSelection = make(map[string]bool)
+	s.ArtistSelection = make(map[string]uint8)
+	return nil
+
+}

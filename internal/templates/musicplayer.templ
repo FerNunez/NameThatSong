@@ -80,6 +80,16 @@ templ MusicPlayer(g *service.GameService) {
 				</div>
 			</div>
 		</div>
+		<div class="w-1/8 p-1">
+			<div class="space-y-0.5">
+				<div>
+					<h3 class="font-bold text-base">Remaining Songs</h3>
+					<div class="mt-2">
+						<h2 id="remaining-songs" class="font-bold text-7xl">{ strconv.Itoa(len(g.MusicPlayer.Queue) - g.MusicPlayer.CurrentIndex) }</h2>
+					</div>
+				</div>
+			</div>
+		</div>
 	</div>
 	<!-- Success Animation -->
 	<div id="success-animation" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 hidden">
