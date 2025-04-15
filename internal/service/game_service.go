@@ -257,12 +257,22 @@ func (s *GameService) UserGuess(guess string) (string, error) {
 //func (s *GameService) GetScore() int { }
 
 // SkipSong skips to the next song
-//func (s *GameService) SkipSong() error {}
+func (s *GameService) SkipSong() error {
+
+	nextTrackId, err := s.MusicPlayer.NextInQueue()
+	if err != nil {
+		return err
+	}
+	return s.SpotifyApi.PlaySong(nextTrackId)
+}
 
 // ClearQueue clears the current music queue
 func (s *GameService) ClearQueue() error {
 	s.AlbumSelection = make(map[string]bool)
 	s.ArtistSelection = make(map[string]uint8)
+	s.GuessState = game.NewGameState()
+	s.MusicPlayer.ClearQueue()
+	s.SpotifyApi.PausePlayback()
 	return nil
 
 }

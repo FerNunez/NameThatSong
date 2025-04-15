@@ -404,11 +404,18 @@ func (h *GameHandler) GuessTrack(w http.ResponseWriter, r *http.Request) {
 }
 
 // SkipSong handles skip button
-// func (h *GameHandler) SkipSong(w http.ResponseWriter, r *http.Request) { }
+func (h *GameHandler) SkipSong(w http.ResponseWriter, r *http.Request) {
+	err := h.GameService.SkipSong()
+	if err != nil {
+		return
+	}
+	mp := templates.MusicPlayer(h.GameService)
+	mp.Render(r.Context(), w)
+}
 
 // ClearQueue handles clearing the music player queue
 func (h *GameHandler) ClearQueue(w http.ResponseWriter, r *http.Request) {
-
 	h.GameService.ClearQueue()
-
+	mp := templates.MusicPlayer(h.GameService)
+	mp.Render(r.Context(), w)
 }

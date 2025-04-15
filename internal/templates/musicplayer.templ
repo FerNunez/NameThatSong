@@ -44,7 +44,7 @@ templ MusicPlayer(g *service.GameService) {
 					class="p-1 hover:bg-zinc-700 rounded-full"
 					hx-put="/skip"
 					hx-trigger="click"
-					hx-swap="none"
+					hx-target="#music-player"
 				>
 					<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
