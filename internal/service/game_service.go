@@ -74,73 +74,11 @@ func (s GameService) SearchArtists(artist string) ([]spotify_api.ArtistData, err
 }
 
 func (s GameService) GetArtistsAlbum(artistId string) ([]spotify_api.AlbumData, error) {
-	// check if artist already known
-	albumsIds, exist := s.Cache.ArtistToAlbumsMap[artistId]
-	if !exist {
-		// get artist trop track
-		albumTopTrack, topTracks, err := s.SpotifyApi.CreateAlbumFromTopTracks(artistId)
-		if err != nil {
-			return nil, err
-		}
-
-		albums, err := s.SpotifyApi.FetchAlbumByArtistID(artistId)
-		if err != nil {
-			return nil, err
-		}
-
-		// update Artist to albumMaps
-		albumsIds = make([]string, 0, len(albums)+1)
-		albumsIds = append(albumsIds, albumTopTrack.ID)
-		s.Cache.AlbumMap[albumTopTrack.ID] = albumTopTrack
-		for _, album := range albums {
-			s.Cache.AlbumMap[album.ID] = album
-			albumsIds = append(albumsIds, album.ID)
-			// s.Cache.AlbumIdToArtistId[album.ID] = artistId
-		}
-		s.Cache.ArtistToAlbumsMap[artistId] = albumsIds
-
-		// associate AlbumID for top tracks
-		tracksIds := make([]string, 0, len(topTracks))
-		for _, track := range topTracks {
-			s.Cache.TrackMap[track.ID] = track
-			tracksIds = append(tracksIds, track.ID)
-		}
-		s.Cache.AlbumToTracksMap[albumTopTrack.ID] = tracksIds
-	}
-
-	albums := make([]spotify_api.AlbumData, 0, len(albumsIds))
-	for _, albumId := range albumsIds {
-		album, _ := s.Cache.AlbumMap[albumId]
-		albums = append(albums, album)
-
-	}
-
-	return albums, nil
+	return s.Cache.GetArtistsAlbum(s.SpotifyApi, artistId)
 }
 
 func (s GameService) GetAlbumTracks(albumId string) ([]spotify_api.TrackData, error) {
-	tracksIds, exist := s.Cache.AlbumToTracksMap[albumId]
-	if !exist {
-		tracks, err := s.SpotifyApi.FetchTracksByAlbumID(albumId)
-		if err != nil {
-			return nil, err
-		}
-		tracksIds = make([]string, 0, len(tracks))
-		for _, track := range tracks {
-			s.Cache.TrackMap[track.ID] = track
-			tracksIds = append(tracksIds, track.ID)
-
-			//s.Cache.TrackIdToAlbumId[track.ID] = albumId
-		}
-		s.Cache.AlbumToTracksMap[albumId] = tracksIds
-	}
-
-	tracks := make([]spotify_api.TrackData, 0, len(tracksIds))
-	for _, trackId := range tracksIds {
-		track, _ := s.Cache.TrackMap[trackId]
-		tracks = append(tracks, track)
-	}
-	return tracks, nil
+	return s.Cache.GetAlbumTracks(s.SpotifyApi, albumId)
 }
 
 // StartGame prepares the game with selected albums
