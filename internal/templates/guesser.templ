@@ -1,9 +1,6 @@
 package templates
 
-import (
-	"fmt"
-	"goth/internal/base"
-)
+import "fmt"
 
 templ GuesserInterface() {
 	<form
@@ -39,14 +36,13 @@ templ GuesserInterface() {
 	</form>
 }
 
-templ GuessHelperList(trackList []base.Track, artistsNames []string, albumUrl []string) {
-	<div class="guess-helper-list">
-		for idx, track := range trackList {
-			@GuessOptionCard(track.ID, track.Name, albumUrl[idx], artistsNames[idx], track.Selected)
-		}
-	</div>
-}
-
+//templ GuessHelperList(trackList []base.Track, artistsNames []string, albumUrl []string) {
+//	<div class="guess-helper-list">
+//		for idx, track := range trackList {
+//			@GuessOptionCard(track.ID, track.Name, albumUrl[idx], artistsNames[idx], track.Selected)
+//		}
+//	</div>
+//}
 templ GuessOptionCard(trackID, trackName, albumUrl, artistsNames string, selected bool) {
 	//onclick={ templ.JSFuncCall("setGuessOption", track.Name, track.ID) }
 	{{ class_selected := "search-result-item inline-flex w-full px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white" }}
