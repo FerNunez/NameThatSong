@@ -12,6 +12,7 @@ func CleanText(s string) string {
 	cleanText = RemoveAfterWord(cleanText, "-")
 	cleanText = RemoveAfterWord(cleanText, "feat.")
 	cleanText = RemoveAfterWord(cleanText, "feature")
+	cleanText = RemoveSymbols(cleanText)
 	cleanText = RemoveAccent(cleanText)
 
 	return cleanText
@@ -53,26 +54,44 @@ func RemoveAfterWord(s string, w string) string {
 	return splitted[0]
 }
 
+func RemoveSymbols(s string) string {
+
+	// remove symbol
+	noSymbol := ""
+	for _, r := range strings.ToLower(s) {
+		// remove symbol
+		if unicode.IsLetter(r) || unicode.IsNumber(r) {
+			noSymbol += string(r)
+		} else {
+			noSymbol += " "
+		}
+	}
+
+	return noSymbol
+}
 func ProcessState(original string, aliveWords map[string]uint8) string {
 
 	if len(aliveWords) == 0 {
 		return original
 	}
 
+	original = RemoveSymbols(original)
+	original = RemoveAccent(original)
+
 	solution := ""
 	words := strings.Split(original, " ")
 	for _, w := range words {
 
 		// remove symbol
-		noSymbol := ""
-		for _, r := range strings.ToLower(w) {
-			// remove symbol
-			if unicode.IsLetter(r) || unicode.IsNumber(r) {
-				noSymbol += string(r)
-			}
-		}
-
-		_, ok := aliveWords[noSymbol]
+		// noSymbol := ""
+		// for _, r := range strings.ToLower(w) {
+		// 	// remove symbol
+		// 	if unicode.IsLetter(r) || unicode.IsNumber(r) {
+		// 		noSymbol += string(r)
+		// 	}
+		// }
+		//
+		_, ok := aliveWords[w]
 		if !ok {
 			solution += w
 		} else {
