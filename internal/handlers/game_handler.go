@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"fmt"
-	player "goth/internal/music_player"
+	"goth/internal/music_player"
 	"goth/internal/service"
 	"goth/internal/spotify_api"
 	"goth/internal/templates"
