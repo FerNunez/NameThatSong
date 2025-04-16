@@ -3,10 +3,10 @@ package service
 import (
 	"errors"
 	"fmt"
-	"goth/internal/cache"
-	"goth/internal/game"
-	player "goth/internal/music_player"
-	"goth/internal/spotify_api"
+	"github.com/FerNunez/NameThatSong/internal/cache"
+	"github.com/FerNunez/NameThatSong/internal/game"
+	"github.com/FerNunez/NameThatSong/internal/music_player"
+	"github.com/FerNunez/NameThatSong/internal/spotify_api"
 	"strings"
 )
 

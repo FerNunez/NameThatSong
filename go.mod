@@ -1,4 +1,4 @@
-module goth
+module github.com/FerNunez/NameThatSong
 
 go 1.23.0
 

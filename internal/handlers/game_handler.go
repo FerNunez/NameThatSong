@@ -2,11 +2,11 @@ package handlers
 
 import (
 	"fmt"
-	"goth/internal/music_player"
-	"goth/internal/service"
-	"goth/internal/spotify_api"
-	"goth/internal/templates"
-	"goth/internal/utils"
+	"github.com/FerNunez/NameThatSong/internal/music_player"
+	"github.com/FerNunez/NameThatSong/internal/service"
+	"github.com/FerNunez/NameThatSong/internal/spotify_api"
+	"github.com/FerNunez/NameThatSong/internal/templates"
+	"github.com/FerNunez/NameThatSong/internal/utils"
 	"net/http"
 	"os"
 	"sort"

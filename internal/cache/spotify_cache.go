@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"goth/internal/spotify_api"
+	"github.com/FerNunez/NameThatSong/internal/spotify_api"
 )
 
 type SpotifyCache struct {

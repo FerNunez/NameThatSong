@@ -3,7 +3,7 @@ package game_test
 import (
 	"testing"
 
-	"goth/internal/game"
+	"github.com/FerNunez/NameThatSong/internal/game"
 )
 
 func TestRemoveAccent(t *testing.T) {

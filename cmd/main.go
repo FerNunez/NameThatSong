@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"goth/internal/handlers"
+	"github.com/FerNunez/NameThatSong/internal/handlers"
 	"log"
 	"net/http"
 	"os"
