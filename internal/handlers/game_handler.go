@@ -29,7 +29,8 @@ func NewGameHandler() (*GameHandler, error) {
 
 	clientID := os.Getenv("CLIENT_ID")
 	clientSecret := os.Getenv("CLIENT_SECRET")
-	redirectURI := "http://127.0.0.1:8080/auth/callback"
+	//redirectURI := "http://127.0.0.1:8080/auth/callback"
+	redirectURI := "https://namethatsong.onrender.com/auth/callback"
 
 	if clientID == "" || clientSecret == "" {
 		return nil, fmt.Errorf("missing Spotify credentials in .env file")
