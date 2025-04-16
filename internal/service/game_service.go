@@ -201,6 +201,13 @@ func (s *GameService) SkipSong() error {
 	if err != nil {
 		return err
 	}
+	track, ok := s.Cache.TrackMap[nextTrackId]
+	if !ok {
+		panic("Track should always exist in cache")
+	}
+
+	// guessSong process:
+	s.GuessState.SetTitle(track.Name)
 	return s.SpotifyApi.PlaySong(nextTrackId)
 }
 

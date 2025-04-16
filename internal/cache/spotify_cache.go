@@ -19,6 +19,8 @@ func NewSpotifyCache() *SpotifyCache {
 		AlbumMap:          map[string]spotify_api.AlbumData{},
 		AlbumToTracksMap:  map[string][]string{},
 		TrackMap:          map[string]spotify_api.TrackData{},
+		TrackIdToAlbumId:  make(map[string]string),
+		AlbumIdToArtistId: make(map[string]string),
 	}
 }
 
@@ -49,8 +51,9 @@ func (c *SpotifyCache) GetArtistsAlbum(s *spotify_api.SpotifySongProvider, artis
 		for _, album := range albums {
 			c.AlbumMap[album.ID] = album
 			albumsIds = append(albumsIds, album.ID)
-			// c.AlbumIdToArtistId[album.ID] = artistId
+			c.AlbumIdToArtistId[album.ID] = artistId
 		}
+
 		c.ArtistToAlbumsMap[artistId] = albumsIds
 
 		// associate AlbumID for top tracks
@@ -84,7 +87,7 @@ func (c *SpotifyCache) GetAlbumTracks(s *spotify_api.SpotifySongProvider, albumI
 			c.TrackMap[track.ID] = track
 			tracksIds = append(tracksIds, track.ID)
 
-			//s.Cache.TrackIdToAlbumId[track.ID] = albumId
+			c.TrackIdToAlbumId[track.ID] = albumId
 		}
 		c.AlbumToTracksMap[albumId] = tracksIds
 	}
