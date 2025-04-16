@@ -57,5 +57,6 @@ func main() {
 	fmt.Println("4. Click Start to begin the game")
 	fmt.Println("5. Guess the songs as they play!")
 
-	log.Fatal(http.ListenAndServe("127.0.0.1:"+port, r))
+	//log.Fatal(http.ListenAndServe("127.0.0.1:"+port, r))
+	log.Fatal(http.ListenAndServe("0.0.0.0:"+port, r))
 }
