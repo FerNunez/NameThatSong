@@ -49,14 +49,13 @@ func main() {
 		port = "8080"
 	}
 
-	fmt.Printf("Server starting on http://127.0.0.1:%s\n", port)
-	fmt.Println("\n===== Guess The Song Game =====")
-	fmt.Println("1. Open your browser and go to: http://127.0.0.1:" + port)
-	fmt.Println("2. Log in with your Spotify account")
-	fmt.Println("3. Search for an artist and select their albums")
-	fmt.Println("4. Click Start to begin the game")
-	fmt.Println("5. Guess the songs as they play!")
+	address := os.Getenv("ADDRESS")
+	if address == "" {
+		address = "127.0.0.1"
+		// 0.0.0.0
+	}
+	fmt.Printf("Server starting on http://%s:%s\n", address, port)
 
 	//log.Fatal(http.ListenAndServe("127.0.0.1:"+port, r))
-	log.Fatal(http.ListenAndServe("0.0.0.0:"+port, r))
+	log.Fatal(http.ListenAndServe(address+":"+port, r))
 }
