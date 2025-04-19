@@ -37,6 +37,11 @@ func (c *SpotifyCache) GetArtistsAlbum(s *spotify_api.SpotifySongProvider, artis
 	if !exist {
 		// get artist trop track
 		albumTopTrack, topTracks, err := s.CreateAlbumFromTopTracks(artistId)
+		artist, ok := c.ArtistMap[artistId]
+		albumTopTrack.ImagesURL = artist.ImageUrl
+		if !ok {
+			panic("Track should always exist in cache")
+		}
 		if err != nil {
 			return nil, err
 		}
