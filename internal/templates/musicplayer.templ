@@ -14,17 +14,23 @@ templ MusicPlayer(g *service.GameService) {
 		}
 		{{ title := g.GuessState.Title.ShowGuessState() }}
 		{{ points := g.GuessState.GetPoints() }}
+		{{ artist := "an Artist" }}
 		<!-- Main Player Container -->
 		<div class="flex p-2 gap-1 h-[8vh] min-h-[100px] w-full items-center justify-center rounded-3xl bg-gray-600">
 			<!-- Left Sidebar -->
-			<div class="p-1 flex gap-2 flex-row items-center w-1/3">
+			<div class="p-1 flex gap-2 flex-row items-center w-1/2">
 				// album photo
 				<img src="https://picsum.photos/200" alt="Album Cover" class="w-20 h-20 rounded-lg"/>
 				<div class="flex flex-col justify-center ml-4 w-full">
 					// Song Title
-					<h2 id="guess-title" class="font-bold text-2xl mb-1 text-white drop-shadow-lg" style="white-space: pre-wrap">{ title }</h2>
+					{{ textsize := "text-3xl" }}
+					if len(title) > 20 {
+						{{ textsize = "text-xl" }}
+					}
+					{{ textclass := "font-bold mb-1 text-white drop-shadow-lg" + textsize }}
+					<h2 id="guess-title" class={ textclass } style="white-space: pre-wrap">{ title }</h2>
 					// Artist name
-					<p id="guess-artist" class="text-zinc-400 text-xl">{ title } </p>
+					<p id="guess-artist" class="text-zinc-400 text-xl">{ artist } </p>
 				</div>
 			</div>
 			<!-- Main Player Content -->
@@ -110,13 +116,13 @@ templ MusicPlayer(g *service.GameService) {
 
 templ GoodGuess(s string) {
 	<div
-		class="font-bold text-green-600"
+		class="left-5 font-bold text-green-600"
 		hx-put="/skip"
-		hx-trigger="load delay:3s"
+		hx-trigger="load delay:2s"
 		hx-target="#music-player"
 	>{ s }</div>
 }
 
 templ BadGuess(s string) {
-	<div class="font-bold text-yellow-500">{ s }</div>
+	<div class="left-2 font-bold text-yellow-500">{ s }</div>
 }
