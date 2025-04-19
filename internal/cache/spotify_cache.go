@@ -5,6 +5,7 @@ import (
 )
 
 type SpotifyCache struct {
+	ArtistMap         map[string]spotify_api.ArtistData
 	ArtistToAlbumsMap map[string][]string
 	AlbumMap          map[string]spotify_api.AlbumData
 	AlbumToTracksMap  map[string][]string
@@ -15,6 +16,7 @@ type SpotifyCache struct {
 
 func NewSpotifyCache() *SpotifyCache {
 	return &SpotifyCache{
+		ArtistMap:         map[string]spotify_api.ArtistData{},
 		ArtistToAlbumsMap: map[string][]string{},
 		AlbumMap:          map[string]spotify_api.AlbumData{},
 		AlbumToTracksMap:  map[string][]string{},

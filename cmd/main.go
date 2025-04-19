@@ -52,7 +52,6 @@ func main() {
 	address := os.Getenv("ADDRESS")
 	if address == "" {
 		address = "127.0.0.1"
-		// 0.0.0.0
 	}
 	fmt.Printf("Server starting on http://%s:%s\n", address, port)
 

@@ -6,28 +6,42 @@ import (
 	"time"
 )
 
+type Song struct {
+	TrackId  string
+	AlbumId  string
+	ArtistId string
+}
+
+func NewSong(trackId string, albumId string, artistId string) *Song {
+	return &Song{
+		TrackId:  trackId,
+		AlbumId:  albumId,
+		ArtistId: artistId,
+	}
+}
+
 type MusicPlayer struct {
-	Queue        []string
+	Queue        []Song
 	CurrentIndex int
 }
 
 func NewMusicPlayer() *MusicPlayer {
 	return &MusicPlayer{
-		Queue:        []string{},
+		Queue:        []Song{},
 		CurrentIndex: 0,
 	}
 }
 
-func (p *MusicPlayer) AddToQueue(songsId []string) {
-	p.Queue = append(p.Queue, songsId...)
+func (p *MusicPlayer) AddToQueue(songs []Song) {
+	p.Queue = append(p.Queue, songs...)
 }
 
-func (p *MusicPlayer) GetQueue() []string {
+func (p *MusicPlayer) GetQueue() []Song {
 	return p.Queue
 }
 
 func (p *MusicPlayer) ClearQueue() {
-	p.Queue = []string{}
+	p.Queue = []Song{}
 	p.CurrentIndex = 0
 }
 
@@ -45,9 +59,9 @@ func (p *MusicPlayer) Shuffle() {
 	p.CurrentIndex = 0
 }
 
-func (p *MusicPlayer) NextInQueue() (string, error) {
+func (p *MusicPlayer) NextInQueue() (Song, error) {
 	if p.CurrentIndex >= len(p.Queue) {
-		return "", errors.New("cannot next song as last song in the queue")
+		return Song{}, errors.New("cannot next song as last song in the queue")
 	}
 
 	p.CurrentIndex += 1

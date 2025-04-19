@@ -14,13 +14,14 @@ templ MusicPlayer(g *service.GameService) {
 		}
 		{{ title := g.GuessState.Title.ShowGuessState() }}
 		{{ points := g.GuessState.GetPoints() }}
-		{{ artist := "an Artist" }}
+		{{ artist := g.GuessState.Artist }}
+		{{ albumurl := g.GuessState.AlbumImage }}
 		<!-- Main Player Container -->
 		<div class="flex p-2 gap-1 h-[8vh] min-h-[100px] w-full items-center justify-center rounded-3xl bg-gray-600">
 			<!-- Left Sidebar -->
 			<div class="p-1 flex gap-2 flex-row items-center w-1/2">
 				// album photo
-				<img src="https://picsum.photos/200" alt="Album Cover" class="w-20 h-20 rounded-lg"/>
+				<img src={ albumurl } alt="Album Cover" class="w-20 h-20 rounded-lg"/>
 				<div class="flex flex-col justify-center ml-4 w-full">
 					// Song Title
 					{{ textsize := "text-3xl" }}

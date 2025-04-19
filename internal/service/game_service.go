@@ -7,7 +7,6 @@ import (
 	"github.com/FerNunez/NameThatSong/internal/game"
 	"github.com/FerNunez/NameThatSong/internal/music_player"
 	"github.com/FerNunez/NameThatSong/internal/spotify_api"
-	"strings"
 )
 
 // GameService coordinates the song provider and music player
@@ -16,20 +15,20 @@ type GameService struct {
 	SpotifyApi      *spotify_api.SpotifySongProvider
 	AlbumSelection  map[string]bool
 	ArtistSelection map[string]uint8
-	TracksToPlayId  []string
-	TracksOptions   []spotify_api.TrackData
+	TracksToPlayId  map[string]*player.Song
 	GuessState      *game.GuessState
 	Cache           *cache.SpotifyCache
 }
 
 // NewGameService creates a new game service
-func NewGameService(player *player.MusicPlayer, provider *spotify_api.SpotifySongProvider) *GameService {
+func NewGameService(musicPlayer *player.MusicPlayer, provider *spotify_api.SpotifySongProvider) *GameService {
 	guessState := game.NewGameState()
 	return &GameService{
-		MusicPlayer:     player,
+		MusicPlayer:     musicPlayer,
 		SpotifyApi:      provider,
 		AlbumSelection:  make(map[string]bool),
 		ArtistSelection: make(map[string]uint8),
+		TracksToPlayId:  make(map[string]*player.Song),
 		Cache:           cache.NewSpotifyCache(),
 		GuessState:      guessState,
 	}
@@ -70,6 +69,10 @@ func (s *GameService) GetSelectedAlbums() []string {
 
 func (s GameService) SearchArtists(artist string) ([]spotify_api.ArtistData, error) {
 	artists, err := s.SpotifyApi.SearchArtistsByName(artist)
+
+	for _, artist := range artists {
+		s.Cache.ArtistMap[artist.Id] = artist
+	}
 	return artists, err
 }
 
@@ -98,30 +101,39 @@ func (s *GameService) StartGame() error {
 			if err != nil {
 				return err
 			}
-			s.TracksOptions = append(s.TracksOptions, tracksData...)
 
 			_, exists := s.AlbumSelection[albumId]
 			if exists {
 				for _, track := range tracksData {
-					s.TracksToPlayId = append(s.TracksToPlayId, track.ID)
+					s.TracksToPlayId[track.ID] = player.NewSong(track.ID, albumId, artistId)
 				}
 			}
 		}
 
 	}
 
-	s.MusicPlayer.Queue = append(s.MusicPlayer.Queue, s.TracksToPlayId...)
+	for _, song := range s.TracksToPlayId {
+		s.MusicPlayer.Queue = append(s.MusicPlayer.Queue, *song)
+	}
 	s.MusicPlayer.Shuffle()
-	trackId := s.MusicPlayer.Queue[s.MusicPlayer.CurrentIndex]
+	song := s.MusicPlayer.Queue[s.MusicPlayer.CurrentIndex]
 
-	track, ok := s.Cache.TrackMap[trackId]
+	track, ok := s.Cache.TrackMap[song.TrackId]
+	if !ok {
+		panic("Track should always exist in cache")
+	}
+	album, ok := s.Cache.AlbumMap[song.AlbumId]
+	if !ok {
+		panic("Track should always exist in cache")
+	}
+	artist, ok := s.Cache.ArtistMap[song.ArtistId]
 	if !ok {
 		panic("Track should always exist in cache")
 	}
 
 	// guessSong process:
-	s.GuessState.SetTitle(track.Name)
-	s.SpotifyApi.PlaySong(trackId)
+	s.GuessState.SetTitle(track.Name, artist.Name, album.ImagesURL)
+	s.SpotifyApi.PlaySong(song.TrackId)
 
 	// Debug
 	println("track Name:", track.Name)
@@ -129,58 +141,10 @@ func (s *GameService) StartGame() error {
 	return nil
 }
 
-func (s *GameService) FilterTrackOptions(trackGuess string) ([]spotify_api.TrackData, error) {
-	if len(s.TracksOptions) < 0 {
-		return nil, errors.New("empty tracks options")
-	}
-
-	guessOptions := []spotify_api.TrackData{}
-	for _, artistData := range s.TracksOptions {
-		addTrack := true
-		guessWord := strings.Split(strings.ToLower(trackGuess), " ")
-		artistNameLowered := strings.ToLower(artistData.Name)
-
-		for _, word := range guessWord {
-			if !strings.Contains(artistNameLowered, word) {
-				addTrack = false
-				break
-			}
-		}
-
-		if addTrack {
-			guessOptions = append(guessOptions, artistData)
-		}
-
-	}
-
-	return guessOptions, nil
-}
-
 // User tries to guess
 func (s *GameService) UserGuess(guess string) (bool, error) {
 
 	_, guessedCorrectly := s.GuessState.Guess(guess)
-
-	// if guessedCorrectly {
-	//
-	// 	nextTrackId, err := s.MusicPlayer.NextInQueue()
-	// 	if err != nil {
-	// 		return false, err
-	// 	}
-	//
-	// 	track, ok := s.Cache.TrackMap[nextTrackId]
-	// 	if !ok {
-	// 		panic("Track should always exist in cache")
-	// 	}
-	//
-	// 	// guessSong process:
-	// 	fmt.Println("new song to guess title", track.Name)
-	// 	s.GuessState.SetTitle(track.Name)
-	// 	err = s.SpotifyApi.PlaySong(nextTrackId)
-	// 	if err != nil {
-	// 		return false, err
-	// 	}
-	// }
 
 	return guessedCorrectly, nil
 }
@@ -197,18 +161,27 @@ func (s *GameService) UserGuess(guess string) (bool, error) {
 // SkipSong skips to the next song
 func (s *GameService) SkipSong() error {
 
-	nextTrackId, err := s.MusicPlayer.NextInQueue()
+	nextSong, err := s.MusicPlayer.NextInQueue()
 	if err != nil {
 		return err
 	}
-	track, ok := s.Cache.TrackMap[nextTrackId]
+	track, ok := s.Cache.TrackMap[nextSong.TrackId]
+	if !ok {
+		panic("Track should always exist in cache")
+	}
+
+	album, ok := s.Cache.AlbumMap[nextSong.AlbumId]
+	if !ok {
+		panic("Track should always exist in cache")
+	}
+	artist, ok := s.Cache.ArtistMap[nextSong.ArtistId]
 	if !ok {
 		panic("Track should always exist in cache")
 	}
 
 	// guessSong process:
-	s.GuessState.SetTitle(track.Name)
-	return s.SpotifyApi.PlaySong(nextTrackId)
+	s.GuessState.SetTitle(track.Name, artist.Name, album.ImagesURL)
+	return s.SpotifyApi.PlaySong(nextSong.TrackId)
 }
 
 // ClearQueue clears the current music queue

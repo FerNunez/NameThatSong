@@ -7,6 +7,8 @@ import (
 
 type GuessState struct {
 	Title          *TitleGuessState
+	Artist         string
+	AlbumImage     string
 	State          string
 	points         int
 	correctGuesses int
@@ -21,8 +23,10 @@ func NewGameState() *GuessState {
 	}
 }
 
-func (g *GuessState) SetTitle(trackName string) {
+func (g *GuessState) SetTitle(trackName string, artistName string, albumUrl string) {
 	g.Title = NewTitleGuessState(trackName)
+	g.Artist = artistName
+	g.AlbumImage = albumUrl
 	g.State = ""
 }
 

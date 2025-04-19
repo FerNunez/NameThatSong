@@ -403,7 +403,6 @@ func (h *GameHandler) GuessTrack(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("points", h.GameService.GuessState.GetPoints())
 	mp := templates.MusicPlayer(h.GameService)
 	mp.Render(r.Context(), w)
 
