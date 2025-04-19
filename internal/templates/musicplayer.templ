@@ -6,106 +6,117 @@ import (
 )
 
 templ MusicPlayer(g *service.GameService) {
-	{{ title := g.GuessState.Title.ShowGuessState() }}
-	{{ points := g.GuessState.GetPoints() }}
-	<!-- Main Player Container -->
-	<div id="music-player" class="flex p-2 gap-1 h-[8vh] min-h-[100px] w-full items-center justify-center rounded-3xl bg-gray-600">
-		<!-- Left Sidebar -->
-		<div class="p-1 flex gap-2 flex-row items-center w-1/3">
-			// album photo
-			<img src="https://picsum.photos/200" alt="Album Cover" class="w-20 h-20 rounded-lg"/>
-			<div class="flex flex-col justify-center ml-4 w-full">
-				// Song Title
-				<h2 id="guess-title" class="font-bold text-2xl mb-1 text-white drop-shadow-lg" style="white-space: pre-wrap">{ title }</h2>
-				// Artist name
-				<p id="guess-artist" class="text-zinc-400 text-xl">{ title } </p>
-			</div>
-		</div>
-		<!-- Main Player Content -->
-		<div class="flex-1 flex flex-col items-center justify-center ">
-			<!-- Controls -->
-			<div class="flex items-center gap-4">
-				<button class="p-1 hover:bg-zinc-700 rounded-full">
-					<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-					</svg>
-				</button>
-				<button
-					class="p-3 bg-white text-zinc-900 rounded-full hover:bg-zinc-200"
-					hx-get="/play"
-					hx-trigger="click"
-					hx-swap="none"
-				>
-					<svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-						<path d="M8 5v14l11-7z"></path>
-					</svg>
-				</button>
-				<button
-					class="p-1 hover:bg-zinc-700 rounded-full"
-					hx-put="/skip"
-					hx-trigger="click"
-					hx-target="#music-player"
-				>
-					<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-					</svg>
-				</button>
-			</div>
-			<!-- Progress Bar -->
-			<div class="w-1/2">
-				<div class="flex items-center gap-2 text-sm">
-					<span>2:30</span>
-					<div class="flex-1 h-1 bg-zinc-600 rounded-full">
-						<div class="w-1/3 h-full bg-white rounded-full"></div>
-					</div>
-					<span>4:15</span>
-				</div>
-			</div>
-		</div>
-		<!-- Remaining Songs Section -->
-		<div class="w-24 flex flex-col justify-center overflow-hidden -ml-8">
-			<div class="text-center">
-				<h3 class="font-bold text-lg text-zinc-400">Songs</h3>
-				<div class="mt-0">
-					<h2 id="remaining-songs" class="font-bold text-7xl leading-none text-white">{ strconv.Itoa(len(g.MusicPlayer.Queue) - g.MusicPlayer.CurrentIndex) }</h2>
-				</div>
-			</div>
-		</div>
-		<!-- Stats Section -->
-		<div class="w-24 p-1">
-			<div class="space-y-0.5">
-				<div>
-					<h3 class="font-bold text-zinc-400 text-lg">Stats</h3>
-					<div class="mt-2 space-y-0.5">
-						<div class="flex justify-between">
-							<span class="text-zinc-400">Points:</span>
-							<span id="points" class="font-bold text-white">{ strconv.Itoa(points) }</span>
-						</div>
-						<div class="flex justify-between">
-							<span class="text-zinc-400">Correct:</span>
-							<span id="correct-guesses" class="font-bold text-white">0</span>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-	<!-- Success Animation -->
-	<div id="success-animation" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 hidden">
-		<div class="bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-bounce">
-			<svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-			</svg>
-			<p class="text-center font-bold">Correct!</p>
-		</div>
-	</div>
-	<script>
-		function showSuccess() {
-			const animation = document.getElementById('success-animation');
-			animation.classList.remove('hidden');
-			setTimeout(() => {
-				animation.classList.add('hidden');
-			}, 2000);
+	<div id="music-player">
+		if g.GuessState.State == "Correct!" {
+			@GoodGuess(g.GuessState.State)
+		} else {
+			@BadGuess(g.GuessState.State)
 		}
-	</script>
+		{{ title := g.GuessState.Title.ShowGuessState() }}
+		{{ points := g.GuessState.GetPoints() }}
+		<!-- Main Player Container -->
+		<div class="flex p-2 gap-1 h-[8vh] min-h-[100px] w-full items-center justify-center rounded-3xl bg-gray-600">
+			<!-- Left Sidebar -->
+			<div class="p-1 flex gap-2 flex-row items-center w-1/3">
+				// album photo
+				<img src="https://picsum.photos/200" alt="Album Cover" class="w-20 h-20 rounded-lg"/>
+				<div class="flex flex-col justify-center ml-4 w-full">
+					// Song Title
+					<h2 id="guess-title" class="font-bold text-2xl mb-1 text-white drop-shadow-lg" style="white-space: pre-wrap">{ title }</h2>
+					// Artist name
+					<p id="guess-artist" class="text-zinc-400 text-xl">{ title } </p>
+				</div>
+			</div>
+			<!-- Main Player Content -->
+			<div class="flex-1 flex flex-col items-center justify-center ">
+				<!-- Controls -->
+				<div class="flex items-center gap-4">
+					<button class="p-1 hover:bg-zinc-700 rounded-full">
+						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+						</svg>
+					</button>
+					<button
+						class="p-3 bg-white text-zinc-900 rounded-full hover:bg-zinc-200"
+						hx-get="/play"
+						hx-trigger="click"
+						hx-swap="none"
+					>
+						<svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+							<path d="M8 5v14l11-7z"></path>
+						</svg>
+					</button>
+					<button
+						class="p-1 hover:bg-zinc-700 rounded-full"
+						hx-put="/skip"
+						hx-trigger="click"
+						hx-target="#music-player"
+					>
+						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+						</svg>
+					</button>
+				</div>
+				<!-- Progress Bar -->
+				<div class="w-1/2">
+					<div class="flex items-center gap-2 text-sm">
+						<span>2:30</span>
+						<div class="flex-1 h-1 bg-zinc-600 rounded-full">
+							<div class="w-1/3 h-full bg-white rounded-full"></div>
+						</div>
+						<span>4:15</span>
+					</div>
+				</div>
+			</div>
+			<!-- Remaining Songs Section -->
+			<div class="w-24 flex flex-col justify-center overflow-hidden -ml-8">
+				<div class="text-center">
+					<h3 class="font-bold text-lg text-zinc-400">Songs</h3>
+					<div class="mt-0">
+						<h2 id="remaining-songs" class="font-bold text-7xl leading-none text-white">{ strconv.Itoa(len(g.MusicPlayer.Queue) - g.MusicPlayer.CurrentIndex) }</h2>
+					</div>
+				</div>
+			</div>
+			<!-- Stats Section -->
+			<div class="w-24 p-1">
+				<div class="space-y-0.5">
+					<div>
+						<h3 class="font-bold text-zinc-400 text-lg">Stats</h3>
+						<div class="mt-2 space-y-0.5">
+							<div class="flex justify-between">
+								<span class="text-zinc-400">Points:</span>
+								<span id="points" class="font-bold text-white">{ strconv.Itoa(points) }</span>
+							</div>
+							<div class="flex justify-between">
+								<span class="text-zinc-400">Correct:</span>
+								<span id="correct-guesses" class="font-bold text-white">0</span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!-- Success Animation -->
+		<div id="success-animation" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 hidden">
+			<div class="bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-bounce">
+				<svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+				</svg>
+				<p class="text-center font-bold">Correct!</p>
+			</div>
+		</div>
+	</div>
+}
+
+templ GoodGuess(s string) {
+	<div
+		class="font-bold text-green-600"
+		hx-put="/skip"
+		hx-trigger="load delay:3s"
+		hx-target="#music-player"
+	>{ s }</div>
+}
+
+templ BadGuess(s string) {
+	<div class="font-bold text-yellow-500">{ s }</div>
 }

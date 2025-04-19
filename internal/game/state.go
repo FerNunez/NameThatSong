@@ -7,6 +7,7 @@ import (
 
 type GuessState struct {
 	Title          *TitleGuessState
+	State          string
 	points         int
 	correctGuesses int
 }
@@ -14,6 +15,7 @@ type GuessState struct {
 func NewGameState() *GuessState {
 	return &GuessState{
 		Title:          NewTitleGuessState(""),
+		State:          "",
 		points:         0,
 		correctGuesses: 0,
 	}
@@ -21,6 +23,7 @@ func NewGameState() *GuessState {
 
 func (g *GuessState) SetTitle(trackName string) {
 	g.Title = NewTitleGuessState(trackName)
+	g.State = ""
 }
 
 type TitleGuessState struct {
@@ -54,11 +57,13 @@ func (g *GuessState) Guess(text string) (string, bool) {
 	// update Guess
 	g.Title.updateGuessState(text)
 
+	g.State = "Keep guessing.."
 	// Check if all words are guessed
 	allGuessed := len(g.Title.TitleAliveWords) == 0
 	if allGuessed {
 		g.points += 100 // Award 100 points for a correct guess
 		g.correctGuesses++
+		g.State = "Correct!"
 	}
 
 	return g.Title.ShowGuessState(), allGuessed

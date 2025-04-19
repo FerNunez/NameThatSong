@@ -157,32 +157,32 @@ func (s *GameService) FilterTrackOptions(trackGuess string) ([]spotify_api.Track
 }
 
 // User tries to guess
-func (s *GameService) UserGuess(guess string) (string, error) {
+func (s *GameService) UserGuess(guess string) (bool, error) {
 
-	guessResult, guessedCorrectly := s.GuessState.Guess(guess)
+	_, guessedCorrectly := s.GuessState.Guess(guess)
 
-	if guessedCorrectly {
+	// if guessedCorrectly {
+	//
+	// 	nextTrackId, err := s.MusicPlayer.NextInQueue()
+	// 	if err != nil {
+	// 		return false, err
+	// 	}
+	//
+	// 	track, ok := s.Cache.TrackMap[nextTrackId]
+	// 	if !ok {
+	// 		panic("Track should always exist in cache")
+	// 	}
+	//
+	// 	// guessSong process:
+	// 	fmt.Println("new song to guess title", track.Name)
+	// 	s.GuessState.SetTitle(track.Name)
+	// 	err = s.SpotifyApi.PlaySong(nextTrackId)
+	// 	if err != nil {
+	// 		return false, err
+	// 	}
+	// }
 
-		nextTrackId, err := s.MusicPlayer.NextInQueue()
-		if err != nil {
-			return "", err
-		}
-
-		track, ok := s.Cache.TrackMap[nextTrackId]
-		if !ok {
-			panic("Track should always exist in cache")
-		}
-
-		// guessSong process:
-		fmt.Println("new song to guess title", track.Name)
-		s.GuessState.SetTitle(track.Name)
-		err = s.SpotifyApi.PlaySong(nextTrackId)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	return guessResult, nil
+	return guessedCorrectly, nil
 }
 
 // PlayGame starts playback

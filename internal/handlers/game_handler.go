@@ -402,6 +402,7 @@ func (h *GameHandler) GuessTrack(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Guess user error", http.StatusBadRequest)
 		return
 	}
+
 	fmt.Println("points", h.GameService.GuessState.GetPoints())
 	mp := templates.MusicPlayer(h.GameService)
 	mp.Render(r.Context(), w)

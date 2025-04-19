@@ -1,16 +1,15 @@
 package templates
 
-import "fmt"
+import "github.com/FerNunez/NameThatSong/internal/service"
 
-templ GuesserInterface() {
+templ GuesserInterface(g *service.GameService) {
 	<form
 		class="max-w-md mx-auto"
 		hx-post="/guess-track"
 		hx-target="#music-player"
 		hx-trigger="submit"
-		_="on submit halt the event"
 	>
-		<label for="default-search" class="mb-2 text-sm font-medium text-gray-900 sr-only dark:text-white">Search</label>
+		<label class="mb-2 text-sm font-medium text-gray-900 sr-only dark:text-white">Search</label>
 		<div
 			id="guess-results"
 			class="guess-results  bg-white divide-y divide-gray-100 rounded-lg shadow-sm w-full dark:bg-gray-700 text-gray-700 dark:text-gray-200 "
@@ -19,49 +18,13 @@ templ GuesserInterface() {
 			<input
 				type="search"
 				name="guess"
-				hx-get="/guess-helper"
-				hx-trigger="keyup changed delay:200ms"
-				hx-target="#guess-results"
 				placeholder="Start typing your guess..."
-				id="default-guess"
 				class="guess-input block w-full p-4 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-				required
-				_="on hx:afterRequest set my value to ''"
 			/>
 			<button
 				type="submit"
 				class="guess-button text-white absolute end-2.5 bottom-2.5 bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-			>guess me</button>
+			>Guess!</button>
 		</div>
 	</form>
-}
-
-//templ GuessHelperList(trackList []base.Track, artistsNames []string, albumUrl []string) {
-//	<div class="guess-helper-list">
-//		for idx, track := range trackList {
-//			@GuessOptionCard(track.ID, track.Name, albumUrl[idx], artistsNames[idx], track.Selected)
-//		}
-//	</div>
-//}
-templ GuessOptionCard(trackID, trackName, albumUrl, artistsNames string, selected bool) {
-	//onclick={ templ.JSFuncCall("setGuessOption", track.Name, track.ID) }
-	{{ class_selected := "search-result-item inline-flex w-full px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white" }}
-	if selected {
-		{{ fmt.Println(" Track selected") }}
-		{{ class_selected = "search-result-item inline-flex w-full px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-white" }}
-	}
-	<div
-		class={ class_selected }
-		hx-trigger="click"
-		hx-post="/select-track"
-		hx-vals={ `{"trackID": "` + trackID + `"}` }
-		value={ trackID }
-		hx-swap="outerHTML"
-	>
-		<img src={ albumUrl } alt="Album Cover" class="w-12 h-12 rounded-lg"/>
-		<div class="px-4">
-			<h1 class="text-white font-bold">{ trackName }</h1>
-			<p class="text-gray-400">{ artistsNames }</p>
-		</div>
-	</div>
 }
