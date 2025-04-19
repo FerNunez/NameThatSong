@@ -427,7 +427,5 @@ func (h *GameHandler) ClearQueue(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *GameHandler) SongTime(w http.ResponseWriter, r *http.Request) {
-
 	w.Write([]byte(h.GameService.MusicPlayer.GetTimerAsString()))
-
 }

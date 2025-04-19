@@ -2,15 +2,19 @@ package main
 
 import (
 	"fmt"
-	"github.com/FerNunez/NameThatSong/internal/handlers"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/FerNunez/NameThatSong/internal/handlers"
+	"github.com/FerNunez/NameThatSong/internal/store/dbstore"
 
 	"github.com/go-chi/chi/v5"
 )
 
 func main() {
+
+	sessionStore := dbstore.NewSessionStore()
 
 	// Create new router
 	r := chi.NewRouter()

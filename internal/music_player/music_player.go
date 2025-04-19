@@ -71,6 +71,9 @@ func (p *MusicPlayer) NextInQueue() (Song, error) {
 	return p.Queue[p.CurrentIndex], nil
 
 }
+func (p *MusicPlayer) SongOver() bool {
+	return time.Since(p.Timer) >= p.SongDuration
+}
 
 func (p *MusicPlayer) GetTimerAsString() string {
 	timerElapsed := time.Since(p.Timer)
