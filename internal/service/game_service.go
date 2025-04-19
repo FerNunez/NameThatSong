@@ -3,6 +3,8 @@ package service
 import (
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/FerNunez/NameThatSong/internal/cache"
 	"github.com/FerNunez/NameThatSong/internal/game"
 	"github.com/FerNunez/NameThatSong/internal/music_player"
@@ -133,6 +135,9 @@ func (s *GameService) StartGame() error {
 
 	// guessSong process:
 	s.GuessState.SetTitle(track.Name, artist.Name, album.ImagesURL)
+	s.MusicPlayer.Timer = time.Now()
+	s.MusicPlayer.SongDuration = time.Duration(track.DurationMs) * time.Millisecond
+	fmt.Println("song duration:", track.DurationMs)
 	s.SpotifyApi.PlaySong(song.TrackId)
 
 	// Debug
@@ -148,15 +153,6 @@ func (s *GameService) UserGuess(guess string) (bool, error) {
 
 	return guessedCorrectly, nil
 }
-
-// PlayGame starts playback
-//func (s *GameService) PlayGame() error {}
-
-// MakeGuess checks if the user's guess matches the current song
-//func (s *GameService) MakeGuess(guess string) (bool, string, error) { }
-
-// GetScore returns the current score
-//func (s *GameService) GetScore() int { }
 
 // SkipSong skips to the next song
 func (s *GameService) SkipSong() error {
@@ -181,6 +177,8 @@ func (s *GameService) SkipSong() error {
 
 	// guessSong process:
 	s.GuessState.SetTitle(track.Name, artist.Name, album.ImagesURL)
+	s.MusicPlayer.Timer = time.Now()
+	s.MusicPlayer.SongDuration = time.Duration(track.DurationMs) * time.Millisecond
 	return s.SpotifyApi.PlaySong(nextSong.TrackId)
 }
 

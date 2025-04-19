@@ -67,11 +67,18 @@ templ MusicPlayer(g *service.GameService) {
 				<!-- Progress Bar -->
 				<div class="w-1/2">
 					<div class="flex items-center gap-2 text-sm">
-						<span>2:30</span>
+						<div
+							hx-get="/song-time"
+							hx-trigger="every 1s"
+						>
+							<span></span>
+						</div>
 						<div class="flex-1 h-1 bg-zinc-600 rounded-full">
 							<div class="w-1/3 h-full bg-white rounded-full"></div>
 						</div>
-						<span>4:15</span>
+						<div>
+							<span>{ g.MusicPlayer.GetSongDurationAsString() }</span>
+						</div>
 					</div>
 				</div>
 			</div>

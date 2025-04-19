@@ -2,6 +2,7 @@ package player
 
 import (
 	"errors"
+	"fmt"
 	"math/rand"
 	"time"
 )
@@ -23,6 +24,8 @@ func NewSong(trackId string, albumId string, artistId string) *Song {
 type MusicPlayer struct {
 	Queue        []Song
 	CurrentIndex int
+	Timer        time.Time
+	SongDuration time.Duration
 }
 
 func NewMusicPlayer() *MusicPlayer {
@@ -67,4 +70,21 @@ func (p *MusicPlayer) NextInQueue() (Song, error) {
 	p.CurrentIndex += 1
 	return p.Queue[p.CurrentIndex], nil
 
+}
+
+func (p *MusicPlayer) GetTimerAsString() string {
+	timerElapsed := time.Since(p.Timer)
+	return DurationToString(timerElapsed)
+}
+
+func (p *MusicPlayer) GetSongDurationAsString() string {
+	return DurationToString(p.SongDuration)
+}
+func DurationToString(d time.Duration) string {
+	// Get minutes and seconds
+	minutes := int(d.Minutes())
+	seconds := int(d.Seconds()) % 60
+
+	// Format as "m:ss"
+	return fmt.Sprintf("%d:%02d", minutes, seconds)
 }

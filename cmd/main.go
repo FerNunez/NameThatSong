@@ -42,6 +42,7 @@ func main() {
 	//r.Post("/select-track", gameHandler.SelectTrack)
 	r.Put("/skip", gameHandler.SkipSong)
 	r.Post("/clear-queue", gameHandler.ClearQueue)
+	r.Get("/song-time", gameHandler.SongTime)
 
 	// Start the server
 	port := os.Getenv("PORT")

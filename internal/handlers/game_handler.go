@@ -2,14 +2,15 @@ package handlers
 
 import (
 	"fmt"
+	"net/http"
+	"os"
+	"sort"
+
 	"github.com/FerNunez/NameThatSong/internal/music_player"
 	"github.com/FerNunez/NameThatSong/internal/service"
 	"github.com/FerNunez/NameThatSong/internal/spotify_api"
 	"github.com/FerNunez/NameThatSong/internal/templates"
 	"github.com/FerNunez/NameThatSong/internal/utils"
-	"net/http"
-	"os"
-	"sort"
 
 	"github.com/joho/godotenv"
 )
@@ -423,4 +424,10 @@ func (h *GameHandler) ClearQueue(w http.ResponseWriter, r *http.Request) {
 	h.GameService.ClearQueue()
 	mp := templates.MusicPlayer(h.GameService)
 	mp.Render(r.Context(), w)
+}
+
+func (h *GameHandler) SongTime(w http.ResponseWriter, r *http.Request) {
+
+	w.Write([]byte(h.GameService.MusicPlayer.GetTimerAsString()))
+
 }
