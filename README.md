@@ -1,66 +1,20 @@
-# GoTTH
-A simple, modern stack for building fast web applications.
+# NameThatSong
 
-**Watch walk-through video:**
+**NameThatSong** is a fun and interactive game web page where players test their music knowledge by guessing the currently playing song. Users need to connect their Spotify account to enhance the experience, as the project leverages **Spotify's Web API** to search for artists, retrieve song information, and play music directly from Spotify.
 
-[![GoTTH stack walkthrough](https://img.youtube.com/vi/k00jVJeZxrs/0.jpg)](https://www.youtube.com/watch?v=k00jVJeZxrs)
+This project is a fork of the skeleton framework **[GoTTH](https://github.com/TomDoesTech/GOTTH)**, which serves as the foundation for this application.
 
-* Go - Backend
-* Tailwind - CSS
-* Templ - Templating
-* HTMX - Interactivity
+## Tech Stack
 
-## Technologies
-### Tailwind
-To generate the Tailwind style sheet, we use the Tailwind binary. To get started with TailWind CSS, make sure you have the correct binary in the root directory. follow the instructions in this guide. Make sure you download the correct binary for your operating system.
-https://tailwindcss.com/blog/standalone-cli
+The project is built using a combination of technologies:
 
-### Templ
-https://templ.guide/
+- **Go**: Backend development and core logic  
+- **Htmx**: Web interaction  
+- **Templ**: Build HTML/X with Go  
+- **Tailwind CSS**: For styling
 
-### Air
-Air is required for hot reloading used in ```make dev```
-https://github.com/cosmtrek/air
+## Acknowledgments
 
-
-## Makefile
-This Makefile is designed to simplify common development tasks for your project. It includes targets for building your Go application, watching and building Tailwind CSS, generating templates, and running your development server using Air.
-
-
-## Development
-`make docker-dev` will start everything in watch mode inside a Docker container.
-
-### Targets:
-
-```bash
-make tailwind-watch
-```
-This target watches the ./static/css/input.css file and automatically rebuilds the Tailwind CSS styles whenever changes are detected.
-
-```
-make tailwind-build
-```
-This target minifies the Tailwind CSS styles by running the tailwindcss command.
-
-```
-make templ-watch
-```
-This target watches for changes to *.templ files and automatically generates them.
-
-
-```
-make templ-generate
-```
-This target generates templates using the templ command.
-
-
-```
-make dev
-```
-This target runs the development server using Air, which helps in hot-reloading your Go application during development.
-
-```
-make build
-```
-This target orchestrates the building process by executing the tailwind-build, templ-generate, and go build commands sequentially. It creates the binary output in the ./bin/ directory.
+- This project is a fork of [GoTTH](https://github.com/TomDoesTech/GOTTH), a skeleton framework that provided the foundation for development.  
+- Thanks to **Spotify** for their fantastic Web API.
 
