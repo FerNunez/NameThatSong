@@ -9,12 +9,11 @@ import (
 	"github.com/FerNunez/NameThatSong/internal/handlers"
 	"github.com/FerNunez/NameThatSong/internal/store/dbstore"
 
+	m "github.com/FerNunez/NameThatSong/internal/middleware"
 	"github.com/go-chi/chi/v5"
 )
 
 func main() {
-
-	sessionStore := dbstore.NewSessionStore()
 
 	// Create new router
 	r := chi.NewRouter()
@@ -25,27 +24,42 @@ func main() {
 		log.Fatalf("Error creating game handler: %v", err)
 	}
 
-	// Set up static file server
-	fileServer := http.FileServer(http.Dir("./static"))
-	r.Handle("/static/*", http.StripPrefix("/static/", fileServer))
+	sessionStore := dbstore.NewSessionStore()
+	//sessionStore.CreateSession()
+	authMiddleware := m.NewAuthMiddleware(sessionStore, "test")
+	r.Group(func(r chi.Router) {
+		r.Use(
+			authMiddleware.CreateTempUser,
+		)
+		r.Get("/", gameHandler.IndexHandler)
 
-	r.Get("/", gameHandler.IndexHandler)
-	// Auth Routes
-	r.Get("/login", gameHandler.AuthHandler)
-	r.Get("/auth/callback", gameHandler.AuthCallbackHandler)
+	})
+	r.Group(func(r chi.Router) {
+		r.Use(
+			authMiddleware.AddUserToContext,
+		)
+		// Set up static file server
+		fileServer := http.FileServer(http.Dir("./static"))
+		r.Handle("/static/*", http.StripPrefix("/static/", fileServer))
 
-	// Game routes
-	r.Get("/search-helper", gameHandler.SearchArtists)
-	r.Get("/search-albums", gameHandler.GetArtistAlbums)
-	r.Post("/api/select-album", gameHandler.SelectAlbum)
-	r.Post("/start-process", gameHandler.StartGame)
-	//r.Get("/play", gameHandler.PlayGame)
-	//TODO: add only songs of artists here
-	//r.Get("/guess-helper", gameHandler.GuessHelper)
-	r.Post("/guess-track", gameHandler.GuessTrack)
-	//r.Post("/select-track", gameHandler.SelectTrack)
-	r.Put("/skip", gameHandler.SkipSong)
-	r.Post("/clear-queue", gameHandler.ClearQueue)
+		// Auth Routes
+		r.Get("/login", gameHandler.AuthHandler)
+		r.Get("/auth/callback", gameHandler.AuthCallbackHandler)
+
+		// Game routes
+		r.Get("/search-helper", gameHandler.SearchArtists)
+		r.Get("/search-albums", gameHandler.GetArtistAlbums)
+		r.Post("/api/select-album", gameHandler.SelectAlbum)
+		r.Post("/start-process", gameHandler.StartGame)
+		//r.Get("/play", gameHandler.PlayGame)
+		//TODO: add only songs of artists here
+		//r.Get("/guess-helper", gameHandler.GuessHelper)
+		r.Post("/guess-track", gameHandler.GuessTrack)
+		//r.Post("/select-track", gameHandler.SelectTrack)
+		r.Put("/skip", gameHandler.SkipSong)
+		r.Post("/clear-queue", gameHandler.ClearQueue)
+	})
+
 	r.Get("/song-time", gameHandler.SongTime)
 
 	// Start the server
