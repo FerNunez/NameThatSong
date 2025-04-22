@@ -1,0 +1,75 @@
+package templates
+
+templ Login(title string) {
+	<div class="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-900 to-gray-800 py-16 px-4 sm:px-6 lg:px-8">
+		<div class="max-w-md w-full bg-gray-800 rounded-xl shadow-2xl p-8 space-y-10 border-gray-700">
+			<div>
+				<h1 class="text-center text-3xl font-bold tracking-tight text-white mb-6">
+					Sign in to your account
+				</h1>
+			</div>
+			<form
+				class="mt-8 space-y-10"
+				hx-post="/login"
+				hx-trigger="submit"
+				hx-target-401="#login-error"
+				hx-ext="response-targets"
+			>
+				<div id="login-error" class="text-center text-red-500 text-sm font-medium"></div>
+				<div class="space-y-5">
+					<div class="space-y-2">
+						<label for="username" class="block text-sm font-medium text-gray-200">
+							Username 
+						</label>
+						<input
+							type="username"
+							name="username"
+							id="username"
+							required
+							class="block w-full rounded-lg border border-gray-600 bg-gray-700 px-4 py-3 text-white placeholder-gray-400 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-200"
+							placeholder="DuaFanNo1"
+						/>
+					</div>
+					<div class="space-y-2">
+						<label for="password" class="block text-sm font-medium text-gray-200">
+							Password
+						</label>
+						<input
+							type="password"
+							name="password"
+							id="password"
+							required
+							class="block w-full rounded-lg border border-gray-600 bg-gray-700 px-4 py-3 text-white placeholder-gray-400 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-200"
+							placeholder="••••••••"
+							autocomplete="current-password"
+						/>
+					</div>
+				</div>
+				<div class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-yellow-200 hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:bg-yellow-200 transition-all duration-200 shadow-lg hover:shadow-xl">
+					<button
+						type="submit"
+					>
+						Sign in
+					</button>
+				</div>
+				<div class="text-center mt-6">
+					<p class="text-sm text-gray-400">
+						Don't have an account yet?
+						<a
+							href="/register"
+							class="font-medium text-blue-400 hover:text-blue-300 transition-colors duration-200 ml-1"
+						>
+							Register
+						</a>
+					</p>
+				</div>
+			</form>
+		</div>
+	</div>
+}
+
+templ LoginError() {
+	<p class="text-red-500 text-sm font-medium px-4 py-2 bg-red-500/10 rounded-lg border border-red-500/20">
+		Invalid password for that username
+	</p>
+}

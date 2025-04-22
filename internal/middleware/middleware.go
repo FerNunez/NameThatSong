@@ -77,14 +77,14 @@ func (m *AuthMiddleware) AddUserToContext(next http.Handler) http.Handler {
 	})
 }
 
-// func GetUser(ctx context.Context) *store.User {
-// 	user := ctx.Value(UserKey)
-// 	if user == nil {
-// 		return nil
-// 	}
-//
-// 	return user.(*store.User)
-// }
+func GetUser(ctx context.Context) *store.Session {
+	user := ctx.Value(UserKey)
+	if user == nil {
+		return nil
+	}
+
+	return user.(*store.Session)
+}
 
 // TEMPORAL STUF
 

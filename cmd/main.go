@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	//"github.com/FerNunez/NameThatSong/internal/game"
 	"github.com/FerNunez/NameThatSong/internal/handlers"
 	"github.com/FerNunez/NameThatSong/internal/store/dbstore"
 
@@ -42,8 +43,12 @@ func main() {
 		fileServer := http.FileServer(http.Dir("./static"))
 		r.Handle("/static/*", http.StripPrefix("/static/", fileServer))
 
+		r.Get("/register", gameHandler.GetRegisterHandler)
+		r.Post("/register", gameHandler.PostRegisterHandler)
 		// Auth Routes
-		r.Get("/login", gameHandler.AuthHandler)
+		r.Get("/login", gameHandler.GetLoginHandler)
+		r.Post("/login", gameHandler.PostLoginHandler)
+		//r.Get("/login", gameHandler.AuthHandler)
 		r.Get("/auth/callback", gameHandler.AuthCallbackHandler)
 
 		// Game routes
