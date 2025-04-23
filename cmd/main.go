@@ -6,15 +6,30 @@ import (
 	"net/http"
 	"os"
 
+	"database/sql"
+
 	//"github.com/FerNunez/NameThatSong/internal/game"
+	"github.com/FerNunez/NameThatSong/internal/database"
 	"github.com/FerNunez/NameThatSong/internal/handlers"
 	"github.com/FerNunez/NameThatSong/internal/store/dbstore"
+	"github.com/joho/godotenv"
 
 	m "github.com/FerNunez/NameThatSong/internal/middleware"
 	"github.com/go-chi/chi/v5"
+	_ "github.com/lib/pq"
 )
 
 func main() {
+
+	err := godotenv.Load()
+	dbURL := os.Getenv("DB_URL")
+	fmt.Printf("dbURL: %v\n", dbURL)
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatalf("Error opening db: %v", err)
+	}
+	dbQueries := database.New(db)
+	fmt.Println("Hey, dbQuaeries is heeere: ", dbQueries)
 
 	// Create new router
 	r := chi.NewRouter()
@@ -44,10 +59,10 @@ func main() {
 		r.Handle("/static/*", http.StripPrefix("/static/", fileServer))
 
 		r.Get("/register", gameHandler.GetRegisterHandler)
-		r.Post("/register", gameHandler.PostRegisterHandler)
+		r.Post("/register", handlers.NewPostRegisterHandler(dbQueries).ServeHttp)
 		// Auth Routes
 		r.Get("/login", gameHandler.GetLoginHandler)
-		r.Post("/login", gameHandler.PostLoginHandler)
+		r.Post("/login", handlers.NewPostLoginHandler(dbQueries).ServeHttp)
 		//r.Get("/login", gameHandler.AuthHandler)
 		r.Get("/auth/callback", gameHandler.AuthCallbackHandler)
 

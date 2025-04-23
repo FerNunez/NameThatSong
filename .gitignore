@@ -2,10 +2,13 @@ bin
 tmp
 *.db
 tailwindcss
+git filter-repo --path secrets.txt --invert-paths
 
 
 *_templ.go
 *_templ.txt
 static/css/style.css
 
-goth
+.env
+.private
+

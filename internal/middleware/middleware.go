@@ -33,14 +33,12 @@ var UserKey string = "user"
 func (m *AuthMiddleware) AddUserToContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		fmt.Println("Hi. Im getting called")
 		sessionCookie, err := r.Cookie(m.sessionCookieName)
 
 		if err != nil {
 			next.ServeHTTP(w, r)
 			return
 		}
-		fmt.Println("Cookie gotten")
 
 		decodedValue, err := b64.StdEncoding.DecodeString(sessionCookie.Value)
 
@@ -57,10 +55,7 @@ func (m *AuthMiddleware) AddUserToContext(next http.Handler) http.Handler {
 		}
 
 		sessionID := splitValue[0]
-		userName := splitValue[1]
-
-		fmt.Println("sessionID", sessionID)
-		fmt.Println("userID", userName)
+		// userName := splitValue[1]
 
 		//user, err := m.sessionStore.GetUserFromSession(sessionID, userID)
 		user, err := m.sessionStore.GetUserFromSession(sessionID)
