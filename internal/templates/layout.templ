@@ -1,7 +1,5 @@
 package templates
 
-import m "github.com/FerNunez/NameThatSong/internal/middleware"
-
 templ header(title string) {
 	<head>
 		<title>{ title }</title>
@@ -30,7 +28,8 @@ templ nav() {
 				</li>
 			</ol>
 			<ol class="flex space-x-4">
-				if m.GetUser(ctx) != nil {
+				//if m.GetUser(ctx) != nil {
+				if false {
 					<li>
 						<button class="text-gray-200" hx-target="body" hx-swap="innerHTML" hx-post="/logout">Logout</button>
 					</li>

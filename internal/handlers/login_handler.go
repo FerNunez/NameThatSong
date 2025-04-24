@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/FerNunez/NameThatSong/internal/database"
+	"github.com/FerNunez/NameThatSong/internal/auth"
+	"github.com/FerNunez/NameThatSong/internal/store"
+	"github.com/FerNunez/NameThatSong/internal/store/database"
 	"github.com/FerNunez/NameThatSong/internal/templates"
 )
 
@@ -21,7 +23,8 @@ func (h GameHandler) GetLoginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type PostLoginHandler struct {
-	dbQuery *database.Queries
+	UserStore store.UserStore
+	//dbQuery   *database.Queries
 	// sessionStore      store.SessionStore
 	// passwordhash      hash.PasswordHash
 	// sessionCookieName string
@@ -29,16 +32,16 @@ type PostLoginHandler struct {
 
 func NewPostLoginHandler(dbQuery *database.Queries) *PostLoginHandler {
 	return &PostLoginHandler{
-		dbQuery,
+		UserStore: store.NewSQLUserStore(dbQuery),
 	}
 }
 
 func (h PostLoginHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 
-	username := r.FormValue("username")
+	email := r.FormValue("email")
 	password := r.FormValue("password")
-	fmt.Printf("Received a username: %v and pass %v\n", username, password)
-	dbUser, err := h.dbQuery.GetUserByEmail(r.Context(), username)
+	fmt.Printf("Received a email: %v and pass %v\n", email, password)
+	dbUser, err := h.UserStore.GetEmail(r.Context(), email)
 
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -46,6 +49,16 @@ func (h PostLoginHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 		c.Render(r.Context(), w)
 		return
 	}
+
+	// Check Password
+	if err := auth.CheckPasswordHash(password, dbUser.HashedPassword); err != nil {
+		errmsg := fmt.Sprintln("Wrong password")
+		fmt.Println(errmsg)
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte(errmsg))
+		return
+	}
+
 	fmt.Println("Todo rest :", dbUser)
 
 	// TODO: add here redirect to main page?

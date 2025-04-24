@@ -9,12 +9,11 @@ import (
 	"database/sql"
 
 	//"github.com/FerNunez/NameThatSong/internal/game"
-	"github.com/FerNunez/NameThatSong/internal/database"
 	"github.com/FerNunez/NameThatSong/internal/handlers"
-	"github.com/FerNunez/NameThatSong/internal/store/dbstore"
+	"github.com/FerNunez/NameThatSong/internal/store/database"
 	"github.com/joho/godotenv"
 
-	m "github.com/FerNunez/NameThatSong/internal/middleware"
+	//m "github.com/FerNunez/NameThatSong/internal/middleware"
 	"github.com/go-chi/chi/v5"
 	_ "github.com/lib/pq"
 )
@@ -40,20 +39,20 @@ func main() {
 		log.Fatalf("Error creating game handler: %v", err)
 	}
 
-	sessionStore := dbstore.NewSessionStore()
+	// sessionStore := dbstore.NewSessionStore()
 	//sessionStore.CreateSession()
-	authMiddleware := m.NewAuthMiddleware(sessionStore, "test")
+	// authMiddleware := m.NewAuthMiddleware(sessionStore, "test")
 	r.Group(func(r chi.Router) {
-		r.Use(
-			authMiddleware.CreateTempUser,
-		)
-		r.Get("/", gameHandler.IndexHandler)
+		// r.Use(
+		// 	authMiddleware.CreateTempUser,
+		// )
 
 	})
 	r.Group(func(r chi.Router) {
-		r.Use(
-			authMiddleware.AddUserToContext,
-		)
+		// r.Use(
+		// 	authMiddleware.AddUserToContext,
+		// )
+		r.Get("/", gameHandler.IndexHandler)
 		// Set up static file server
 		fileServer := http.FileServer(http.Dir("./static"))
 		r.Handle("/static/*", http.StripPrefix("/static/", fileServer))

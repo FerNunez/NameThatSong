@@ -18,13 +18,13 @@ templ Login(title string) {
 				<div id="login-error" class="text-center text-red-500 text-sm font-medium"></div>
 				<div class="space-y-5">
 					<div class="space-y-2">
-						<label for="username" class="block text-sm font-medium text-gray-200">
-							Username 
+						<label for="email" class="block text-sm font-medium text-gray-200">
+							email 
 						</label>
 						<input
-							type="username"
-							name="username"
-							id="username"
+							type="email"
+							name="email"
+							id="email"
 							required
 							class="block w-full rounded-lg border border-gray-600 bg-gray-700 px-4 py-3 text-white placeholder-gray-400 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-200"
 							placeholder="DuaFanNo1"
@@ -70,6 +70,6 @@ templ Login(title string) {
 
 templ LoginError() {
 	<p class="text-red-500 text-sm font-medium px-4 py-2 bg-red-500/10 rounded-lg border border-red-500/20">
-		Invalid password for that username
+		Invalid password for that email
 	</p>
 }

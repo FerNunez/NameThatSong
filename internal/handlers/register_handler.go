@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/FerNunez/NameThatSong/internal/database"
+	"github.com/FerNunez/NameThatSong/internal/auth"
+	"github.com/FerNunez/NameThatSong/internal/store"
+	"github.com/FerNunez/NameThatSong/internal/store/database"
 	"github.com/FerNunez/NameThatSong/internal/templates"
 )
 
 type PostRegisterHandler struct {
-	dbQuery *database.Queries
+	UserStore store.UserStore
+	//dbQuery *database.Queries
 	// sessionStore      store.SessionStore
 	// passwordhash      hash.PasswordHash
 	// sessionCookieName string
@@ -27,22 +30,21 @@ func (h GameHandler) GetRegisterHandler(w http.ResponseWriter, r *http.Request) 
 
 func NewPostRegisterHandler(dbQuery *database.Queries) *PostRegisterHandler {
 	return &PostRegisterHandler{
-		dbQuery,
+		UserStore: store.NewSQLUserStore(dbQuery),
 	}
 }
 
 func (h PostRegisterHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 
-	username := r.FormValue("username")
+	email := r.FormValue("email")
 	password := r.FormValue("password")
-	fmt.Printf("Received a username: %v and pass %v\n", username, password)
+	fmt.Printf("Received a email: %v and pass %v\n", email, password)
 
-	dbUser, err := h.dbQuery.CreateUser(r.Context(), database.CreateUserParams{
-		Email:          username,
-		HashedPassword: password,
-	})
+	hashedPass, err := auth.HashPassword(password)
 
-	fmt.Println("im here with dbUser", dbUser)
+	dbUser, err := h.UserStore.Create(r.Context(), email, hashedPass)
+
+	fmt.Println("im here with dbUser", dbUser.Email)
 
 	if err != nil {
 
