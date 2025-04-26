@@ -18,6 +18,6 @@ CREATE TABLE sessions(
 );
 
 -- +goose Down
-DROP TABLE users;
+DROP TABLE users CASCADE;
 DROP TABLE sessions;
 

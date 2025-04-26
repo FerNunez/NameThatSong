@@ -35,7 +35,7 @@ func NewSQLSessionStore(db *database.Queries) SessionStore {
 }
 
 func (s *SQLSessionStore) Create(ctx context.Context, userID uuid.UUID, ttl time.Duration) (Session, error) {
-	id := generateSessionID() // You would implement this function
+	id := generateSessionID()
 	expiresAt := time.Now().Add(ttl)
 
 	dbSession, err := s.db.CreateSession(ctx, database.CreateSessionParams{
@@ -47,7 +47,6 @@ func (s *SQLSessionStore) Create(ctx context.Context, userID uuid.UUID, ttl time
 		return Session{}, err
 	}
 
-	// Convert from DB model to domain model
 	return Session{
 		ID:        dbSession.ID,
 		UserID:    dbSession.UserID,
@@ -57,7 +56,6 @@ func (s *SQLSessionStore) Create(ctx context.Context, userID uuid.UUID, ttl time
 	}, nil
 }
 
-// Get retrieves a session by ID
 func (s *SQLSessionStore) Get(ctx context.Context, id string) (Session, error) {
 	dbSession, err := s.db.GetSession(ctx, id)
 	if err != nil {

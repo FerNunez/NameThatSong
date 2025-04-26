@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	b64 "encoding/base64"
+
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/FerNunez/NameThatSong/internal/auth"
 	"github.com/FerNunez/NameThatSong/internal/store"
@@ -23,16 +26,20 @@ func (h GameHandler) GetLoginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type PostLoginHandler struct {
-	UserStore store.UserStore
+	UserStore    store.UserStore
+	SessionStore store.SessionStore
+	SessionName  string
 	//dbQuery   *database.Queries
 	// sessionStore      store.SessionStore
 	// passwordhash      hash.PasswordHash
 	// sessionCookieName string
 }
 
-func NewPostLoginHandler(dbQuery *database.Queries) *PostLoginHandler {
+func NewPostLoginHandler(dbQuery *database.Queries, sessionName string) *PostLoginHandler {
 	return &PostLoginHandler{
-		UserStore: store.NewSQLUserStore(dbQuery),
+		UserStore:    store.NewSQLUserStore(dbQuery),
+		SessionStore: store.NewSQLSessionStore(dbQuery),
+		SessionName:  sessionName,
 	}
 }
 
@@ -49,17 +56,43 @@ func (h PostLoginHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 		c.Render(r.Context(), w)
 		return
 	}
+	fmt.Printf("DB found: %v", dbUser)
 
 	// Check Password
 	if err := auth.CheckPasswordHash(password, dbUser.HashedPassword); err != nil {
-		errmsg := fmt.Sprintln("Wrong password")
-		fmt.Println(errmsg)
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(errmsg))
+		c := templates.LoginError()
+		c.Render(r.Context(), w)
 		return
 	}
+	fmt.Println("Password checked!")
 
-	fmt.Println("Todo rest :", dbUser)
+	ttl := time.Duration(24 * time.Hour)
+	dbSession, err := h.SessionStore.Create(r.Context(), dbUser.ID, ttl)
+	if err != nil {
 
-	// TODO: add here redirect to main page?
+		fmt.Printf("error creating session!: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		c := templates.LoginError()
+		c.Render(r.Context(), w)
+		return
+	}
+	fmt.Printf("Session created: %v", dbSession)
+
+	cookieValue := b64.StdEncoding.EncodeToString(fmt.Appendf(nil, "%s:%s", dbSession.ID, dbSession.UserID.String()))
+
+	cookie := http.Cookie{
+		Name:     h.SessionName,
+		Value:    cookieValue,
+		Expires:  dbSession.ExpiresAt,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	}
+
+	http.SetCookie(w, &cookie)
+
+	fmt.Println("Cookie created")
+	w.Header().Set("HX-Redirect", "/")
+	w.WriteHeader(http.StatusOK)
 }

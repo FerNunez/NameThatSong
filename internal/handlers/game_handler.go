@@ -75,7 +75,8 @@ func (h *GameHandler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Redirect to Spotify
-	http.Redirect(w, r, urlString, http.StatusFound)
+	//http.Redirect(w, r, urlString, http.StatusFound)
+	w.Header().Set("HX-Redirect", urlString)
 }
 
 // AuthCallbackHandler handles the callback from Spotify after login

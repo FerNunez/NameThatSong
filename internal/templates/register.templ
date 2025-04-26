@@ -1,24 +1,46 @@
 package templates
 
 templ RegisterSuccess() {
-	<h1>Registration successful</h1>
-	<p>Go to <a href="login">login</a></p>
+	<div class="min-h-screen flex items-start justify-center bg-gradient-to-b from-gray-900 to-gray-800 pt-16 px-4 sm:px-6 lg:px-8">
+		<div class="max-w-md w-full bg-gray-800 rounded-xl shadow-2xl p-8 space-y-6 border border-gray-700">
+			<h1 class="text-center text-3xl tracking-tight text-white mb-6">Registration successful</h1>
+			<div class="text-center">
+				<h1 class="text-center text-3xl font-bold tracking-tight text-white mb-6">Please connect your Spotify account</h1>
+				<button
+					type="submit"
+					hx-get="/spotify-auth"
+					hx-trigger="click"
+					class="m-8 py-2 px-18 rounded-lg bg-green-500 hover:bg-green-600 text-white font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer border-2 border-green-400 hover:border-green-300 hover:translate-y-1 hover:scale-105"
+				>
+					Connect 
+				</button>
+			</div>
+		</div>
+	</div>
 }
 
 templ RegisterError() {
-	<div>
-		<h1>Registration failed</h1>
-		<p>There was an error registering your account</p>
+	<div class="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-900 to-gray-800 py-16 px-4 sm:px-6 lg:px-8">
+		<div class="max-w-md w-full bg-gray-800 rounded-xl shadow-2xl p-8 space-y-6 border-gray-700">
+			<h1 class="text-center text-3xl font-bold tracking-tight text-white mb-6">Registration failed</h1>
+			<p class="text-center text-red-400">There was an error registering your account</p>
+			<div class="text-center">
+				<a
+					href="/register"
+					class="inline-block text-sm text-blue-400 hover:text-blue-300 transition-colors duration-200"
+				>
+					Try again
+				</a>
+			</div>
+		</div>
 	</div>
 }
 
 templ RegisterPage() {
 	<div
-		hx-ext="response-targets"
-		class="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-900 to-gray-800 py-16 px-4 sm:px-6 lg:px-8"
+		class="min-h-screen flex items-start justify-center bg-gradient-to-b from-gray-900 to-gray-800 pt-16 px-4 sm:px-6 lg:px-8"
 	>
 		<div
-			hx-ext="response-targets"
 			class="max-w-md w-full bg-gray-800 rounded-xl shadow-2xl p-8 space-y-10 border-gray-700"
 		>
 			<div>

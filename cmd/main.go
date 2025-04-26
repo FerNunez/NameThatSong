@@ -22,13 +22,11 @@ func main() {
 
 	err := godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
-	fmt.Printf("dbURL: %v\n", dbURL)
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatalf("Error opening db: %v", err)
 	}
 	dbQueries := database.New(db)
-	fmt.Println("Hey, dbQuaeries is heeere: ", dbQueries)
 
 	// Create new router
 	r := chi.NewRouter()
@@ -61,8 +59,8 @@ func main() {
 		r.Post("/register", handlers.NewPostRegisterHandler(dbQueries).ServeHttp)
 		// Auth Routes
 		r.Get("/login", gameHandler.GetLoginHandler)
-		r.Post("/login", handlers.NewPostLoginHandler(dbQueries).ServeHttp)
-		//r.Get("/login", gameHandler.AuthHandler)
+		r.Post("/login", handlers.NewPostLoginHandler(dbQueries, "SessionTEST").ServeHttp)
+		r.Get("/spotify-auth", gameHandler.AuthHandler)
 		r.Get("/auth/callback", gameHandler.AuthCallbackHandler)
 
 		// Game routes
