@@ -18,7 +18,8 @@ type User struct {
 
 type UserStore interface {
 	Create(ctx context.Context, email, hashed_password string) (User, error)
-	GetEmail(ctx context.Context, email string) (User, error)
+	GetByEmail(ctx context.Context, email string) (User, error)
+	GetById(ctx context.Context, id string) (User, error)
 	UpdateById(ctx context.Context, id uuid.UUID, newEmail, newHashedPass string) error
 	Reset(ctx context.Context) error
 }
@@ -51,8 +52,29 @@ func (s *SQLUserStore) Create(ctx context.Context, email, hashed_password string
 	}, nil
 }
 
-func (s SQLUserStore) GetEmail(ctx context.Context, email string) (User, error) {
+func (s SQLUserStore) GetById(ctx context.Context, id string) (User, error) {
+	parsedUUID, err := uuid.Parse(id)
+	if err != nil {
+		return User{}, err
+	}
+	dbUser, err := s.db.GetUserById(ctx, parsedUUID)
+
+	if err != nil {
+		return User{}, err
+	}
+
+	return User{
+		ID:             dbUser.ID,
+		CreatedAt:      dbUser.CreatedAt,
+		UpdatedAt:      dbUser.UpdatedAt,
+		Email:          dbUser.Email,
+		HashedPassword: dbUser.HashedPassword,
+	}, nil
+}
+
+func (s SQLUserStore) GetByEmail(ctx context.Context, email string) (User, error) {
 	dbUser, err := s.db.GetUserByEmail(ctx, email)
+
 	if err != nil {
 		return User{}, err
 	}

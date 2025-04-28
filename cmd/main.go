@@ -10,10 +10,11 @@ import (
 
 	//"github.com/FerNunez/NameThatSong/internal/game"
 	"github.com/FerNunez/NameThatSong/internal/handlers"
+	"github.com/FerNunez/NameThatSong/internal/store"
 	"github.com/FerNunez/NameThatSong/internal/store/database"
 	"github.com/joho/godotenv"
 
-	//m "github.com/FerNunez/NameThatSong/internal/middleware"
+	m "github.com/FerNunez/NameThatSong/internal/middleware"
 	"github.com/go-chi/chi/v5"
 	_ "github.com/lib/pq"
 )
@@ -28,6 +29,8 @@ func main() {
 	}
 	dbQueries := database.New(db)
 
+	userStore := store.NewSQLUserStore(dbQueries)
+
 	// Create new router
 	r := chi.NewRouter()
 
@@ -37,19 +40,14 @@ func main() {
 		log.Fatalf("Error creating game handler: %v", err)
 	}
 
+	cookieName := "CookieName"
 	// sessionStore := dbstore.NewSessionStore()
 	//sessionStore.CreateSession()
-	// authMiddleware := m.NewAuthMiddleware(sessionStore, "test")
+	authMiddleware := m.NewAuthMiddleware(userStore, cookieName)
 	r.Group(func(r chi.Router) {
-		// r.Use(
-		// 	authMiddleware.CreateTempUser,
-		// )
-
-	})
-	r.Group(func(r chi.Router) {
-		// r.Use(
-		// 	authMiddleware.AddUserToContext,
-		// )
+		r.Use(
+			authMiddleware.AddUserToContext,
+		)
 		r.Get("/", gameHandler.IndexHandler)
 		// Set up static file server
 		fileServer := http.FileServer(http.Dir("./static"))
@@ -59,7 +57,7 @@ func main() {
 		r.Post("/register", handlers.NewPostRegisterHandler(dbQueries).ServeHttp)
 		// Auth Routes
 		r.Get("/login", gameHandler.GetLoginHandler)
-		r.Post("/login", handlers.NewPostLoginHandler(dbQueries, "SessionTEST").ServeHttp)
+		r.Post("/login", handlers.NewPostLoginHandler(dbQueries, cookieName).ServeHttp)
 		r.Get("/spotify-auth", gameHandler.AuthHandler)
 		r.Get("/auth/callback", gameHandler.AuthCallbackHandler)
 

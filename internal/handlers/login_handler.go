@@ -48,7 +48,7 @@ func (h PostLoginHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	email := r.FormValue("email")
 	password := r.FormValue("password")
 	fmt.Printf("Received a email: %v and pass %v\n", email, password)
-	dbUser, err := h.UserStore.GetEmail(r.Context(), email)
+	dbUser, err := h.UserStore.GetByEmail(r.Context(), email)
 
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)

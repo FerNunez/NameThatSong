@@ -1,86 +1,80 @@
 package middleware
 
-// import (
-// 	"context"
-// 	"fmt"
-// 	"net/http"
-// 	"strings"
-// 	"time"
-//
-// 	b64 "encoding/base64"
-//
-// 	"github.com/FerNunez/NameThatSong/internal/store"
-// )
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"strings"
 
-//
-// type AuthMiddleware struct {
-// 	sessionStore      *dbstore.SessionStore
-// 	sessionCookieName string
-// 	count             int
-// }
-//
-// func NewAuthMiddleware(sessionStore *dbstore.SessionStore, sessionCookieName string) *AuthMiddleware {
-// 	return &AuthMiddleware{
-// 		sessionStore:      sessionStore,
-// 		sessionCookieName: sessionCookieName,
-// 		count:             0,
-// 	}
-// }
-//
-// var UserKey string = "user"
-//
-// // Gets Cookie -> Gets user from Cookie
-// func (m *AuthMiddleware) AddUserToContext(next http.Handler) http.Handler {
-// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-//
-// 		sessionCookie, err := r.Cookie(m.sessionCookieName)
-//
-// 		if err != nil {
-// 			next.ServeHTTP(w, r)
-// 			return
-// 		}
-//
-// 		decodedValue, err := b64.StdEncoding.DecodeString(sessionCookie.Value)
-//
-// 		if err != nil {
-// 			next.ServeHTTP(w, r)
-// 			return
-// 		}
-//
-// 		splitValue := strings.Split(string(decodedValue), ":")
-//
-// 		if len(splitValue) != 2 {
-// 			next.ServeHTTP(w, r)
-// 			return
-// 		}
-//
-// 		sessionID := splitValue[0]
-// 		// userName := splitValue[1]
-//
-// 		//user, err := m.sessionStore.GetUserFromSession(sessionID, userID)
-// 		user, err := m.sessionStore.GetUserFromSession(sessionID)
-//
-// 		if err != nil {
-// 			next.ServeHTTP(w, r)
-// 			return
-// 		}
-//
-// 		// set User in context
-// 		ctx := context.WithValue(r.Context(), UserKey, user)
-//
-// 		next.ServeHTTP(w, r.WithContext(ctx))
-// 	})
-// }
-//
-// func GetUser(ctx context.Context) *store.Session {
-// 	user := ctx.Value(UserKey)
-// 	if user == nil {
-// 		return nil
-// 	}
-//
-// 	return user.(*store.Session)
-// }
-//
+	b64 "encoding/base64"
+
+	"github.com/FerNunez/NameThatSong/internal/store"
+)
+
+type AuthMiddleware struct {
+	userStore         store.UserStore
+	sessionCookieName string
+	count             int
+}
+
+func NewAuthMiddleware(userStore store.UserStore, sessionCookieName string) *AuthMiddleware {
+	return &AuthMiddleware{
+		userStore:         userStore,
+		sessionCookieName: sessionCookieName,
+		count:             0,
+	}
+}
+
+var UserKey string = "user"
+
+// Gets Cookie -> Gets user from Cookie
+func (m *AuthMiddleware) AddUserToContext(next http.Handler) http.Handler {
+	fmt.Println("middleware called?")
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		sessionCookie, err := r.Cookie(m.sessionCookieName)
+		if err != nil {
+			fmt.Println("error")
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		decodedValue, err := b64.StdEncoding.DecodeString(sessionCookie.Value)
+		if err != nil {
+			fmt.Println("error here")
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		splitValue := strings.Split(string(decodedValue), ":")
+		if len(splitValue) != 2 {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		//sessionID := splitValue[0]
+		//userID := splitValue[1]
+		user, err := m.userStore.GetById(r.Context(), splitValue[1])
+		if err != nil {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		fmt.Println("Found ID in DB")
+		ctx := context.WithValue(r.Context(), UserKey, user)
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func GetUser(ctx context.Context) (store.User, bool) {
+	user := ctx.Value(UserKey)
+	if user == nil {
+		return store.User{}, false
+	}
+	return user.(store.User), true
+}
+
 // // TEMPORAL STUF
 //
 // func (m *AuthMiddleware) CreateTempUser(next http.Handler) http.Handler {
@@ -100,7 +94,7 @@ package middleware
 // 				SessionID: "",
 // 				UserName:  userName,
 // 			}
-// 			sessWithId, _ := m.sessionStore.CreateSession(&s)
+// 			sessWithId, _ := m.userStore.CreateSession(&s)
 // 			m.count += 1
 //
 // 			cookieValue := b64.StdEncoding.EncodeToString(fmt.Appendf(nil, "%s:%s", sessWithId.SessionID, sessWithId.UserName))
