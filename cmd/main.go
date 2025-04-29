@@ -55,9 +55,12 @@ func main() {
 
 		r.Get("/register", gameHandler.GetRegisterHandler)
 		r.Post("/register", handlers.NewPostRegisterHandler(dbQueries).ServeHttp)
-		// Auth Routes
+		// login Routes
 		r.Get("/login", gameHandler.GetLoginHandler)
 		r.Post("/login", handlers.NewPostLoginHandler(dbQueries, cookieName).ServeHttp)
+		r.Post("/logout", handlers.NewPostLogoutHandler(cookieName).ServeHTTP)
+
+		// Auth
 		r.Get("/spotify-auth", gameHandler.AuthHandler)
 		r.Get("/auth/callback", gameHandler.AuthCallbackHandler)
 
