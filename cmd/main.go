@@ -8,8 +8,8 @@ import (
 
 	"database/sql"
 
-	//"github.com/FerNunez/NameThatSong/internal/game"
 	"github.com/FerNunez/NameThatSong/internal/handlers"
+	"github.com/FerNunez/NameThatSong/internal/manager"
 	"github.com/FerNunez/NameThatSong/internal/store"
 	"github.com/FerNunez/NameThatSong/internal/store/database"
 	"github.com/joho/godotenv"
@@ -21,6 +21,8 @@ import (
 
 func main() {
 
+	gm := manager.NewGameManager()
+
 	err := godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
 	db, err := sql.Open("postgres", dbURL)
@@ -28,17 +30,16 @@ func main() {
 		log.Fatalf("Error opening db: %v", err)
 	}
 	dbQueries := database.New(db)
-
 	userStore := store.NewSQLUserStore(dbQueries)
 
 	// Create new router
 	r := chi.NewRouter()
 
 	// Create game handler
-	gameHandler, err := handlers.NewGameHandler()
-	if err != nil {
-		log.Fatalf("Error creating game handler: %v", err)
-	}
+	// gameHandler, err := handlers.NewGameHandler()
+	// if err != nil {
+	// 	log.Fatalf("Error creating game handler: %v", err)
+	// }
 
 	cookieName := "CookieName"
 	// sessionStore := dbstore.NewSessionStore()
@@ -48,37 +49,39 @@ func main() {
 		r.Use(
 			authMiddleware.AddUserToContext,
 		)
-		r.Get("/", gameHandler.IndexHandler)
+		r.Get("/", handlers.NewGetIndexHandler(gm).ServeHttp)
 		// Set up static file server
 		fileServer := http.FileServer(http.Dir("./static"))
 		r.Handle("/static/*", http.StripPrefix("/static/", fileServer))
 
-		r.Get("/register", gameHandler.GetRegisterHandler)
-		r.Post("/register", handlers.NewPostRegisterHandler(dbQueries).ServeHttp)
+		r.Get("/register", handlers.NewGetRegisterHandler().ServeHttp)
+		r.Post("/register", handlers.NewPostRegisterHandler(dbQueries, gm).ServeHttp)
 		// login Routes
-		r.Get("/login", gameHandler.GetLoginHandler)
-		r.Post("/login", handlers.NewPostLoginHandler(dbQueries, cookieName).ServeHttp)
+		r.Get("/login", handlers.NewGetLoginHandler().ServeHttp)
+		r.Post("/login", handlers.NewPostLoginHandler(dbQueries, cookieName, gm).ServeHttp)
 		r.Post("/logout", handlers.NewPostLogoutHandler(cookieName).ServeHTTP)
 
 		// Auth
-		r.Get("/spotify-auth", gameHandler.AuthHandler)
-		r.Get("/auth/callback", gameHandler.AuthCallbackHandler)
+		r.Get("/spotify-auth", handlers.NewGetAuthHandler(gm).ServeHttp)
+		r.Get("/auth/callback", handlers.NewGetAuthCallbackHandler(gm).ServeHttp)
 
 		// Game routes
-		r.Get("/search-helper", gameHandler.SearchArtists)
-		r.Get("/search-albums", gameHandler.GetArtistAlbums)
-		r.Post("/api/select-album", gameHandler.SelectAlbum)
-		r.Post("/start-process", gameHandler.StartGame)
-		//r.Get("/play", gameHandler.PlayGame)
-		//TODO: add only songs of artists here
-		//r.Get("/guess-helper", gameHandler.GuessHelper)
-		r.Post("/guess-track", gameHandler.GuessTrack)
-		//r.Post("/select-track", gameHandler.SelectTrack)
-		r.Put("/skip", gameHandler.SkipSong)
-		r.Post("/clear-queue", gameHandler.ClearQueue)
+		r.Get("/search-helper", handlers.NewGetSearchArtists(gm).ServeHttp)
+		r.Get("/search-albums", handlers.NewGetArtistAlbums(gm).ServeHttp)
+		// r.Post("/api/select-album", gameHandler.SelectAlbum)
+		//
+		// //
+		// r.Post("/start-process", gameHandler.StartGame)
+		// //r.Get("/play", gameHandler.PlayGame)
+		// //TODO: add only songs of artists here
+		// //r.Get("/guess-helper", gameHandler.GuessHelper)
+		// r.Post("/guess-track", gameHandler.GuessTrack)
+		// //r.Post("/select-track", gameHandler.SelectTrack)
+		// r.Put("/skip", gameHandler.SkipSong)
+		// r.Post("/clear-queue", gameHandler.ClearQueue)
 	})
 
-	r.Get("/song-time", gameHandler.SongTime)
+	// r.Get("/song-time", gameHandler.SongTime)
 
 	// Start the server
 	port := os.Getenv("PORT")

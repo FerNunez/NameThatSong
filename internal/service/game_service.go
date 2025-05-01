@@ -9,6 +9,7 @@ import (
 	"github.com/FerNunez/NameThatSong/internal/game"
 	"github.com/FerNunez/NameThatSong/internal/music_player"
 	"github.com/FerNunez/NameThatSong/internal/spotify_api"
+	"github.com/FerNunez/NameThatSong/internal/utils"
 )
 
 // GameService coordinates the song provider and music player
@@ -23,17 +24,29 @@ type GameService struct {
 }
 
 // NewGameService creates a new game service
-func NewGameService(musicPlayer *player.MusicPlayer, provider *spotify_api.SpotifySongProvider) *GameService {
+func NewGameService(clientID, clientSecret, redirectURI string) (*GameService, error) {
+
+	// Generate a random state for OAuth
+	state, err := utils.GenerateState(16)
+	if err != nil {
+		return nil, fmt.Errorf("error generating state: %v", err)
+	}
+
+	// Create song provider
+	songProvider := spotify_api.NewSpotifySongProvider(clientID, clientSecret, redirectURI, state)
+	// Create music service client
+	musicPlayer := player.NewMusicPlayer()
+	// Create game service
 	guessState := game.NewGameState()
 	return &GameService{
 		MusicPlayer:     musicPlayer,
-		SpotifyApi:      provider,
+		SpotifyApi:      songProvider,
 		AlbumSelection:  make(map[string]bool),
 		ArtistSelection: make(map[string]uint8),
 		TracksToPlayId:  make(map[string]*player.Song),
 		Cache:           cache.NewSpotifyCache(),
 		GuessState:      guessState,
-	}
+	}, nil
 }
 
 // SelectAlbum selects or deselects an album

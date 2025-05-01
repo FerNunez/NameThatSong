@@ -8,12 +8,19 @@ import (
 	"time"
 
 	"github.com/FerNunez/NameThatSong/internal/auth"
+	"github.com/FerNunez/NameThatSong/internal/manager"
 	"github.com/FerNunez/NameThatSong/internal/store"
 	"github.com/FerNunez/NameThatSong/internal/store/database"
 	"github.com/FerNunez/NameThatSong/internal/templates"
 )
 
-func (h GameHandler) GetLoginHandler(w http.ResponseWriter, r *http.Request) {
+type GetLoginHandler struct{}
+
+func NewGetLoginHandler() *GetLoginHandler {
+	return &GetLoginHandler{}
+}
+
+func (h GetLoginHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 
 	t := templates.Login("Login")
 	err := templates.Layout(t, "NameThanSong").Render(r.Context(), w)
@@ -29,17 +36,20 @@ type PostLoginHandler struct {
 	UserStore    store.UserStore
 	SessionStore store.SessionStore
 	SessionName  string
+	GameManager  *manager.GameManager
+
 	//dbQuery   *database.Queries
 	// sessionStore      store.SessionStore
 	// passwordhash      hash.PasswordHash
 	// sessionCookieName string
 }
 
-func NewPostLoginHandler(dbQuery *database.Queries, sessionName string) *PostLoginHandler {
+func NewPostLoginHandler(dbQuery *database.Queries, sessionName string, gm *manager.GameManager) *PostLoginHandler {
 	return &PostLoginHandler{
 		UserStore:    store.NewSQLUserStore(dbQuery),
 		SessionStore: store.NewSQLSessionStore(dbQuery),
 		SessionName:  sessionName,
+		GameManager:  gm,
 	}
 }
 
@@ -49,14 +59,12 @@ func (h PostLoginHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	password := r.FormValue("password")
 	fmt.Printf("Received a email: %v and pass %v\n", email, password)
 	dbUser, err := h.UserStore.GetByEmail(r.Context(), email)
-
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		c := templates.LoginError()
 		c.Render(r.Context(), w)
 		return
 	}
-	fmt.Printf("DB found: %v", dbUser)
 
 	// Check Password
 	if err := auth.CheckPasswordHash(password, dbUser.HashedPassword); err != nil {
@@ -66,6 +74,14 @@ func (h PostLoginHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Println("Password checked!")
+
+	_, ok := h.GameManager.Games[dbUser.ID.String()]
+	if !ok {
+		fmt.Println("Err. Game not found for err:", dbUser.ID.String())
+		return
+	}
+
+	fmt.Println("Game found:", dbUser.ID.String())
 
 	ttl := time.Duration(24 * time.Hour)
 	dbSession, err := h.SessionStore.Create(r.Context(), dbUser.ID, ttl)
