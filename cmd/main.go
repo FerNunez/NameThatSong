@@ -65,23 +65,25 @@ func main() {
 		r.Get("/spotify-auth", handlers.NewGetAuthHandler(gm).ServeHttp)
 		r.Get("/auth/callback", handlers.NewGetAuthCallbackHandler(gm).ServeHttp)
 
-		// Game routes
+		// Search
 		r.Get("/search-helper", handlers.NewGetSearchArtists(gm).ServeHttp)
 		r.Get("/search-albums", handlers.NewGetArtistAlbums(gm).ServeHttp)
-		// r.Post("/api/select-album", gameHandler.SelectAlbum)
-		//
-		// //
-		// r.Post("/start-process", gameHandler.StartGame)
-		// //r.Get("/play", gameHandler.PlayGame)
-		// //TODO: add only songs of artists here
-		// //r.Get("/guess-helper", gameHandler.GuessHelper)
-		// r.Post("/guess-track", gameHandler.GuessTrack)
-		// //r.Post("/select-track", gameHandler.SelectTrack)
-		// r.Put("/skip", gameHandler.SkipSong)
-		// r.Post("/clear-queue", gameHandler.ClearQueue)
-	})
 
-	// r.Get("/song-time", gameHandler.SongTime)
+		// Select
+		r.Post("/api/select-album", handlers.NewPostSelectAlbum(gm).ServeHttp)
+		r.Post("/start-game", handlers.NewPostStartGame(gm).ServeHttp)
+
+		// Guess
+		r.Post("/guess-track", handlers.NewPostGuessTrack(gm).ServeHttp)
+
+		// Player
+		r.Post("/play-pause", handlers.NewPostPlayPause(gm).ServeHttp)
+		r.Post("/skip", handlers.NewPostSkip(gm).ServeHttp)
+		r.Post("/clear-queue", handlers.NewPostClearQueue(gm).ServeHttp)
+
+		r.Get("/song-time", handlers.NewGetSongTime(gm).ServeHttp)
+
+	})
 
 	// Start the server
 	port := os.Getenv("PORT")

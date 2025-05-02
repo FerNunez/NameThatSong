@@ -51,3 +51,26 @@ func (h *PostSelectAlbum) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	component := templates.AlbumCard(album, toggle, artistID)
 	component.Render(r.Context(), w)
 }
+
+//////////////////
+
+type PostClearQueue struct {
+	gm *manager.GameManager
+}
+
+func NewPostClearQueue(gm *manager.GameManager) *PostClearQueue {
+	return &PostClearQueue{gm}
+}
+
+func (h *PostClearQueue) ServeHttp(w http.ResponseWriter, r *http.Request) {
+
+	game, err := h.gm.GetGame(r.Context())
+	if err != nil {
+		fmt.Printf("error getting game : %v", err)
+		return
+	}
+
+	game.ClearQueue()
+	mp := templates.MusicPlayer(game)
+	mp.Render(r.Context(), w)
+}

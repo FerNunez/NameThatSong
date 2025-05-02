@@ -62,36 +62,27 @@ func NewGetArtistAlbums(gm *manager.GameManager) *GetArtistAlbums {
 }
 
 func (h *GetArtistAlbums) ServeHttp(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Get artist")
 	game, err := h.gm.GetGame(r.Context())
 	if err != nil {
 		fmt.Printf("error getting game : %v", err)
 		return
 	}
-
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Failed to parse form", http.StatusBadRequest)
-		return
-	}
-
-	albumID := r.Form.Get("albumID")
-	if albumID == "" {
-		http.Error(w, "Album ID is required", http.StatusBadRequest)
-		return
-	}
-	artistID := r.Form.Get("artistID")
+	artistID := r.URL.Query().Get("artist-id")
+	fmt.Println("got artist ID", artistID)
 	if artistID == "" {
-		http.Error(w, "Album ID is required", http.StatusBadRequest)
+		http.Error(w, "Artist ID is required", http.StatusBadRequest)
 		return
 	}
-	fmt.Println("artistID", artistID)
 
-	// Toggle album selection
-	toggle := game.ToggleAlbumSelection(albumID, artistID)
-
-	album, ok := game.Cache.AlbumMap[albumID]
-	if !ok {
-		panic("album should be in cache")
+	albums, err := game.GetArtistsAlbum(artistID)
+	//albums, err := game.SpotifyApi.FetchAlbumByArtistID(artistID)
+	if err != nil {
+		http.Error(w, "Cant retrieve Artist ID albums", http.StatusBadRequest)
+		fmt.Println("no album")
+		return
 	}
-	component := templates.AlbumCard(album, toggle, artistID)
+
+	component := templates.AlbumDropdown(albums, game.AlbumSelection, artistID)
 	component.Render(r.Context(), w)
 }

@@ -74,6 +74,12 @@ func (h PostLoginHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Login without game
+	if _, err := h.GameManager.GetGame(r.Context()); err != nil {
+		fmt.Println("recreating game for user: ", dbUser.ID.String())
+		h.GameManager.CreateGame(dbUser.ID.String())
+	}
+
 	ttl := time.Duration(24 * time.Hour)
 	dbSession, err := h.SessionStore.Create(r.Context(), dbUser.ID, ttl)
 	if err != nil {

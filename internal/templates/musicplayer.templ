@@ -45,7 +45,7 @@ templ MusicPlayer(g *service.GameService) {
 					</button>
 					<button
 						class="p-3 bg-white text-zinc-900 rounded-full hover:bg-zinc-200"
-						hx-get="/play"
+						hx-post="/play-pause"
 						hx-trigger="click"
 						hx-swap="none"
 					>
@@ -55,7 +55,7 @@ templ MusicPlayer(g *service.GameService) {
 					</button>
 					<button
 						class="p-1 hover:bg-zinc-700 rounded-full"
-						hx-put="/skip"
+						hx-post="/skip"
 						hx-trigger="click"
 						hx-target="#music-player"
 					>
@@ -125,7 +125,7 @@ templ MusicPlayer(g *service.GameService) {
 templ GoodGuess(s string) {
 	<div
 		class="left-5 font-bold text-green-600"
-		hx-put="/skip"
+		hx-post="/skip"
 		hx-trigger="load delay:2s"
 		hx-target="#music-player"
 	>{ s }</div>
