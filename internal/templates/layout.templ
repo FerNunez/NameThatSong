@@ -33,6 +33,16 @@ templ nav() {
 				{{ user, ok := m.GetUser(ctx) }}
 				if ok {
 					<li>
+						<button
+							type="submit"
+							hx-get="/spotify-auth"
+							hx-trigger="click"
+							class="m-8 py-2 px-18 rounded-lg bg-green-500 hover:bg-green-600 text-white font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer border-2 border-green-400 hover:border-green-300 hover:translate-y-1 hover:scale-105"
+						>
+							Connect 
+						</button>
+					</li>
+					<li>
 						<h1 class="font-sans text-white">Hello, { user.Email }</h1>
 						<button class="text-gray-200" hx-target="body" hx-swap="innerHTML" hx-post="/logout">Logout</button>
 					</li>

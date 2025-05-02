@@ -17,16 +17,17 @@ func NewGetAuthHandler(gm *manager.GameManager) *GetAuthHandler {
 }
 func (h *GetAuthHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 
+	fmt.Println("Hello getting called")
 	game, err := h.gm.GetGame(r.Context())
 	if err != nil {
-		fmt.Printf("error generating state: %v", err)
+		fmt.Printf("eror getting game: %v", err)
 		http.Error(w, "error generating state", http.StatusBadRequest)
 		return
 	}
 
 	urlString, err := game.SpotifyApi.AuthRequestURL()
 	if err != nil {
-		fmt.Printf("error generating state: %v", err)
+		fmt.Printf("error getting auth: %v", err)
 		http.Error(w, "error generating state", http.StatusBadRequest)
 		return
 	}
@@ -47,7 +48,7 @@ func (h *GetAuthCallbackHandler) ServeHttp(w http.ResponseWriter, r *http.Reques
 
 	game, err := h.gm.GetGame(r.Context())
 	if err != nil {
-		fmt.Printf("error generating state: %v", err)
+		fmt.Printf("error generating state: %v\n", err)
 		http.Error(w, "error generating state", http.StatusBadRequest)
 		return
 	}

@@ -57,7 +57,7 @@ func (h PostLoginHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 
 	email := r.FormValue("email")
 	password := r.FormValue("password")
-	fmt.Printf("Received a email: %v and pass %v\n", email, password)
+
 	dbUser, err := h.UserStore.GetByEmail(r.Context(), email)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -73,42 +73,29 @@ func (h PostLoginHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 		c.Render(r.Context(), w)
 		return
 	}
-	fmt.Println("Password checked!")
-
-	_, ok := h.GameManager.Games[dbUser.ID.String()]
-	if !ok {
-		fmt.Println("Err. Game not found for err:", dbUser.ID.String())
-		return
-	}
-
-	fmt.Println("Game found:", dbUser.ID.String())
 
 	ttl := time.Duration(24 * time.Hour)
 	dbSession, err := h.SessionStore.Create(r.Context(), dbUser.ID, ttl)
 	if err != nil {
-
 		fmt.Printf("error creating session!: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		c := templates.LoginError()
 		c.Render(r.Context(), w)
 		return
 	}
-	fmt.Printf("Session created: %v", dbSession)
 
 	cookieValue := b64.StdEncoding.EncodeToString(fmt.Appendf(nil, "%s:%s", dbSession.ID, dbSession.UserID.String()))
-
 	cookie := http.Cookie{
 		Name:     h.SessionName,
 		Value:    cookieValue,
 		Expires:  dbSession.ExpiresAt,
 		Path:     "/",
 		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteNoneMode,
+		Secure:   true,
 	}
-
 	http.SetCookie(w, &cookie)
 
-	fmt.Println("Cookie created")
 	w.Header().Set("HX-Redirect", "/")
 	w.WriteHeader(http.StatusOK)
 }

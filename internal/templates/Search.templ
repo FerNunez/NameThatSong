@@ -2,25 +2,6 @@ package templates
 
 import "github.com/FerNunez/NameThatSong/internal/spotify_api"
 
-// min returns the smaller of two integers
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-type Album struct {
-	ID     int
-	Title  string
-	Artist string
-	Year   int
-}
-
-templ GamePage() {
-	// Empty component for now
-}
-
 templ SearchInput() {
 	<div class="relative">
 		<form class="max-w-md mx-auto">

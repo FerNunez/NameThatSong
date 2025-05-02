@@ -29,9 +29,9 @@ var UserKey string = "user"
 
 // Gets Cookie -> Gets user from Cookie
 func (m *AuthMiddleware) AddUserToContext(next http.Handler) http.Handler {
-	fmt.Println("middleware called?")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
+		fmt.Println("middleware called? from", r.URL)
 		sessionCookie, err := r.Cookie(m.sessionCookieName)
 		if err != nil {
 			fmt.Println("error")
