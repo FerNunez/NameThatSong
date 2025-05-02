@@ -1,6 +1,7 @@
 package templates
 
 import (
+	m "github.com/FerNunez/NameThatSong/internal/middleware"
 	"github.com/FerNunez/NameThatSong/internal/service"
 	"strconv"
 )
@@ -67,12 +68,15 @@ templ MusicPlayer(g *service.GameService) {
 				<!-- Progress Bar -->
 				<div class="w-1/2">
 					<div class="flex items-center gap-2 text-sm">
-						<div
-							hx-get="/song-time"
-							hx-trigger="every 1s"
-						>
-							<span></span>
-						</div>
+						{{ _, ok := m.GetUser(ctx) }}
+						if ok {
+							<div
+								hx-get="/song-time"
+								hx-trigger="every 1s"
+							>
+								<span></span>
+							</div>
+						}
 						<div class="flex-1 h-1 bg-zinc-600 rounded-full">
 							<div class="w-1/3 h-full bg-white rounded-full"></div>
 						</div>

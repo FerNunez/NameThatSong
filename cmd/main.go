@@ -40,15 +40,7 @@ func main() {
 	// Create new router
 	r := chi.NewRouter()
 
-	// Create game handler
-	// gameHandler, err := handlers.NewGameHandler()
-	// if err != nil {
-	// 	log.Fatalf("Error creating game handler: %v", err)
-	// }
-
 	cookieName := "CookieName"
-	// sessionStore := dbstore.NewSessionStore()
-	//sessionStore.CreateSession()
 	authMiddleware := m.NewAuthMiddleware(userStore, cookieName)
 	r.Group(func(r chi.Router) {
 		r.Use(

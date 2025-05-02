@@ -69,7 +69,6 @@ func (h *PostClearQueue) ServeHttp(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("error getting game : %v", err)
 		return
 	}
-
 	game.ClearQueue()
 	mp := templates.MusicPlayer(game)
 	mp.Render(r.Context(), w)
