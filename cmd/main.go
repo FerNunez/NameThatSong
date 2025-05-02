@@ -25,6 +25,11 @@ func main() {
 
 	err := godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
+	if dbURL == "" {
+		fmt.Println("**Please define the DB_RUL in environtment.")
+		fmt.Println("Setting dev dbUrl:", dbURL)
+		dbURL = "postgres://postgres:postgres@localhost:5432/nts"
+	}
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatalf("Error opening db: %v", err)
