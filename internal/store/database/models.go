@@ -20,6 +20,15 @@ type Session struct {
 	RevokedAt sql.NullTime
 }
 
+type SpotifyToken struct {
+	RefreshToken string
+	AccessToken  string
+	TokenType    string
+	Scope        string
+	ExpiresAt    time.Time
+	UserID       uuid.UUID
+}
+
 type User struct {
 	ID             uuid.UUID
 	CreatedAt      time.Time
