@@ -24,7 +24,7 @@ func (h *PostPlayPause) ServeHttp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = game.SpotifyApi.PausePlayback()
+	err = game.SpotifyApi.PausePlayback(game.SpotifyToken.AccessToken)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error play game: %v", err), http.StatusInternalServerError)
 		return

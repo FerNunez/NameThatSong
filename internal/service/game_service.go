@@ -9,6 +9,7 @@ import (
 	"github.com/FerNunez/NameThatSong/internal/game"
 	"github.com/FerNunez/NameThatSong/internal/music_player"
 	"github.com/FerNunez/NameThatSong/internal/spotify_api"
+	"github.com/FerNunez/NameThatSong/internal/store"
 	"github.com/FerNunez/NameThatSong/internal/utils"
 )
 
@@ -21,10 +22,12 @@ type GameService struct {
 	TracksToPlayId  map[string]*player.Song
 	GuessState      *game.GuessState
 	Cache           *cache.SpotifyCache
+	UserId          string
+	SpotifyToken    store.SpotifyToken
 }
 
 // NewGameService creates a new game service
-func NewGameService(clientID, clientSecret, redirectURI string) (*GameService, error) {
+func NewGameService(clientID, clientSecret, redirectURI, userId string) (*GameService, error) {
 
 	// Generate a random state for OAuth
 	state, err := utils.GenerateState(16)
@@ -46,6 +49,7 @@ func NewGameService(clientID, clientSecret, redirectURI string) (*GameService, e
 		TracksToPlayId:  make(map[string]*player.Song),
 		Cache:           cache.NewSpotifyCache(),
 		GuessState:      guessState,
+		UserId:          userId,
 	}, nil
 }
 
@@ -83,7 +87,7 @@ func (s *GameService) GetSelectedAlbums() []string {
 }
 
 func (s GameService) SearchArtists(artist string) ([]spotify_api.ArtistData, error) {
-	artists, err := s.SpotifyApi.SearchArtistsByName(artist)
+	artists, err := s.SpotifyApi.SearchArtistsByName(s.SpotifyToken.AccessToken, artist)
 
 	for _, artist := range artists {
 		s.Cache.ArtistMap[artist.Id] = artist
@@ -92,11 +96,11 @@ func (s GameService) SearchArtists(artist string) ([]spotify_api.ArtistData, err
 }
 
 func (s GameService) GetArtistsAlbum(artistId string) ([]spotify_api.AlbumData, error) {
-	return s.Cache.GetArtistsAlbum(s.SpotifyApi, artistId)
+	return s.Cache.GetArtistsAlbum(s.SpotifyApi, s.SpotifyToken.AccessToken, artistId)
 }
 
 func (s GameService) GetAlbumTracks(albumId string) ([]spotify_api.TrackData, error) {
-	return s.Cache.GetAlbumTracks(s.SpotifyApi, albumId)
+	return s.Cache.GetAlbumTracks(s.SpotifyApi, s.SpotifyToken.AccessToken, albumId)
 }
 
 // StartGame prepares the game with selected albums
@@ -151,7 +155,7 @@ func (s *GameService) StartGame() error {
 	s.MusicPlayer.Timer = time.Now()
 	s.MusicPlayer.SongDuration = time.Duration(track.DurationMs) * time.Millisecond
 	fmt.Println("song duration:", track.DurationMs)
-	s.SpotifyApi.PlaySong(song.TrackId)
+	s.SpotifyApi.PlaySong(s.SpotifyToken.AccessToken, song.TrackId)
 
 	// Debug
 	println("track Name:", track.Name)
@@ -192,7 +196,7 @@ func (s *GameService) SkipSong() error {
 	s.GuessState.SetTitle(track.Name, artist.Name, album.ImagesURL)
 	s.MusicPlayer.Timer = time.Now()
 	s.MusicPlayer.SongDuration = time.Duration(track.DurationMs) * time.Millisecond
-	return s.SpotifyApi.PlaySong(nextSong.TrackId)
+	return s.SpotifyApi.PlaySong(s.SpotifyToken.AccessToken, nextSong.TrackId)
 }
 
 // ClearQueue clears the current music queue
@@ -201,7 +205,42 @@ func (s *GameService) ClearQueue() error {
 	s.ArtistSelection = make(map[string]uint8)
 	s.GuessState = game.NewGameState()
 	s.MusicPlayer.ClearQueue()
-	s.SpotifyApi.PausePlayback()
+	s.SpotifyApi.PausePlayback(s.SpotifyToken.AccessToken)
 	return nil
+}
 
+func (s GameService) spotifyTokenIsValid() bool {
+	if time.Now().After(s.SpotifyToken.ExpiresAt) {
+		return false
+	}
+	return true
+}
+
+func (s *GameService) RequestUserAuthoritazion() (string, error) {
+	urlString, err := s.SpotifyApi.AuthRequestURL()
+	return urlString, err
+}
+
+func (s *GameService) ExchangeToken(state, code string) error {
+	if code == "" || state == "" {
+		return fmt.Errorf("Error guetting code and state from spotify api")
+	}
+	err := s.SpotifyApi.ValidateState(state)
+	if err != nil {
+		return err
+	}
+	spotiufyTokenReponse, err := s.SpotifyApi.TokenExchange(code)
+	if err != nil {
+		return err
+	}
+
+	expires_at := time.Now().Add(time.Duration(spotiufyTokenReponse.ExpiresIn) * time.Second)
+	s.SpotifyToken = store.SpotifyToken{
+		RefreshToken: spotiufyTokenReponse.RefreshToken,
+		AccessToken:  spotiufyTokenReponse.AccessToken,
+		TokenType:    spotiufyTokenReponse.TokenType,
+		Scope:        spotiufyTokenReponse.Scope,
+		ExpiresAt:    expires_at,
+	}
+	return nil
 }

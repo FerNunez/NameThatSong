@@ -7,11 +7,13 @@ import (
 
 	"github.com/FerNunez/NameThatSong/internal/middleware"
 	"github.com/FerNunez/NameThatSong/internal/service"
+	"github.com/FerNunez/NameThatSong/internal/store"
 	"github.com/joho/godotenv"
 )
 
 type GameManager struct {
-	Games map[string]*service.GameService
+	Games             map[string]*service.GameService
+	SpotifyTokenStore store.SpotifyTokenStore
 }
 
 func NewGameManager() *GameManager {
@@ -41,7 +43,7 @@ func (gm *GameManager) CreateGame(userId string) error {
 		//"https://namethatsong.onrender.com/auth/callback"
 	}
 
-	gameService, err := service.NewGameService(clientID, clientSecret, redirectURI)
+	gameService, err := service.NewGameService(clientID, clientSecret, redirectURI, userId)
 	if err != nil {
 		return err
 	}
@@ -60,6 +62,15 @@ func (gm GameManager) GetGame(ctx context.Context) (*service.GameService, error)
 	if !ok {
 		return nil, fmt.Errorf("There is no game for user id")
 	}
+
+	// valid, err := gm.SpotifyTokenStore.IsValid(ctx, user.ID)
+	// if err != nil {
+	// 	panic("Should not be here")
+	// }
+	//
+	// if !valid{
+	//
+	// }
 
 	return game, nil
 }

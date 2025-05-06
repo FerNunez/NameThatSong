@@ -9,8 +9,6 @@ type ArtistData struct {
 
 // SpotifySongProvider implements the SongProvider interface for Spotify
 type SpotifySongProvider struct {
-	AccessToken  string
-	RefreshToken string
 	ClientID     string
 	ClientSecret string
 	RedirectURI  string
@@ -20,16 +18,9 @@ type SpotifySongProvider struct {
 // NewSpotifySongProvider creates a new SpotifySongProvider
 func NewSpotifySongProvider(clientID, clientSecret string, redirectURI string, state string) *SpotifySongProvider {
 	return &SpotifySongProvider{
-		AccessToken:  "",
-		RefreshToken: "",
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		RedirectURI:  redirectURI,
 		State:        state,
 	}
-}
-
-func (p *SpotifySongProvider) SetToken(accessToken string, refreshToken string) {
-	p.AccessToken = accessToken
-	p.RefreshToken = refreshToken
 }

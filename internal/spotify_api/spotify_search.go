@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func (p *SpotifySongProvider) SearchArtistsByName(name string) ([]ArtistData, error) {
+func (p *SpotifySongProvider) SearchArtistsByName(accessToken, name string) ([]ArtistData, error) {
 
 	limit := "50"
 	artistQuery := "artist:" + strings.ToLower(name)
@@ -31,7 +31,7 @@ func (p *SpotifySongProvider) SearchArtistsByName(name string) ([]ArtistData, er
 	}
 
 	// Set Authorization header
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", p.AccessToken))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 
 	// Make the request
 	client := &http.Client{}

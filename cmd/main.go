@@ -21,8 +21,6 @@ import (
 
 func main() {
 
-	gm := manager.NewGameManager()
-
 	err := godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
 	if dbURL == "" {
@@ -36,6 +34,9 @@ func main() {
 	}
 	dbQueries := database.New(db)
 	userStore := store.NewSQLUserStore(dbQueries)
+	//spotifyTokenStore := store.NewSQLSpotifyTokenStore(dbQueries)
+
+	gm := manager.NewGameManager()
 
 	// Create new router
 	r := chi.NewRouter()

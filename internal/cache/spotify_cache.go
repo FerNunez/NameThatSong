@@ -30,13 +30,13 @@ func (c *SpotifyCache) GetArtistData(s *spotify_api.SpotifySongProvider, id stri
 	return spotify_api.ArtistData{}, nil
 }
 
-func (c *SpotifyCache) GetArtistsAlbum(s *spotify_api.SpotifySongProvider, artistId string) ([]spotify_api.AlbumData, error) {
+func (c *SpotifyCache) GetArtistsAlbum(s *spotify_api.SpotifySongProvider, accessToken, artistId string) ([]spotify_api.AlbumData, error) {
 	// check if artist already known
 	albumsIds, exist := c.ArtistToAlbumsMap[artistId]
 
 	if !exist {
 		// get artist trop track
-		albumTopTrack, topTracks, err := s.CreateAlbumFromTopTracks(artistId)
+		albumTopTrack, topTracks, err := s.CreateAlbumFromTopTracks(accessToken, artistId)
 		artist, ok := c.ArtistMap[artistId]
 		albumTopTrack.ImagesURL = artist.ImageUrl
 		if !ok {
@@ -46,7 +46,7 @@ func (c *SpotifyCache) GetArtistsAlbum(s *spotify_api.SpotifySongProvider, artis
 			return nil, err
 		}
 
-		albums, err := s.FetchAlbumByArtistID(artistId)
+		albums, err := s.FetchAlbumByArtistID(accessToken, artistId)
 		if err != nil {
 			return nil, err
 		}
@@ -82,10 +82,10 @@ func (c *SpotifyCache) GetArtistsAlbum(s *spotify_api.SpotifySongProvider, artis
 	return albums, nil
 }
 
-func (c *SpotifyCache) GetAlbumTracks(s *spotify_api.SpotifySongProvider, albumId string) ([]spotify_api.TrackData, error) {
+func (c *SpotifyCache) GetAlbumTracks(s *spotify_api.SpotifySongProvider, accessToken, albumId string) ([]spotify_api.TrackData, error) {
 	tracksIds, exist := c.AlbumToTracksMap[albumId]
 	if !exist {
-		tracks, err := s.FetchTracksByAlbumID(albumId)
+		tracks, err := s.FetchTracksByAlbumID(accessToken, albumId)
 		if err != nil {
 			return nil, err
 		}

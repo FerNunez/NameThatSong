@@ -10,6 +10,14 @@ import (
 	"strings"
 )
 
+type TokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int    `json:"expires_in"`
+	RefreshToken string `json:"refresh_token"`
+	Scope        string `json:"scope"`
+}
+
 func (p *SpotifySongProvider) AuthRequestURL() (string, error) {
 	// Build the authorization URL
 	authURL := "https://accounts.spotify.com/authorize"
@@ -40,7 +48,7 @@ func (p *SpotifySongProvider) ValidateState(state string) error {
 }
 
 // Exchange code for tokens
-func (p *SpotifySongProvider) TokenExchange(code string) error {
+func (p *SpotifySongProvider) TokenExchange(code string) (TokenResponse, error) {
 	tokenURL := "https://accounts.spotify.com/api/token"
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
@@ -50,7 +58,7 @@ func (p *SpotifySongProvider) TokenExchange(code string) error {
 	req, err := http.NewRequest("POST", tokenURL, strings.NewReader(data.Encode()))
 	if err != nil {
 		fmt.Printf("Error creating request: %v", err)
-		return err
+		return TokenResponse{}, err
 	}
 
 	// Set headers
@@ -63,30 +71,22 @@ func (p *SpotifySongProvider) TokenExchange(code string) error {
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Printf("Error getting token: %v", err)
-		return err
+		return TokenResponse{}, err
 	}
 	defer resp.Body.Close()
 
-	// Parse response
-	var tokenResponse struct {
-		AccessToken  string `json:"access_token"`
-		TokenType    string `json:"token_type"`
-		ExpiresIn    int    `json:"expires_in"`
-		RefreshToken string `json:"refresh_token"`
-		Scope        string `json:"scope"`
-	}
-
+	var tokenResponse TokenResponse
 	if err := json.NewDecoder(resp.Body).Decode(&tokenResponse); err != nil {
 		fmt.Printf("Error parsing token response: %v", err)
-		return nil
+		return TokenResponse{}, err
 	}
 
 	// Store tokens
 	// TODO: Set AccessToken to spotify API
 	// TODO: Set RefreshToken to spotify API
-	p.AccessToken = tokenResponse.AccessToken
-	p.RefreshToken = tokenResponse.RefreshToken
+	// p.AccessToken = tokenResponse.AccessToken
+	// p.RefreshToken = tokenResponse.RefreshToken
 	// fmt.Printf("Got the tokens %v, %v", p.AccessToken, p.RefreshToken)
 
-	return nil
+	return tokenResponse, nil
 }

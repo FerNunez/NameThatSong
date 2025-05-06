@@ -8,7 +8,7 @@ import (
 )
 
 // PlaySong starts playing a specific song on the user's active device
-func (p *SpotifySongProvider) PlaySong(songID string) error {
+func (p *SpotifySongProvider) PlaySong(accessToken, songID string) error {
 	type PlaySongRequest struct {
 		Uris       []string `json:"uris"`
 		PositionMs int      `json:"position_ms"`
@@ -35,7 +35,7 @@ func (p *SpotifySongProvider) PlaySong(songID string) error {
 		return fmt.Errorf("could not create request: %v", err)
 	}
 
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", p.AccessToken))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 	req.Header.Set("Content-Type", "application/json")
 
 	client := http.Client{}
@@ -53,7 +53,7 @@ func (p *SpotifySongProvider) PlaySong(songID string) error {
 }
 
 // PausePlayback pauses the current playback on the user's active device
-func (p *SpotifySongProvider) PausePlayback() error {
+func (p *SpotifySongProvider) PausePlayback(accessToken string) error {
 	url := "https://api.spotify.com/v1/me/player/pause"
 	//if c.DeviceID != "" {
 	//	url = fmt.Sprintf("%s?device_id=%s", url, c.DeviceID)
@@ -64,7 +64,7 @@ func (p *SpotifySongProvider) PausePlayback() error {
 		return fmt.Errorf("could not create request: %v", err)
 	}
 
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", p.AccessToken))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 
 	client := http.Client{}
 	resp, err := client.Do(req)
@@ -81,7 +81,7 @@ func (p *SpotifySongProvider) PausePlayback() error {
 }
 
 // ResumePlayback resumes the current playback on the user's active device
-func (p *SpotifySongProvider) ResumePlayback() error {
+func (p *SpotifySongProvider) ResumePlayback(accessToken string) error {
 	url := "https://api.spotify.com/v1/me/player/play"
 	// if c.DeviceID != "" {
 	// 	url = fmt.Sprintf("%s?device_id=%s", url, c.DeviceID)
@@ -92,7 +92,7 @@ func (p *SpotifySongProvider) ResumePlayback() error {
 		return fmt.Errorf("could not create request: %v", err)
 	}
 
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", p.AccessToken))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 
 	client := http.Client{}
 	resp, err := client.Do(req)

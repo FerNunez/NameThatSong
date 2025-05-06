@@ -25,7 +25,7 @@ func (h *GetAuthHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	urlString, err := game.SpotifyApi.AuthRequestURL()
+	urlString, err := game.RequestUserAuthoritazion()
 	if err != nil {
 		fmt.Printf("error getting auth: %v", err)
 		http.Error(w, "error generating state", http.StatusBadRequest)
@@ -45,7 +45,6 @@ func NewGetAuthCallbackHandler(gm *manager.GameManager) *GetAuthCallbackHandler 
 
 }
 func (h *GetAuthCallbackHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
-
 	game, err := h.gm.GetGame(r.Context())
 	if err != nil {
 		fmt.Printf("error generating state: %v\n", err)
@@ -53,21 +52,14 @@ func (h *GetAuthCallbackHandler) ServeHttp(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Check state to prevent CSRF
 	state := r.URL.Query().Get("state")
-	err = game.SpotifyApi.ValidateState(state)
-	if err != nil {
-		http.Error(w, "State unvalidated", http.StatusInternalServerError)
-		return
-	}
-
-	// Get the authorization code
 	code := r.URL.Query().Get("code")
-	if code == "" {
-		http.Error(w, "No code provided", http.StatusBadRequest)
+	err = game.ExchangeToken(state, code)
+	if err != nil {
+		fmt.Printf("error exchanging token: %v\n", err)
+		http.Error(w, "error exchanging spotify token", http.StatusBadRequest)
 		return
 	}
-	game.SpotifyApi.TokenExchange(code)
 
 	http.Redirect(w, r, "/", http.StatusFound)
 }

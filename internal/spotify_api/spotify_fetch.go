@@ -20,7 +20,7 @@ type AlbumData struct {
 // id=album&
 // include_groups= album
 // limit=50
-func (p *SpotifySongProvider) FetchAlbumByArtistID(artistId string) ([]AlbumData, error) {
+func (p *SpotifySongProvider) FetchAlbumByArtistID(accesToken, artistId string) ([]AlbumData, error) {
 
 	limit := 50
 	include_groups := "album"
@@ -30,7 +30,7 @@ func (p *SpotifySongProvider) FetchAlbumByArtistID(artistId string) ([]AlbumData
 		return nil, err
 	}
 
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", p.AccessToken))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accesToken))
 
 	client := http.Client{}
 	resp, err := client.Do(req)
@@ -122,7 +122,7 @@ type TrackData struct {
 // id= 4aawyAB9vmqN3uQ7FjRGTy
 // limit =50
 // fetch artists by ID:
-func (p *SpotifySongProvider) FetchTracksByAlbumID(albumId string) ([]TrackData, error) {
+func (p *SpotifySongProvider) FetchTracksByAlbumID(accessToken, albumId string) ([]TrackData, error) {
 	limit := 50
 	requestURL := fmt.Sprintf("https://api.spotify.com/v1/albums/%s/tracks?limit=%d", albumId, limit)
 	req, err := http.NewRequest("GET", requestURL, nil)
@@ -130,7 +130,7 @@ func (p *SpotifySongProvider) FetchTracksByAlbumID(albumId string) ([]TrackData,
 		return nil, err
 	}
 
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", p.AccessToken))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 
 	client := http.Client{}
 	resp, err := client.Do(req)
@@ -199,7 +199,7 @@ func (p *SpotifySongProvider) FetchTracksByAlbumID(albumId string) ([]TrackData,
 	return trackList, nil
 }
 
-func (p *SpotifySongProvider) CreateAlbumFromTopTracks(artistId string) (AlbumData, []TrackData, error) {
+func (p *SpotifySongProvider) CreateAlbumFromTopTracks(accessToken, artistId string) (AlbumData, []TrackData, error) {
 
 	requestURL := fmt.Sprintf("https://api.spotify.com/v1/artists/%v/top-tracks", artistId)
 	req, err := http.NewRequest("GET", requestURL, nil)
@@ -207,7 +207,7 @@ func (p *SpotifySongProvider) CreateAlbumFromTopTracks(artistId string) (AlbumDa
 		return AlbumData{}, nil, err
 	}
 
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", p.AccessToken))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 
 	client := http.Client{}
 	resp, err := client.Do(req)
