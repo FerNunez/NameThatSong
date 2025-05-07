@@ -13,6 +13,8 @@ type SpotifySongProvider struct {
 	ClientSecret string
 	RedirectURI  string
 	State        string
+	AccessToken  string
+	RefreshToken string
 }
 
 // NewSpotifySongProvider creates a new SpotifySongProvider
@@ -22,5 +24,7 @@ func NewSpotifySongProvider(clientID, clientSecret string, redirectURI string, s
 		ClientSecret: clientSecret,
 		RedirectURI:  redirectURI,
 		State:        state,
+		AccessToken:  "",
+		RefreshToken: "",
 	}
 }

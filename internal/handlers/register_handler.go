@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/FerNunez/NameThatSong/internal/auth"
 	"github.com/FerNunez/NameThatSong/internal/manager"
@@ -28,7 +29,8 @@ func (h GetRegisterHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 }
 
 type PostRegisterHandler struct {
-	UserStore store.UserStore
+	UserStore         store.UserStore
+	SpotifyTokenStore store.SpotifyTokenStore
 	//dbQuery *database.Queries
 	// sessionStore      store.SessionStore
 	// passwordhash      hash.PasswordHash
@@ -61,8 +63,7 @@ func (h PostRegisterHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Create new game instance?
-	err = h.GameManager.CreateGame(dbUser.ID.String())
+	err = h.GameManager.CreateGame(dbUser.ID, h.SpotifyTokenStore)
 	if err != nil {
 		fmt.Println("could not create game", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -70,8 +71,10 @@ func (h PostRegisterHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 		c.Render(r.Context(), w)
 		return
 	}
-
 	fmt.Println("Game added for:", dbUser.ID.String())
+
+	// add a empty spotify token for user
+	h.SpotifyTokenStore.Create(r.Context(), dbUser.ID, "", "", "", "", time.Now())
 
 	c := templates.RegisterSuccess()
 	err = c.Render(r.Context(), w)

@@ -34,7 +34,6 @@ func main() {
 	}
 	dbQueries := database.New(db)
 	userStore := store.NewSQLUserStore(dbQueries)
-	//spotifyTokenStore := store.NewSQLSpotifyTokenStore(dbQueries)
 
 	gm := manager.NewGameManager()
 

@@ -50,7 +50,7 @@ func (h *PostSkip) ServeHttp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = game.SkipSong()
+	err = game.SkipSong(r.Context())
 	if err != nil {
 		return
 	}

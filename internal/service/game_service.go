@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -11,23 +12,25 @@ import (
 	"github.com/FerNunez/NameThatSong/internal/spotify_api"
 	"github.com/FerNunez/NameThatSong/internal/store"
 	"github.com/FerNunez/NameThatSong/internal/utils"
+	"github.com/google/uuid"
 )
 
 // GameService coordinates the song provider and music player
 type GameService struct {
-	MusicPlayer     *player.MusicPlayer
-	SpotifyApi      *spotify_api.SpotifySongProvider
-	AlbumSelection  map[string]bool
-	ArtistSelection map[string]uint8
-	TracksToPlayId  map[string]*player.Song
-	GuessState      *game.GuessState
-	Cache           *cache.SpotifyCache
-	UserId          string
-	SpotifyToken    store.SpotifyToken
+	MusicPlayer       *player.MusicPlayer
+	SpotifyApi        *spotify_api.SpotifySongProvider
+	AlbumSelection    map[string]bool
+	ArtistSelection   map[string]uint8
+	TracksToPlayId    map[string]*player.Song
+	GuessState        *game.GuessState
+	Cache             *cache.SpotifyCache
+	UserId            uuid.UUID
+	SpotifyToken      store.SpotifyToken
+	SpotifyTokenStore store.SpotifyTokenStore
 }
 
 // NewGameService creates a new game service
-func NewGameService(clientID, clientSecret, redirectURI, userId string) (*GameService, error) {
+func NewGameService(clientID, clientSecret, redirectURI string, userId uuid.UUID, spotifyTokenStore store.SpotifyTokenStore) (*GameService, error) {
 
 	// Generate a random state for OAuth
 	state, err := utils.GenerateState(16)
@@ -42,14 +45,15 @@ func NewGameService(clientID, clientSecret, redirectURI, userId string) (*GameSe
 	// Create game service
 	guessState := game.NewGameState()
 	return &GameService{
-		MusicPlayer:     musicPlayer,
-		SpotifyApi:      songProvider,
-		AlbumSelection:  make(map[string]bool),
-		ArtistSelection: make(map[string]uint8),
-		TracksToPlayId:  make(map[string]*player.Song),
-		Cache:           cache.NewSpotifyCache(),
-		GuessState:      guessState,
-		UserId:          userId,
+		MusicPlayer:       musicPlayer,
+		SpotifyApi:        songProvider,
+		AlbumSelection:    make(map[string]bool),
+		ArtistSelection:   make(map[string]uint8),
+		TracksToPlayId:    make(map[string]*player.Song),
+		Cache:             cache.NewSpotifyCache(),
+		GuessState:        guessState,
+		UserId:            userId,
+		SpotifyTokenStore: spotifyTokenStore,
 	}, nil
 }
 
@@ -86,25 +90,40 @@ func (s *GameService) GetSelectedAlbums() []string {
 	return albums
 }
 
-func (s GameService) SearchArtists(artist string) ([]spotify_api.ArtistData, error) {
-	artists, err := s.SpotifyApi.SearchArtistsByName(s.SpotifyToken.AccessToken, artist)
+func (s GameService) SearchArtists(ctx context.Context, artist string) ([]spotify_api.ArtistData, error) {
 
+	err := s.EnsureAccessToken(ctx)
+	if err != nil {
+		return []spotify_api.ArtistData{}, fmt.Errorf("No token spotify available")
+	}
+
+	artists, err := s.SpotifyApi.SearchArtistsByName(s.SpotifyToken.AccessToken, artist)
 	for _, artist := range artists {
 		s.Cache.ArtistMap[artist.Id] = artist
 	}
 	return artists, err
 }
 
-func (s GameService) GetArtistsAlbum(artistId string) ([]spotify_api.AlbumData, error) {
+func (s GameService) GetArtistsAlbum(ctx context.Context, artistId string) ([]spotify_api.AlbumData, error) {
+
+	err := s.EnsureAccessToken(ctx)
+	if err != nil {
+		return []spotify_api.AlbumData{}, fmt.Errorf("No token spotify available")
+	}
+
 	return s.Cache.GetArtistsAlbum(s.SpotifyApi, s.SpotifyToken.AccessToken, artistId)
 }
 
-func (s GameService) GetAlbumTracks(albumId string) ([]spotify_api.TrackData, error) {
+func (s GameService) GetAlbumTracks(ctx context.Context, albumId string) ([]spotify_api.TrackData, error) {
+	err := s.EnsureAccessToken(ctx)
+	if err != nil {
+		return []spotify_api.TrackData{}, fmt.Errorf("No token spotify available")
+	}
 	return s.Cache.GetAlbumTracks(s.SpotifyApi, s.SpotifyToken.AccessToken, albumId)
 }
 
 // StartGame prepares the game with selected albums
-func (s *GameService) StartGame() error {
+func (s *GameService) StartGame(ctx context.Context) error {
 	if len(s.AlbumSelection) <= 0 {
 		return errors.New("Empty album selection")
 	}
@@ -116,7 +135,7 @@ func (s *GameService) StartGame() error {
 		}
 
 		for _, albumId := range albumsId {
-			tracksData, err := s.GetAlbumTracks(albumId)
+			tracksData, err := s.GetAlbumTracks(ctx, albumId)
 			if err != nil {
 				return err
 			}
@@ -154,7 +173,11 @@ func (s *GameService) StartGame() error {
 	s.GuessState.SetTitle(track.Name, artist.Name, album.ImagesURL)
 	s.MusicPlayer.Timer = time.Now()
 	s.MusicPlayer.SongDuration = time.Duration(track.DurationMs) * time.Millisecond
-	fmt.Println("song duration:", track.DurationMs)
+
+	err := s.EnsureAccessToken(ctx)
+	if err != nil {
+		return fmt.Errorf("Couldnt not ensure refresh token")
+	}
 	s.SpotifyApi.PlaySong(s.SpotifyToken.AccessToken, song.TrackId)
 
 	// Debug
@@ -172,7 +195,7 @@ func (s *GameService) UserGuess(guess string) (bool, error) {
 }
 
 // SkipSong skips to the next song
-func (s *GameService) SkipSong() error {
+func (s *GameService) SkipSong(ctx context.Context) error {
 
 	nextSong, err := s.MusicPlayer.NextInQueue()
 	if err != nil {
@@ -182,7 +205,6 @@ func (s *GameService) SkipSong() error {
 	if !ok {
 		panic("Track should always exist in cache")
 	}
-
 	album, ok := s.Cache.AlbumMap[nextSong.AlbumId]
 	if !ok {
 		panic("Track should always exist in cache")
@@ -196,6 +218,11 @@ func (s *GameService) SkipSong() error {
 	s.GuessState.SetTitle(track.Name, artist.Name, album.ImagesURL)
 	s.MusicPlayer.Timer = time.Now()
 	s.MusicPlayer.SongDuration = time.Duration(track.DurationMs) * time.Millisecond
+
+	err = s.EnsureAccessToken(ctx)
+	if err != nil {
+		return fmt.Errorf("Couldnt not ensure refresh token")
+	}
 	return s.SpotifyApi.PlaySong(s.SpotifyToken.AccessToken, nextSong.TrackId)
 }
 
@@ -207,13 +234,6 @@ func (s *GameService) ClearQueue() error {
 	s.MusicPlayer.ClearQueue()
 	s.SpotifyApi.PausePlayback(s.SpotifyToken.AccessToken)
 	return nil
-}
-
-func (s GameService) spotifyTokenIsValid() bool {
-	if time.Now().After(s.SpotifyToken.ExpiresAt) {
-		return false
-	}
-	return true
 }
 
 func (s *GameService) RequestUserAuthoritazion() (string, error) {
@@ -241,6 +261,46 @@ func (s *GameService) ExchangeToken(state, code string) error {
 		TokenType:    spotiufyTokenReponse.TokenType,
 		Scope:        spotiufyTokenReponse.Scope,
 		ExpiresAt:    expires_at,
+	}
+	return nil
+}
+func (s *GameService) EnsureAccessToken(ctx context.Context) error {
+	//Read from DB
+	if s.SpotifyToken.RefreshToken == "" {
+		storeSpotifyToken, err := s.SpotifyTokenStore.Get(ctx, s.UserId)
+		if err != nil {
+			return err
+		}
+		s.SpotifyToken.AccessToken = storeSpotifyToken.AccessToken
+		s.SpotifyToken.RefreshToken = storeSpotifyToken.RefreshToken
+		s.SpotifyToken.ExpiresAt = storeSpotifyToken.ExpiresAt
+	}
+
+	// Expired?
+	if time.Now().After(s.SpotifyToken.ExpiresAt) {
+		if s.SpotifyToken.RefreshToken == "" {
+			return fmt.Errorf("Refresh token is empty")
+		}
+
+		spotifyRefreshReponse, err := s.SpotifyApi.RegenerateToken()
+		if err != nil {
+			return err
+		}
+
+		expires_at := time.Now().Add(time.Duration(spotifyRefreshReponse.ExpiresIn) * time.Second)
+		s.SpotifyToken = store.SpotifyToken{
+			RefreshToken: spotifyRefreshReponse.RefreshToken,
+			AccessToken:  spotifyRefreshReponse.AccessToken,
+			TokenType:    spotifyRefreshReponse.TokenType,
+			Scope:        spotifyRefreshReponse.Scope,
+			ExpiresAt:    expires_at,
+		}
+
+		// update token
+		err = s.SpotifyTokenStore.Update(ctx, s.UserId, s.SpotifyToken.AccessToken, s.SpotifyToken.ExpiresAt)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

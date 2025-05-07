@@ -87,8 +87,6 @@ func (s *SQLSessionStore) IsValid(ctx context.Context, id string) (bool, error) 
 	}
 
 	now := time.Now()
-
-	// Check if session is expired
 	if now.After(session.ExpiresAt) {
 		return false, nil
 	}

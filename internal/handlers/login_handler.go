@@ -33,10 +33,11 @@ func (h GetLoginHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 }
 
 type PostLoginHandler struct {
-	UserStore    store.UserStore
-	SessionStore store.SessionStore
-	SessionName  string
-	GameManager  *manager.GameManager
+	UserStore         store.UserStore
+	SessionStore      store.SessionStore
+	SpotifyTokenStore store.SpotifyTokenStore
+	SessionName       string
+	GameManager       *manager.GameManager
 
 	//dbQuery   *database.Queries
 	// sessionStore      store.SessionStore
@@ -46,10 +47,11 @@ type PostLoginHandler struct {
 
 func NewPostLoginHandler(dbQuery *database.Queries, sessionName string, gm *manager.GameManager) *PostLoginHandler {
 	return &PostLoginHandler{
-		UserStore:    store.NewSQLUserStore(dbQuery),
-		SessionStore: store.NewSQLSessionStore(dbQuery),
-		SessionName:  sessionName,
-		GameManager:  gm,
+		UserStore:         store.NewSQLUserStore(dbQuery),
+		SessionStore:      store.NewSQLSessionStore(dbQuery),
+		SpotifyTokenStore: store.NewSQLSpotifyTokenStore(dbQuery),
+		SessionName:       sessionName,
+		GameManager:       gm,
 	}
 }
 
@@ -77,7 +79,7 @@ func (h PostLoginHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	// Login without game
 	if _, err := h.GameManager.GetGame(r.Context()); err != nil {
 		fmt.Println("recreating game for user: ", dbUser.ID.String())
-		h.GameManager.CreateGame(dbUser.ID.String())
+		h.GameManager.CreateGame(dbUser.ID, h.SpotifyTokenStore)
 	}
 
 	ttl := time.Duration(24 * time.Hour)

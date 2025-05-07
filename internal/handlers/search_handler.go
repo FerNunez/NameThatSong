@@ -33,7 +33,7 @@ func (h *GetSearchArtists) ServeHttp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	artists, err := game.SearchArtists(query)
+	artists, err := game.SearchArtists(r.Context(), query)
 	if err != nil || len(artists) == 0 {
 		// TODO: SEND ERROR TO REQUEST
 		component := templates.SearchResults([]spotify_api.ArtistData{})
@@ -75,7 +75,7 @@ func (h *GetArtistAlbums) ServeHttp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	albums, err := game.GetArtistsAlbum(artistID)
+	albums, err := game.GetArtistsAlbum(r.Context(), artistID)
 	//albums, err := game.SpotifyApi.FetchAlbumByArtistID(artistID)
 	if err != nil {
 		http.Error(w, "Cant retrieve Artist ID albums", http.StatusBadRequest)

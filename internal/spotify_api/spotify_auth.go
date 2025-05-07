@@ -90,3 +90,39 @@ func (p *SpotifySongProvider) TokenExchange(code string) (TokenResponse, error) 
 
 	return tokenResponse, nil
 }
+
+func (p *SpotifySongProvider) RegenerateToken() (TokenResponse, error) {
+	tokenURL := "https://accounts.spotify.com/api/token"
+	data := url.Values{}
+	data.Set("grant_type", "refresh_token")
+	data.Set("refresh_token", p.RefreshToken)
+	data.Set("client_id", p.ClientID)
+
+	req, err := http.NewRequest("POST", tokenURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		fmt.Printf("Error creating request: %v", err)
+		return TokenResponse{}, err
+	}
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	auth := base64.StdEncoding.EncodeToString([]byte(p.ClientID + ":" + p.ClientSecret))
+	req.Header.Set("Authorization", "Basic "+auth)
+
+	// Send request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("Error getting token: %v", err)
+		return TokenResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	var tokenResponse TokenResponse
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResponse); err != nil {
+		fmt.Printf("Error parsing token response: %v", err)
+		return TokenResponse{}, err
+	}
+
+	return tokenResponse, nil
+}

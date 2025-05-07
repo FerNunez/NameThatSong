@@ -8,6 +8,7 @@ import (
 	"github.com/FerNunez/NameThatSong/internal/middleware"
 	"github.com/FerNunez/NameThatSong/internal/service"
 	"github.com/FerNunez/NameThatSong/internal/store"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 )
 
@@ -22,7 +23,7 @@ func NewGameManager() *GameManager {
 	}
 }
 
-func (gm *GameManager) CreateGame(userId string) error {
+func (gm *GameManager) CreateGame(userId uuid.UUID, spotifyTokenStore store.SpotifyTokenStore) error {
 
 	// Load environment variables
 	err := godotenv.Load()
@@ -43,12 +44,12 @@ func (gm *GameManager) CreateGame(userId string) error {
 		//"https://namethatsong.onrender.com/auth/callback"
 	}
 
-	gameService, err := service.NewGameService(clientID, clientSecret, redirectURI, userId)
+	gameService, err := service.NewGameService(clientID, clientSecret, redirectURI, userId, spotifyTokenStore)
 	if err != nil {
 		return err
 	}
 
-	gm.Games[userId] = gameService
+	gm.Games[userId.String()] = gameService
 	return nil
 }
 

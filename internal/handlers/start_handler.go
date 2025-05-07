@@ -25,7 +25,7 @@ func (h *PostStartGame) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Start the game
-	err = game.StartGame()
+	err = game.StartGame(r.Context())
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error starting game: %v", err), http.StatusInternalServerError)
 		return
