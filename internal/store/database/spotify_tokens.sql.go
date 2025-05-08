@@ -24,7 +24,7 @@ VALUES (
   $5,
   $6
 )
-RETURNING refresh_token, access_token, token_type, scope, expires_at, user_id
+RETURNING user_id, refresh_token, created_at, updated_at, access_token, token_type, scope, expires_at
 `
 
 type CreateSpotifyTokenParams struct {
@@ -47,18 +47,20 @@ func (q *Queries) CreateSpotifyToken(ctx context.Context, arg CreateSpotifyToken
 	)
 	var i SpotifyToken
 	err := row.Scan(
+		&i.UserID,
 		&i.RefreshToken,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 		&i.AccessToken,
 		&i.TokenType,
 		&i.Scope,
 		&i.ExpiresAt,
-		&i.UserID,
 	)
 	return i, err
 }
 
 const getSpotifyTokenByID = `-- name: GetSpotifyTokenByID :one
-SELECT refresh_token, access_token, token_type, scope, expires_at, user_id FROM spotify_tokens
+SELECT user_id, refresh_token, created_at, updated_at, access_token, token_type, scope, expires_at FROM spotify_tokens
 WHERE user_id = $1
 `
 
@@ -66,31 +68,33 @@ func (q *Queries) GetSpotifyTokenByID(ctx context.Context, userID uuid.UUID) (Sp
 	row := q.db.QueryRowContext(ctx, getSpotifyTokenByID, userID)
 	var i SpotifyToken
 	err := row.Scan(
+		&i.UserID,
 		&i.RefreshToken,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 		&i.AccessToken,
 		&i.TokenType,
 		&i.Scope,
 		&i.ExpiresAt,
-		&i.UserID,
 	)
 	return i, err
 }
 
-const updateSpotifyRefreshToken = `-- name: UpdateSpotifyRefreshToken :exec
+const updateSpotifyAccessToken = `-- name: UpdateSpotifyAccessToken :exec
 UPDATE spotify_tokens
-SET refresh_token = $1,
+SET access_token = $1,
     expires_at = $2,
-    updated_at = NOW
+    updated_at = NOW()
 WHERE user_id = $3
 `
 
-type UpdateSpotifyRefreshTokenParams struct {
-	RefreshToken string
-	ExpiresAt    time.Time
-	UserID       uuid.UUID
+type UpdateSpotifyAccessTokenParams struct {
+	AccessToken string
+	ExpiresAt   time.Time
+	UserID      uuid.UUID
 }
 
-func (q *Queries) UpdateSpotifyRefreshToken(ctx context.Context, arg UpdateSpotifyRefreshTokenParams) error {
-	_, err := q.db.ExecContext(ctx, updateSpotifyRefreshToken, arg.RefreshToken, arg.ExpiresAt, arg.UserID)
+func (q *Queries) UpdateSpotifyAccessToken(ctx context.Context, arg UpdateSpotifyAccessTokenParams) error {
+	_, err := q.db.ExecContext(ctx, updateSpotifyAccessToken, arg.AccessToken, arg.ExpiresAt, arg.UserID)
 	return err
 }

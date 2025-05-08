@@ -40,8 +40,9 @@ type PostRegisterHandler struct {
 
 func NewPostRegisterHandler(dbQuery *database.Queries, gm *manager.GameManager) *PostRegisterHandler {
 	return &PostRegisterHandler{
-		UserStore:   store.NewSQLUserStore(dbQuery),
-		GameManager: gm,
+		UserStore:         store.NewSQLUserStore(dbQuery),
+		SpotifyTokenStore: store.NewSQLSpotifyTokenStore(dbQuery),
+		GameManager:       gm,
 	}
 }
 
@@ -74,7 +75,15 @@ func (h PostRegisterHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Game added for:", dbUser.ID.String())
 
 	// add a empty spotify token for user
-	h.SpotifyTokenStore.Create(r.Context(), dbUser.ID, "", "", "", "", time.Now())
+	err = h.SpotifyTokenStore.Create(r.Context(), dbUser.ID, "", "", "", "", time.Now())
+	if err != nil {
+		fmt.Println("Could not create Empty Spotify Token: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		c := templates.RegisterError()
+		c.Render(r.Context(), w)
+		return
+	}
+	fmt.Println("Token Created for", dbUser.ID.String())
 
 	c := templates.RegisterSuccess()
 	err = c.Render(r.Context(), w)

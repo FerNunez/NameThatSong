@@ -54,7 +54,7 @@ func (h *GetAuthCallbackHandler) ServeHttp(w http.ResponseWriter, r *http.Reques
 
 	state := r.URL.Query().Get("state")
 	code := r.URL.Query().Get("code")
-	err = game.ExchangeToken(state, code)
+	err = game.ExchangeToken(r.Context(), state, code)
 	if err != nil {
 		fmt.Printf("error exchanging token: %v\n", err)
 		http.Error(w, "error exchanging spotify token", http.StatusBadRequest)

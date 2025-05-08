@@ -16,11 +16,11 @@ RETURNING *;
 SELECT * FROM spotify_tokens
 WHERE user_id = $1;
 
--- name: UpdateSpotifyRefreshToken :exec
+-- name: UpdateSpotifyAccessToken :exec
 UPDATE spotify_tokens
-SET refresh_token = $1,
+SET access_token = $1,
     expires_at = $2,
-    updated_at = NOW
+    updated_at = NOW()
 WHERE user_id = $3;
 
 

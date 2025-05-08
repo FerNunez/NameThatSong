@@ -78,7 +78,7 @@ func main() {
 		r.Post("/skip", handlers.NewPostSkip(gm).ServeHttp)
 		r.Post("/clear-queue", handlers.NewPostClearQueue(gm).ServeHttp)
 
-		r.Get("/song-time", handlers.NewGetSongTime(gm).ServeHttp)
+		//r.Get("/song-time", handlers.NewGetSongTime(gm).ServeHttp)
 
 	})
 

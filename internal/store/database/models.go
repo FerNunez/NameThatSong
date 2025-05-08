@@ -21,12 +21,14 @@ type Session struct {
 }
 
 type SpotifyToken struct {
+	UserID       uuid.UUID
 	RefreshToken string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 	AccessToken  string
 	TokenType    string
 	Scope        string
 	ExpiresAt    time.Time
-	UserID       uuid.UUID
 }
 
 type User struct {

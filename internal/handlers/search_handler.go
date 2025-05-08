@@ -21,7 +21,7 @@ func NewGetSearchArtists(gm *manager.GameManager) *GetSearchArtists {
 func (h *GetSearchArtists) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	game, err := h.gm.GetGame(r.Context())
 	if err != nil {
-		fmt.Printf("error getting game : %v", err)
+		fmt.Printf("error getting game : %v\n", err)
 		return
 	}
 	// Get query term

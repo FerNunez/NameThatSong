@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/FerNunez/NameThatSong/internal/store/database"
@@ -34,7 +35,7 @@ func NewSQLSpotifyTokenStore(db *database.Queries) SpotifyTokenStore {
 
 func (s *SQLSpotifyTokenStore) Create(ctx context.Context, user_id uuid.UUID, refresh_token, access_token, token_type, scope string, expires_at time.Time) error {
 
-	s.db.CreateSpotifyToken(ctx, database.CreateSpotifyTokenParams{
+	_, err := s.db.CreateSpotifyToken(ctx, database.CreateSpotifyTokenParams{
 		RefreshToken: refresh_token,
 		AccessToken:  access_token,
 		TokenType:    token_type,
@@ -42,13 +43,16 @@ func (s *SQLSpotifyTokenStore) Create(ctx context.Context, user_id uuid.UUID, re
 		ExpiresAt:    expires_at,
 		UserID:       user_id,
 	})
-	return nil
+
+	return err
 }
 func (s *SQLSpotifyTokenStore) Get(ctx context.Context, user_id uuid.UUID) (SpotifyToken, error) {
 	dbSpotifyToken, err := s.db.GetSpotifyTokenByID(ctx, user_id)
 	if err != nil {
 		return SpotifyToken{}, nil
 	}
+
+	fmt.Println("Getting Token:", dbSpotifyToken.AccessToken)
 
 	return SpotifyToken{
 		RefreshToken: dbSpotifyToken.RefreshToken,
@@ -70,10 +74,10 @@ func (s *SQLSpotifyTokenStore) IsValid(ctx context.Context, user_id uuid.UUID) (
 	}
 	return true, nil
 }
-func (s *SQLSpotifyTokenStore) Update(ctx context.Context, user_id uuid.UUID, new_refresh_token string, expires_at time.Time) error {
-	return s.db.UpdateSpotifyRefreshToken(ctx, database.UpdateSpotifyRefreshTokenParams{
-		RefreshToken: new_refresh_token,
-		ExpiresAt:    expires_at,
-		UserID:       user_id,
+func (s *SQLSpotifyTokenStore) Update(ctx context.Context, user_id uuid.UUID, new_access_token string, expires_at time.Time) error {
+	return s.db.UpdateSpotifyAccessToken(ctx, database.UpdateSpotifyAccessTokenParams{
+		AccessToken: new_access_token,
+		ExpiresAt:   expires_at,
+		UserID:      user_id,
 	})
 }

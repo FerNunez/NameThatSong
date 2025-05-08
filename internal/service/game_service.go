@@ -241,7 +241,8 @@ func (s *GameService) RequestUserAuthoritazion() (string, error) {
 	return urlString, err
 }
 
-func (s *GameService) ExchangeToken(state, code string) error {
+func (s *GameService) ExchangeToken(ctx context.Context, state, code string) error {
+	fmt.Println("Exchanging token")
 	if code == "" || state == "" {
 		return fmt.Errorf("Error guetting code and state from spotify api")
 	}
@@ -262,18 +263,30 @@ func (s *GameService) ExchangeToken(state, code string) error {
 		Scope:        spotiufyTokenReponse.Scope,
 		ExpiresAt:    expires_at,
 	}
+
+	err = s.SpotifyTokenStore.Update(ctx, s.UserId, s.SpotifyToken.AccessToken, s.SpotifyToken.ExpiresAt)
+	if err != nil {
+		fmt.Println("Error updating accessToken in DB")
+		return err
+	}
+	fmt.Println("Update of spotify token done")
+
 	return nil
 }
 func (s *GameService) EnsureAccessToken(ctx context.Context) error {
+	fmt.Println("EnsureAccessToken called")
 	//Read from DB
 	if s.SpotifyToken.RefreshToken == "" {
+		fmt.Println("Empty Refresh token")
 		storeSpotifyToken, err := s.SpotifyTokenStore.Get(ctx, s.UserId)
 		if err != nil {
+			fmt.Println("Failed reading exchange token from DB")
 			return err
 		}
 		s.SpotifyToken.AccessToken = storeSpotifyToken.AccessToken
 		s.SpotifyToken.RefreshToken = storeSpotifyToken.RefreshToken
 		s.SpotifyToken.ExpiresAt = storeSpotifyToken.ExpiresAt
+		fmt.Println("Read exchange token: ", storeSpotifyToken.AccessToken)
 	}
 
 	// Expired?
