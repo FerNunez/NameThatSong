@@ -29,7 +29,7 @@ templ IndexPage(g *service.GameService) {
 	</head>
 	<div>
 		<div>
-			@SearchInput()
+			@SearchInput(g.IsUserSpotifyConnected())
 		</div>
 		<div class="fixed bottom-3/8 left-1/2 transform -translate-x-1/2 w-full flex justify-center">
 			<div class="w-full flex-1 flex flex-col items-center gap-4">

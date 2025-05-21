@@ -317,3 +317,12 @@ func (s *GameService) EnsureAccessToken(ctx context.Context) error {
 	}
 	return nil
 }
+
+func (s *GameService) IsUserSpotifyConnected() bool {
+	if s == nil {
+		return false
+	}
+
+	return s.SpotifyToken.AccessToken != ""
+
+}

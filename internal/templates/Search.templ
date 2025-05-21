@@ -2,7 +2,7 @@ package templates
 
 import "github.com/FerNunez/NameThatSong/internal/spotify_api"
 
-templ SearchInput() {
+templ SearchInput(spotifyConnected bool) {
 	<div class="relative">
 		<form class="max-w-md mx-auto">
 			<div class="relative overflow-hidden">
@@ -24,7 +24,26 @@ templ SearchInput() {
 					onkeydown="handleKeyDown(event)"
 				/>
 				<input type="hidden" name="artist-id"/>
-				<button hx-get="/search-albums" hx-trigger="click" hx-target="#album-dropdown-content" hx-include="[name='search'], [name='artist-id']" type="button" class="search-button text-white absolute end-2.5 bottom-2.5 bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Search</button>
+				<div class="absolute end-2.5 bottom-2.5 flex gap-2">
+					if !spotifyConnected {
+						<button
+							type="submit"
+							hx-get="/spotify-auth"
+							hx-trigger="click"
+							class="connect-button py-2 px-4 rounded-lg bg-green-500 hover:bg-green-600 text-white font-bold text-sm shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer border-2 border-green-400 hover:border-green-300 hover:translate-y-1 hover:scale-105"
+						>
+							Connect 
+						</button>
+					}
+					<button
+						hx-get="/search-albums"
+						hx-trigger="click"
+						hx-target="#album-dropdown-content"
+						hx-include="[name='search'], [name='artist-id']"
+						type="button"
+						class="search-button text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+					>Search</button>
+				</div>
 			</div>
 			<div id="search-results" class="search-results absolute z-10 float-right rounded-lg shadow-sm w-2/12 bg-white divide-y divide-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 "></div>
 		</form>
@@ -94,13 +113,7 @@ templ AlbumDropdown(albums []spotify_api.AlbumData, selectedAlbums map[string]bo
 					}
 				</div>
 			</div>
-			<div class="album-controls flex justify-between mt-4">
-				<button id="scroll-left-btn" class="scroll-left-btn text-white bg-gray-700 hover:bg-gray-800 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-gray-600 dark:hover:bg-gray-700 dark:focus:ring-gray-800 flex items-center">
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-					</svg>
-					Previous
-				</button>
+			<div class="album-controls center justify-between mt-4">
 				<button
 					class="start-button focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-6 py-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
 					type="button"
@@ -110,12 +123,6 @@ templ AlbumDropdown(albums []spotify_api.AlbumData, selectedAlbums map[string]bo
 					hx-include="[name='selectedAlbums']"
 					onclick="toggleAlbumDropdown()"
 				>Start!</button>
-				<button id="scroll-right-btn" class="scroll-right-btn text-white bg-gray-700 hover:bg-gray-800 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-gray-600 dark:hover:bg-gray-700 dark:focus:ring-gray-800 flex items-center">
-					Next
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-					</svg>
-				</button>
 			</div>
 		</div>
 		<div class="flex mt-3 space-x-2">
