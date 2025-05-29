@@ -113,7 +113,14 @@ templ AlbumDropdown(albums []spotify_api.AlbumData, selectedAlbums map[string]bo
 					}
 				</div>
 			</div>
-			<div class="album-controls center justify-between mt-4">
+			<div class="flex mt-3 justify-center gap-4">
+				<button
+					id="toggle-album-button"
+					class="toggle-album-btn hidden text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+					onclick="toggleAlbumDropdown()"
+				>
+					Show Albums
+				</button>
 				<button
 					class="start-button focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-6 py-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
 					type="button"
@@ -123,25 +130,23 @@ templ AlbumDropdown(albums []spotify_api.AlbumData, selectedAlbums map[string]bo
 					hx-include="[name='selectedAlbums']"
 					onclick="toggleAlbumDropdown()"
 				>Start!</button>
+				<button
+					id="toggle-album-button"
+					class="toggle-album-btn hidden text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+					onclick="toggleAlbumDropdown()"
+				>
+					Show Albums
+				</button>
+				<button
+					id="clear-queue-button"
+					class="clear-queue-btn text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
+					hx-post="/clear-queue"
+					hx-trigger="click"
+					hx-target="#music-player"
+				>
+					Clear Queue
+				</button>
 			</div>
-		</div>
-		<div class="flex mt-3 space-x-2">
-			<button
-				id="toggle-album-button"
-				class="toggle-album-btn hidden text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-				onclick="toggleAlbumDropdown()"
-			>
-				Show Albums
-			</button>
-			<button
-				id="clear-queue-button"
-				class="clear-queue-btn text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800"
-				hx-post="/clear-queue"
-				hx-trigger="click"
-				hx-target="#music-player"
-			>
-				Clear Queue
-			</button>
 		</div>
 	</div>
 	<script>
