@@ -37,7 +37,6 @@ func NewGameService(clientID, clientSecret, redirectURI string, userId uuid.UUID
 	if err != nil {
 		return nil, fmt.Errorf("error generating state: %v", err)
 	}
-
 	// Create song provider
 	songProvider := spotify_api.NewSpotifySongProvider(clientID, clientSecret, redirectURI, state)
 	// Create music service client
@@ -242,7 +241,6 @@ func (s *GameService) RequestUserAuthoritazion() (string, error) {
 }
 
 func (s *GameService) ExchangeToken(ctx context.Context, state, code string) error {
-	fmt.Println("Exchanging token")
 	if code == "" || state == "" {
 		return fmt.Errorf("Error guetting code and state from spotify api")
 	}
@@ -250,17 +248,18 @@ func (s *GameService) ExchangeToken(ctx context.Context, state, code string) err
 	if err != nil {
 		return err
 	}
-	spotiufyTokenReponse, err := s.SpotifyApi.TokenExchange(code)
+
+	spotifyTokenReponse, err := s.SpotifyApi.TokenExchange(code)
 	if err != nil {
 		return err
 	}
 
-	expires_at := time.Now().Add(time.Duration(spotiufyTokenReponse.ExpiresIn) * time.Second)
+	expires_at := time.Now().Add(time.Duration(spotifyTokenReponse.ExpiresIn) * time.Second)
 	s.SpotifyToken = store.SpotifyToken{
-		RefreshToken: spotiufyTokenReponse.RefreshToken,
-		AccessToken:  spotiufyTokenReponse.AccessToken,
-		TokenType:    spotiufyTokenReponse.TokenType,
-		Scope:        spotiufyTokenReponse.Scope,
+		RefreshToken: spotifyTokenReponse.RefreshToken,
+		AccessToken:  spotifyTokenReponse.AccessToken,
+		TokenType:    spotifyTokenReponse.TokenType,
+		Scope:        spotifyTokenReponse.Scope,
 		ExpiresAt:    expires_at,
 	}
 
@@ -269,12 +268,9 @@ func (s *GameService) ExchangeToken(ctx context.Context, state, code string) err
 		fmt.Println("Error updating accessToken in DB")
 		return err
 	}
-	fmt.Println("Update of spotify token done")
-
 	return nil
 }
 func (s *GameService) EnsureAccessToken(ctx context.Context) error {
-	fmt.Println("EnsureAccessToken called")
 	//Read from DB
 	if s.SpotifyToken.RefreshToken == "" {
 		fmt.Println("Empty Refresh token")

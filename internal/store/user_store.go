@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/FerNunez/NameThatSong/internal/store/database"
@@ -35,6 +36,7 @@ func NewSQLUserStore(db *database.Queries) UserStore {
 }
 
 func (s *SQLUserStore) Create(ctx context.Context, email, hashed_password string) (User, error) {
+
 	dbUser, err := s.db.CreateUser(ctx, database.CreateUserParams{
 		Email:          email,
 		HashedPassword: hashed_password,
@@ -42,6 +44,8 @@ func (s *SQLUserStore) Create(ctx context.Context, email, hashed_password string
 	if err != nil {
 		return User{}, err
 	}
+
+	fmt.Printf("[SQLUserStore] Create: added to database user with Id: %v for email %v\n", dbUser.ID, email)
 
 	return User{
 		ID:             dbUser.ID,

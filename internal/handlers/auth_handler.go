@@ -16,19 +16,14 @@ func NewGetAuthHandler(gm *manager.GameManager) *GetAuthHandler {
 
 }
 func (h *GetAuthHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
-
-	fmt.Println("Hello getting called")
 	game, err := h.gm.GetGame(r.Context())
 	if err != nil {
-		fmt.Printf("eror getting game: %v", err)
-		http.Error(w, "error generating state", http.StatusBadRequest)
+		fmt.Printf("[GetAuthHandler] could not retriever game: %v", err)
 		return
 	}
-
 	urlString, err := game.RequestUserAuthoritazion()
 	if err != nil {
-		fmt.Printf("error getting auth: %v", err)
-		http.Error(w, "error generating state", http.StatusBadRequest)
+		fmt.Printf("[GetAuthHandler] error getting spotify auth: %v", err)
 		return
 	}
 	// Redirect to Spotify

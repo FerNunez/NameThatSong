@@ -37,6 +37,7 @@ func NewSQLSpotifyTokenStore(db *database.Queries, encryptor *crypto.TokenEncryp
 
 func (s *SQLSpotifyTokenStore) Create(ctx context.Context, user_id uuid.UUID, refresh_token, access_token, token_type, scope string, expires_at time.Time) error {
 
+	fmt.Println("Creating.. COULD I?")
 	// Encrypt tokens!
 	refresh_token_crypted, err := s.encryptor.Encrypt(refresh_token)
 	if err != nil {
@@ -47,8 +48,8 @@ func (s *SQLSpotifyTokenStore) Create(ctx context.Context, user_id uuid.UUID, re
 		return err
 	}
 
-	fmt.Println("[Create] refresh_token", refresh_token)
-	fmt.Println("[Create] refresh_token_crypte", refresh_token_crypted)
+	fmt.Println("refresh_token", refresh_token)
+	fmt.Println("refresh_token_crypte", refresh_token_crypted)
 
 	// Store data
 	_, err = s.db.CreateSpotifyToken(ctx, database.CreateSpotifyTokenParams{
@@ -68,18 +69,16 @@ func (s *SQLSpotifyTokenStore) Get(ctx context.Context, user_id uuid.UUID) (Spot
 		return SpotifyToken{}, nil
 	}
 
+	fmt.Println("Getting Token:", dbSpotifyToken.AccessToken)
+
 	refresh_token_decrypted, err := s.encryptor.Decrypt(dbSpotifyToken.RefreshToken)
 	if err != nil {
 		return SpotifyToken{}, err
 	}
-
-	fmt.Printf("[GET] Fetching refresh token: %v, encrypted: %v\n", dbSpotifyToken.RefreshToken, refresh_token_decrypted)
-
 	access_token_decrypted, err := s.encryptor.Decrypt(dbSpotifyToken.AccessToken)
 	if err != nil {
 		return SpotifyToken{}, err
 	}
-	fmt.Printf("[GET] Fetching access token: %v, encrypted: %v\n", dbSpotifyToken.AccessToken, access_token_decrypted)
 
 	return SpotifyToken{
 		RefreshToken: refresh_token_decrypted,
@@ -94,11 +93,9 @@ func (s *SQLSpotifyTokenStore) IsValid(ctx context.Context, user_id uuid.UUID) (
 
 	dbSpotifyToken, err := s.Get(ctx, user_id)
 	if err != nil {
-		_ = fmt.Errorf("[IsValid]: user_id %v  not found", user_id)
 		return false, err
 	}
 	if time.Now().After(dbSpotifyToken.ExpiresAt) {
-		_ = fmt.Errorf("[IsValid]: AccessToken expired for user_id: %v", user_id)
 		return false, nil
 	}
 	return true, nil
@@ -110,10 +107,9 @@ func (s *SQLSpotifyTokenStore) Update(ctx context.Context, user_id uuid.UUID, ne
 	if err != nil {
 		return err
 	}
-	fmt.Printf("[SQLSpotifyTokenStore] Update: new access_token encrypted %v added in db\n\n", access_token_crypted)
 
 	return s.db.UpdateSpotifyAccessToken(ctx, database.UpdateSpotifyAccessTokenParams{
-		AccessToken: access_token_crypted,
+		AccessToken: new_access_token,
 		ExpiresAt:   expires_at,
 		UserID:      user_id,
 	})

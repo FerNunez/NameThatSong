@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/FerNunez/NameThatSong/internal/auth"
+	"github.com/FerNunez/NameThatSong/internal/crypto"
 	"github.com/FerNunez/NameThatSong/internal/manager"
 	"github.com/FerNunez/NameThatSong/internal/store"
 	"github.com/FerNunez/NameThatSong/internal/store/database"
@@ -45,11 +46,11 @@ type PostLoginHandler struct {
 	// sessionCookieName string
 }
 
-func NewPostLoginHandler(dbQuery *database.Queries, sessionName string, gm *manager.GameManager) *PostLoginHandler {
+func NewPostLoginHandler(dbQuery *database.Queries, tokenEncryptor *crypto.TokenEncryptor, sessionName string, gm *manager.GameManager) *PostLoginHandler {
 	return &PostLoginHandler{
 		UserStore:         store.NewSQLUserStore(dbQuery),
 		SessionStore:      store.NewSQLSessionStore(dbQuery),
-		SpotifyTokenStore: store.NewSQLSpotifyTokenStore(dbQuery),
+		SpotifyTokenStore: store.NewSQLSpotifyTokenStore(dbQuery, tokenEncryptor),
 		SessionName:       sessionName,
 		GameManager:       gm,
 	}
@@ -78,8 +79,25 @@ func (h PostLoginHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 
 	// Login without game
 	if _, err := h.GameManager.GetGame(r.Context()); err != nil {
-		fmt.Println("recreating game for user: ", dbUser.ID.String())
-		h.GameManager.CreateGame(dbUser.ID, h.SpotifyTokenStore)
+		fmt.Println("[PostLoginHandler] ServeHttp: Recreating game for user", dbUser.ID.String())
+		// TODO: FIX THIS FOR TH ELOVE OF G
+		dbSpotifyToken, err := h.SpotifyTokenStore.Get(r.Context(), dbUser.ID)
+		if err != nil {
+			fmt.Println("[PostLoginHandler] ServeHttp: Spotify token not found for", dbUser.ID.String())
+			h.GameManager.CreateGame(dbUser.ID, h.SpotifyTokenStore)
+
+		} else {
+			fmt.Println("[PostLoginHandler] ServeHttp: Spotify token found for", dbUser.ID.String())
+			h.GameManager.CreateGame(dbUser.ID, h.SpotifyTokenStore)
+			g, ok := h.GameManager.Games[string(dbUser.ID.String())]
+			if ok {
+				fmt.Println("[PostLoginHandler] ServeHttp: retrieved access token from db for user", dbUser.ID.String())
+				g.SpotifyApi.AccessToken = dbSpotifyToken.AccessToken
+				g.SpotifyApi.RefreshToken = dbSpotifyToken.RefreshToken
+				// TODO: FIX THIS
+			}
+		}
+
 	}
 
 	ttl := time.Duration(24 * time.Hour)

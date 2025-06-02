@@ -55,7 +55,7 @@ func (te *TokenEncryptor) Decrypt(ciphertext string) (string, error) {
 	}
 
 	// retirve nonce
-	nonce, cipher := data[:nonceSize], data[:nonceSize]
+	nonce, cipher := data[:nonceSize], data[nonceSize:]
 
 	// decrypt
 	plaintext, err := te.gcm.Open(nil, nonce, cipher, nil)

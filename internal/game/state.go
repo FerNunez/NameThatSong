@@ -1,7 +1,6 @@
 package game
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -48,8 +47,6 @@ func NewTitleGuessState(titleName string) *TitleGuessState {
 		}
 		wordsCounts[w] += 1
 	}
-
-	fmt.Printf("wc: %v\n", wordsCounts)
 
 	return &TitleGuessState{
 		RealTitle:       titleName,

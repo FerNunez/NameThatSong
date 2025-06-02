@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"log"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 
 	"database/sql"
 
+	"github.com/FerNunez/NameThatSong/internal/crypto"
 	"github.com/FerNunez/NameThatSong/internal/handlers"
 	"github.com/FerNunez/NameThatSong/internal/manager"
 	"github.com/FerNunez/NameThatSong/internal/store"
@@ -22,6 +24,20 @@ import (
 func main() {
 
 	err := godotenv.Load()
+
+	//encription key
+	encryptionKey := os.Getenv("SPOTIFY_TOKEN_ENCRYPTION_KEY")
+
+	key, err := base64.StdEncoding.DecodeString(encryptionKey)
+	if err != nil {
+		log.Fatalf("SPOTIFY_TOKEN_ENCRYPTION_KEY error %v", err)
+	}
+
+	tokenEncryptor, err := crypto.NewTokenEncryptor(key)
+	if err != nil {
+		log.Fatalf("Error creating token encrypto: %v", err)
+	}
+
 	dbURL := os.Getenv("DB_URL")
 	if dbURL == "" {
 		fmt.Println("**Please define the DB_RUL in environtment.")
@@ -44,7 +60,7 @@ func main() {
 	authMiddleware := m.NewAuthMiddleware(userStore, cookieName)
 	r.Group(func(r chi.Router) {
 		r.Use(
-			authMiddleware.AddUserToContext,
+			authMiddleware.AddUserToCtxt,
 		)
 		r.Get("/", handlers.NewGetIndexHandler(gm).ServeHttp)
 		// Set up static file server
@@ -52,10 +68,10 @@ func main() {
 		r.Handle("/static/*", http.StripPrefix("/static/", fileServer))
 
 		r.Get("/register", handlers.NewGetRegisterHandler().ServeHttp)
-		r.Post("/register", handlers.NewPostRegisterHandler(dbQueries, gm).ServeHttp)
+		r.Post("/register", handlers.NewPostRegisterHandler(dbQueries, tokenEncryptor, gm).ServeHttp)
 		// login Routes
 		r.Get("/login", handlers.NewGetLoginHandler().ServeHttp)
-		r.Post("/login", handlers.NewPostLoginHandler(dbQueries, cookieName, gm).ServeHttp)
+		r.Post("/login", handlers.NewPostLoginHandler(dbQueries, tokenEncryptor, cookieName, gm).ServeHttp)
 		r.Post("/logout", handlers.NewPostLogoutHandler(cookieName).ServeHTTP)
 
 		// Auth

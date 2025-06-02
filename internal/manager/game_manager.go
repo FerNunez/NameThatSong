@@ -25,6 +25,7 @@ func NewGameManager() *GameManager {
 
 func (gm *GameManager) CreateGame(userId uuid.UUID, spotifyTokenStore store.SpotifyTokenStore) error {
 
+	// TODO: Pass all this into a internal config struct?
 	// Load environment variables
 	err := godotenv.Load()
 	if err != nil {
@@ -50,6 +51,7 @@ func (gm *GameManager) CreateGame(userId uuid.UUID, spotifyTokenStore store.Spot
 	}
 
 	gm.Games[userId.String()] = gameService
+	fmt.Println("[GameManager] CreateGame: New game created for user", userId.String())
 	return nil
 }
 
@@ -59,19 +61,11 @@ func (gm GameManager) GetGame(ctx context.Context) (*service.GameService, error)
 		return nil, fmt.Errorf("There is no user in context")
 	}
 
+	// TODO: Add a DB here to extract a "game"
 	game, ok := gm.Games[user.ID.String()]
 	if !ok {
 		return nil, fmt.Errorf("There is no game for user id")
 	}
-
-	// valid, err := gm.SpotifyTokenStore.IsValid(ctx, user.ID)
-	// if err != nil {
-	// 	panic("Should not be here")
-	// }
-	//
-	// if !valid{
-	//
-	// }
-
+	fmt.Println("[GameManager] GetGame found game for user:", user.ID.String())
 	return game, nil
 }

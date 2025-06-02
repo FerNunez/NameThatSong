@@ -28,39 +28,38 @@ func NewAuthMiddleware(userStore store.UserStore, sessionCookieName string) *Aut
 var UserKey string = "user"
 
 // Gets Cookie -> Gets user from Cookie
-func (m *AuthMiddleware) AddUserToContext(next http.Handler) http.Handler {
+func (m *AuthMiddleware) AddUserToCtxt(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		fmt.Println("middleware called? from", r.URL)
 		sessionCookie, err := r.Cookie(m.sessionCookieName)
 		if err != nil {
-			fmt.Println("error")
+			fmt.Println("[middl][AddUserToCtxt] Could not retrieve session from cookie")
 			next.ServeHTTP(w, r)
 			return
 		}
 
 		decodedValue, err := b64.StdEncoding.DecodeString(sessionCookie.Value)
 		if err != nil {
-			fmt.Println("error here")
+			fmt.Println("[middl][AddUserToCtxt] Could not  session cookie value")
 			next.ServeHTTP(w, r)
 			return
 		}
-
 		splitValue := strings.Split(string(decodedValue), ":")
 		if len(splitValue) != 2 {
+			fmt.Println("[middl][AddUserToCtxt] Retrieved not decide session cookie value")
 			next.ServeHTTP(w, r)
 			return
 		}
 
 		//sessionID := splitValue[0]
-		//userID := splitValue[1]
-		user, err := m.userStore.GetById(r.Context(), splitValue[1])
+		userID := splitValue[1]
+		user, err := m.userStore.GetById(r.Context(), userID)
 		if err != nil {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		fmt.Println("Found ID in DB")
+		fmt.Println("[middleware] User added into context for user_id:", userID)
 		ctx := context.WithValue(r.Context(), UserKey, user)
 
 		next.ServeHTTP(w, r.WithContext(ctx))

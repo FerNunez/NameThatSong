@@ -3,9 +3,10 @@ package handlers
 import (
 	"fmt"
 	"net/http"
-	"time"
+	// "time"
 
 	"github.com/FerNunez/NameThatSong/internal/auth"
+	"github.com/FerNunez/NameThatSong/internal/crypto"
 	"github.com/FerNunez/NameThatSong/internal/manager"
 	"github.com/FerNunez/NameThatSong/internal/store"
 	"github.com/FerNunez/NameThatSong/internal/store/database"
@@ -38,10 +39,10 @@ type PostRegisterHandler struct {
 	GameManager *manager.GameManager
 }
 
-func NewPostRegisterHandler(dbQuery *database.Queries, gm *manager.GameManager) *PostRegisterHandler {
+func NewPostRegisterHandler(dbQuery *database.Queries, tokenEncryptor *crypto.TokenEncryptor, gm *manager.GameManager) *PostRegisterHandler {
 	return &PostRegisterHandler{
 		UserStore:         store.NewSQLUserStore(dbQuery),
-		SpotifyTokenStore: store.NewSQLSpotifyTokenStore(dbQuery),
+		SpotifyTokenStore: store.NewSQLSpotifyTokenStore(dbQuery, tokenEncryptor),
 		GameManager:       gm,
 	}
 }
@@ -50,9 +51,14 @@ func (h PostRegisterHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 
 	email := r.FormValue("email")
 	password := r.FormValue("password")
-
 	// hash password
 	hashedPass, err := auth.HashPassword(password)
+	if err != nil {
+		fmt.Println("[PostRegisterHandler] ServeHttp: could not hash password,", err)
+		c := templates.RegisterError()
+		c.Render(r.Context(), w)
+		return
+	}
 
 	// add user to DB
 	dbUser, err := h.UserStore.Create(r.Context(), email, hashedPass)
@@ -72,22 +78,20 @@ func (h PostRegisterHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 		c.Render(r.Context(), w)
 		return
 	}
-	fmt.Println("Game added for:", dbUser.ID.String())
 
 	// add a empty spotify token for user
-	err = h.SpotifyTokenStore.Create(r.Context(), dbUser.ID, "", "", "", "", time.Now())
-	if err != nil {
-		fmt.Println("Could not create Empty Spotify Token: ", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		c := templates.RegisterError()
-		c.Render(r.Context(), w)
-		return
-	}
-	fmt.Println("Token Created for", dbUser.ID.String())
+	// err = h.SpotifyTokenStore.Create(r.Context(), dbUser.ID, "", "", "", "", time.Now())
+	// if err != nil {
+	// 	fmt.Println("Could not create Empty Spotify Token: ", err)
+	// 	w.WriteHeader(http.StatusInternalServerError)
+	// 	c := templates.RegisterError()
+	// 	c.Render(r.Context(), w)
+	// 	return
+	// }
+	// fmt.Println("Token Created for", dbUser.ID.String())
 
 	c := templates.RegisterSuccess()
 	err = c.Render(r.Context(), w)
-
 	if err != nil {
 		http.Error(w, "error rendering template", http.StatusInternalServerError)
 		return

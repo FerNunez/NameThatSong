@@ -47,14 +47,13 @@ func (p *SpotifySongProvider) ValidateState(state string) error {
 	return nil
 }
 
-// Exchange code for tokens
+// / Exchange new generated tokens (Refresh+Access)
 func (p *SpotifySongProvider) TokenExchange(code string) (TokenResponse, error) {
 	tokenURL := "https://accounts.spotify.com/api/token"
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
 	data.Set("code", code)
 	data.Set("redirect_uri", p.RedirectURI)
-
 	req, err := http.NewRequest("POST", tokenURL, strings.NewReader(data.Encode()))
 	if err != nil {
 		fmt.Printf("Error creating request: %v", err)
@@ -80,17 +79,13 @@ func (p *SpotifySongProvider) TokenExchange(code string) (TokenResponse, error) 
 		fmt.Printf("Error parsing token response: %v", err)
 		return TokenResponse{}, err
 	}
-
-	// Store tokens
-	// TODO: Set AccessToken to spotify API
-	// TODO: Set RefreshToken to spotify API
-	// p.AccessToken = tokenResponse.AccessToken
-	// p.RefreshToken = tokenResponse.RefreshToken
-	// fmt.Printf("Got the tokens %v, %v", p.AccessToken, p.RefreshToken)
-
+	fmt.Println("[TokenExchange] Token Exchanged")
+	// DEBUG LOGGER
+	// fmt.Printf("[TokenExchange] Token Exchanged: RefreshToken: %v, AccessToken: %v, ExpiresAt: %v \n", tokenResponse.RefreshToken, tokenResponse.AccessToken, tokenResponse.ExpiresIn)
 	return tokenResponse, nil
 }
 
+// / Regenerate Access token from a Refresh token
 func (p *SpotifySongProvider) RegenerateToken() (TokenResponse, error) {
 	tokenURL := "https://accounts.spotify.com/api/token"
 	data := url.Values{}
@@ -124,5 +119,6 @@ func (p *SpotifySongProvider) RegenerateToken() (TokenResponse, error) {
 		return TokenResponse{}, err
 	}
 
+	fmt.Printf("[RegenerateToken] New refreshed access token: %v, expiring at %v \n", tokenResponse.AccessToken, tokenResponse.ExpiresIn)
 	return tokenResponse, nil
 }

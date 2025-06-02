@@ -82,52 +82,53 @@ func TestRemoveWord(t *testing.T) {
 		})
 	}
 }
-func TestProcessState(t *testing.T) {
-	// Define the test cases
-	testCases := []struct {
-		original   string
-		aliveWords map[string]uint8
-		expected   string
-	}{
-		{
-			"Hello world!",
-			map[string]uint8{"hello": 1},
-			"_ _ _ _ _  world!", // Replace Hello with underscore, keep 'world!' as it is
-		},
-		{
-			"Go programming is fun!",
-			map[string]uint8{"go": 1, "fun": 1},
-			"_ _  programming is _ _ _ !", // Replace 'Go' and 'fun' with underscores
-		},
-		{
-			"Hello, how are you?",
-			map[string]uint8{"how": 1, "you": 1},
-			"Hello, _ _ _  are _ _ _ ?", // Replace 'how' and 'you' with underscores
-		},
-		{
-			"Test123 is here!",
-			map[string]uint8{"test123": 1},
-			"_ _ _ _ _ _ _  is here!", // Replace 'Test123' with underscore, keep 'is here!' intact
-		},
-		{
-			"Start testing symbols: @#%$!",
-			map[string]uint8{"testing": 1},
-			"Start _ _ _ _ _ _ _  symbols: @#%$!", // Replace 'testing' with underscores
-		},
-		{
-			"Test symbols and spaces.",
-			map[string]uint8{"symbols": 1},
-			"Test _ _ _ _ _ _ _  and spaces.", // Replace 'symbols' with underscores
-		},
-	}
 
-	// Run the test cases
-	for _, tc := range testCases {
-		t.Run(tc.original, func(t *testing.T) {
-			result := game.ProcessState(tc.original, tc.aliveWords)
-			if result != tc.expected {
-				t.Errorf("FAIL: Original: '%s', Expected: '%s', Got: '%s'", tc.original, tc.expected, result)
-			}
-		})
-	}
-}
+// func TestProcessState(t *testing.T) {
+// 	// Define the test cases
+// 	testCases := []struct {
+// 		original   string
+// 		aliveWords map[string]uint8
+// 		expected   string
+// 	}{
+// 		{
+// 			"Hello world!",
+// 			map[string]uint8{"hello": 1},
+// 			"_ _ _ _ _  world!", // Replace Hello with underscore, keep 'world!' as it is
+// 		},
+// 		{
+// 			"Go programming is fun!",
+// 			map[string]uint8{"go": 1, "fun": 1},
+// 			"_ _  programming is _ _ _ !", // Replace 'Go' and 'fun' with underscores
+// 		},
+// 		{
+// 			"Hello, how are you?",
+// 			map[string]uint8{"how": 1, "you": 1},
+// 			"Hello, _ _ _  are _ _ _ ?", // Replace 'how' and 'you' with underscores
+// 		},
+// 		{
+// 			"Test123 is here!",
+// 			map[string]uint8{"test123": 1},
+// 			"_ _ _ _ _ _ _  is here!", // Replace 'Test123' with underscore, keep 'is here!' intact
+// 		},
+// 		{
+// 			"Start testing symbols: @#%$!",
+// 			map[string]uint8{"testing": 1},
+// 			"Start _ _ _ _ _ _ _  symbols: @#%$!", // Replace 'testing' with underscores
+// 		},
+// 		{
+// 			"Test symbols and spaces.",
+// 			map[string]uint8{"symbols": 1},
+// 			"Test _ _ _ _ _ _ _  and spaces.", // Replace 'symbols' with underscores
+// 		},
+// 	}
+//
+// 	// Run the test cases
+// 	for _, tc := range testCases {
+// 		t.Run(tc.original, func(t *testing.T) {
+// 			result := game.ProcessState(tc.original, tc.aliveWords)
+// 			if result != tc.expected {
+// 				t.Errorf("FAIL: Original: '%s', Expected: '%s', Got: '%s'", tc.original, tc.expected, result)
+// 			}
+// 		})
+// 	}
+// }

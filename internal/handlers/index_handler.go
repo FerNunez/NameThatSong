@@ -20,7 +20,7 @@ func (h GetIndexHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 
 	game, err := h.gm.GetGame(r.Context())
 	if err != nil {
-		fmt.Println("cant get games, ", err)
+		fmt.Println("[GetIndexHandler] Cant get game in context:", err)
 		component := templates.IndexPage(nil)
 		layout := templates.Layout(component, "NameThatSong")
 		layout.Render(r.Context(), w)
