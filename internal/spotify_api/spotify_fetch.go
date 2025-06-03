@@ -199,7 +199,8 @@ func (p *SpotifySongProvider) FetchTracksByAlbumID(accessToken, albumId string) 
 	return trackList, nil
 }
 
-func (p *SpotifySongProvider) CreateAlbumFromTopTracks(accessToken, artistId string) (AlbumData, []TrackData, error) {
+// Creates an album with the top tracks of an artist
+func (p *SpotifySongProvider) CreateTopTracksAlbum(accessToken, artistId string) (AlbumData, []TrackData, error) {
 
 	requestURL := fmt.Sprintf("https://api.spotify.com/v1/artists/%v/top-tracks", artistId)
 	req, err := http.NewRequest("GET", requestURL, nil)
@@ -313,6 +314,6 @@ func (p *SpotifySongProvider) CreateAlbumFromTopTracks(accessToken, artistId str
 		Name:        fmt.Sprintf("Top%v", len(trackList)),
 		ReleaseDate: "NEW",
 	}
-	fmt.Println("Fake album: ", album.Name, "trakcs: ", album.TotalTracks, "ID:", album.ID)
+	//fmt.Println("Fake album: ", album.Name, "trakcs: ", album.TotalTracks, "ID:", album.ID)
 	return album, trackList, nil
 }

@@ -23,7 +23,7 @@ type GameService struct {
 	ArtistSelection   map[string]uint8
 	TracksToPlayId    map[string]*player.Song
 	GuessState        *game.GuessState
-	Cache             *cache.SpotifyCache
+	Cache             *cache.SpotifyCacheMap
 	UserId            uuid.UUID
 	SpotifyToken      store.SpotifyToken
 	SpotifyTokenStore store.SpotifyTokenStore
@@ -49,7 +49,7 @@ func NewGameService(clientID, clientSecret, redirectURI string, userId uuid.UUID
 		AlbumSelection:    make(map[string]bool),
 		ArtistSelection:   make(map[string]uint8),
 		TracksToPlayId:    make(map[string]*player.Song),
-		Cache:             cache.NewSpotifyCache(),
+		Cache:             cache.NewSpotifyCacheMap(),
 		GuessState:        guessState,
 		UserId:            userId,
 		SpotifyTokenStore: spotifyTokenStore,
