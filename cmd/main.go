@@ -19,11 +19,22 @@ import (
 	m "github.com/FerNunez/NameThatSong/internal/middleware"
 	"github.com/go-chi/chi/v5"
 	_ "github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
 
 	err := godotenv.Load()
+
+	// Redis
+	// TODO: Change to connection string
+	// TODO: check TLS/SSL
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+	fmt.Println("redis db created: ", rdb)
 
 	//encription key
 	encryptionKey := os.Getenv("SPOTIFY_TOKEN_ENCRYPTION_KEY")

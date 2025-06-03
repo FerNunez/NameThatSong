@@ -23,7 +23,7 @@ type GameService struct {
 	ArtistSelection   map[string]uint8
 	TracksToPlayId    map[string]*player.Song
 	GuessState        *game.GuessState
-	Cache             *cache.SpotifyCacheMap
+	Cache             cache.SpotifyCache
 	UserId            uuid.UUID
 	SpotifyToken      store.SpotifyToken
 	SpotifyTokenStore store.SpotifyTokenStore
@@ -96,10 +96,11 @@ func (s GameService) SearchArtists(ctx context.Context, artist string) ([]spotif
 		return []spotify_api.ArtistData{}, fmt.Errorf("No token spotify available")
 	}
 
-	artists, err := s.SpotifyApi.SearchArtistsByName(s.SpotifyToken.AccessToken, artist)
-	for _, artist := range artists {
-		s.Cache.ArtistMap[artist.Id] = artist
-	}
+	artists, err := s.Cache.GetArtistsByName(s.SpotifyApi, artist)
+	// artists, err := s.SpotifyApi.SearchArtistsByName(s.SpotifyToken.AccessToken, artist)
+	// for _, artist := range artists {
+	// 	s.Cache.ArtistMap[artist.Id] = artist
+	// }
 	return artists, err
 }
 
@@ -128,8 +129,9 @@ func (s *GameService) StartGame(ctx context.Context) error {
 	}
 
 	for artistId := range s.ArtistSelection {
-		albumsId, ok := s.Cache.ArtistToAlbumsMap[artistId]
-		if !ok {
+		albumsId, err := s.Cache.GetAlbumsIdFromArtistId(s.SpotifyApi, artistId)
+		//albumsId, ok := s.Cache.ArtistToAlbumsMap[artistId]
+		if err != nil {
 			panic(fmt.Sprintf("artistId to albumId map should have artist: %v", artistId))
 		}
 
@@ -155,16 +157,19 @@ func (s *GameService) StartGame(ctx context.Context) error {
 	s.MusicPlayer.Shuffle()
 	song := s.MusicPlayer.Queue[s.MusicPlayer.CurrentIndex]
 
-	track, ok := s.Cache.TrackMap[song.TrackId]
-	if !ok {
+	track, ok := s.Cache.GetTrack(s.SpotifyApi, song.TrackId)
+	// track, ok := s.Cache.TrackMap[song.TrackId]
+	if ok != nil {
 		panic("Track should always exist in cache")
 	}
-	album, ok := s.Cache.AlbumMap[song.AlbumId]
-	if !ok {
+	album, ok := s.Cache.GetAlbum(s.SpotifyApi, song.AlbumId)
+	// album, ok := s.Cache.AlbumMap[song.AlbumId]
+	if ok != nil {
 		panic("Track should always exist in cache")
 	}
-	artist, ok := s.Cache.ArtistMap[song.ArtistId]
-	if !ok {
+	artist, ok := s.Cache.GetArtist(s.SpotifyApi, song.ArtistId)
+	//artist, ok := s.Cache.ArtistMap[song.ArtistId]
+	if ok != nil {
 		panic("Track should always exist in cache")
 	}
 
@@ -200,16 +205,19 @@ func (s *GameService) SkipSong(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	track, ok := s.Cache.TrackMap[nextSong.TrackId]
-	if !ok {
+	track, ok := s.Cache.GetTrack(s.SpotifyApi, nextSong.TrackId)
+	// track, ok := s.Cache.TrackMap[nextSong.TrackId]
+	if ok != nil {
 		panic("Track should always exist in cache")
 	}
-	album, ok := s.Cache.AlbumMap[nextSong.AlbumId]
-	if !ok {
+	album, ok := s.Cache.GetAlbum(s.SpotifyApi, nextSong.AlbumId)
+	// album, ok := s.Cache.AlbumMap[nextSong.AlbumId]
+	if ok != nil {
 		panic("Track should always exist in cache")
 	}
-	artist, ok := s.Cache.ArtistMap[nextSong.ArtistId]
-	if !ok {
+	artist, ok := s.Cache.GetArtist(s.SpotifyApi, nextSong.ArtistId)
+	//artist, ok := s.Cache.ArtistMap[nextSong.ArtistId]
+	if ok != nil {
 		panic("Track should always exist in cache")
 	}
 

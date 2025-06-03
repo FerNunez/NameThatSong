@@ -44,8 +44,8 @@ func (h *PostSelectAlbum) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	// Toggle album selection
 	toggle := game.ToggleAlbumSelection(albumID, artistID)
 
-	album, ok := game.Cache.AlbumMap[albumID]
-	if !ok {
+	album, err := game.Cache.GetAlbum(game.SpotifyApi, albumID)
+	if err != nil {
 		panic("album should be in cache")
 	}
 	component := templates.AlbumCard(album, toggle, artistID)

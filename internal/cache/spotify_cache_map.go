@@ -28,10 +28,26 @@ func NewSpotifyCacheMap() *SpotifyCacheMap {
 	}
 }
 
-func (c *SpotifyCacheMap) GetArtistData(s *spotify_api.SpotifySongProvider, id string) (spotify_api.ArtistData, error) {
-	return spotify_api.ArtistData{}, nil
+func (c *SpotifyCacheMap) GetArtistsByName(s *spotify_api.SpotifySongProvider, artistName string) ([]spotify_api.ArtistData, error) {
+	return []spotify_api.ArtistData{}, nil
 }
 
+func (c *SpotifyCacheMap) GetTrack(s *spotify_api.SpotifySongProvider, trackId string) (spotify_api.TrackData, error) {
+	return spotify_api.TrackData{}, nil
+}
+func (c *SpotifyCacheMap) GetAlbum(s *spotify_api.SpotifySongProvider, albumId string) (spotify_api.AlbumData, error) {
+	return spotify_api.AlbumData{}, nil
+}
+func (c *SpotifyCacheMap) GetArtist(s *spotify_api.SpotifySongProvider, artistId string) (spotify_api.ArtistData, error) {
+	return spotify_api.ArtistData{}, nil
+}
+func (c *SpotifyCacheMap) GetAlbumsIdFromArtistId(s *spotify_api.SpotifySongProvider, artistId string) ([]string, error) {
+	return []string{}, nil
+}
+func (c *SpotifyCacheMap) GetArtistData(s *spotify_api.SpotifySongProvider, id string) (spotify_api.ArtistData, error) {
+	//s.Cache.ArtistMap[artist.Id] = artist
+	return spotify_api.ArtistData{}, nil
+}
 func (c *SpotifyCacheMap) GetArtistsAlbum(s *spotify_api.SpotifySongProvider, accessToken, artistId string) ([]spotify_api.AlbumData, error) {
 	// check if artist already known
 	albumsIds, exist := c.ArtistToAlbumsMap[artistId]
