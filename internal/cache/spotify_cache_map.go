@@ -53,11 +53,15 @@ func (c *SpotifyCacheMap) GetAlbum(s *spotify_api.SpotifySongProvider, accessTok
 	if !ok {
 		fmt.Println("[SpotifyCacheMap] GetAlbum miss chache")
 
-		albumData, err := s.FetchAlbum(accessToken, albumId)
+		albumData, tracksData, err := s.FetchAlbum(accessToken, albumId)
 		if err != nil {
 			return spotify_api.AlbumData{}, nil
 		}
 		c.AlbumMap[albumId] = albumData
+
+		for _, track := range tracksData {
+			c.TrackMap[track.ID] = track
+		}
 	}
 	return val, nil
 }

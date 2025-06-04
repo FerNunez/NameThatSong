@@ -44,7 +44,7 @@ func (h *PostSelectAlbum) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	// Toggle album selection
 	toggle := game.ToggleAlbumSelection(albumID, artistID)
 
-	album, err := game.Cache.GetAlbum(game.SpotifyApi, albumID)
+	album, err := game.Cache.GetAlbum(game.SpotifyApi, game.SpotifyToken.AccessToken, albumID)
 	if err != nil {
 		panic("album should be in cache")
 	}
