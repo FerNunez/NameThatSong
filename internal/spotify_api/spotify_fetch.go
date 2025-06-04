@@ -15,6 +15,274 @@ type AlbumData struct {
 	ReleaseDate string
 }
 
+func (p *SpotifySongProvider) FetchTrack(accessToken, trackId string) (TrackData, error) {
+	requestURL := fmt.Sprintf("https://api.spotify.com/v1/tracks/%s", trackId)
+	req, err := http.NewRequest("GET", requestURL, nil)
+	if err != nil {
+		return TrackData{}, err
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
+
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return TrackData{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return TrackData{}, err
+	}
+
+	type FetchTrackResponse struct {
+		Album struct {
+			AlbumType string `json:"album_type"`
+			Artists   []struct {
+				ExternalUrls struct {
+					Spotify string `json:"spotify"`
+				} `json:"external_urls"`
+				Href string `json:"href"`
+				ID   string `json:"id"`
+				Name string `json:"name"`
+				Type string `json:"type"`
+				URI  string `json:"uri"`
+			} `json:"artists"`
+			AvailableMarkets []any `json:"available_markets"`
+			ExternalUrls     struct {
+				Spotify string `json:"spotify"`
+			} `json:"external_urls"`
+			Href   string `json:"href"`
+			ID     string `json:"id"`
+			Images []struct {
+				URL    string `json:"url"`
+				Width  int    `json:"width"`
+				Height int    `json:"height"`
+			} `json:"images"`
+			Name                 string `json:"name"`
+			ReleaseDate          string `json:"release_date"`
+			ReleaseDatePrecision string `json:"release_date_precision"`
+			TotalTracks          int    `json:"total_tracks"`
+			Type                 string `json:"type"`
+			URI                  string `json:"uri"`
+		} `json:"album"`
+		Artists []struct {
+			ExternalUrls struct {
+				Spotify string `json:"spotify"`
+			} `json:"external_urls"`
+			Href string `json:"href"`
+			ID   string `json:"id"`
+			Name string `json:"name"`
+			Type string `json:"type"`
+			URI  string `json:"uri"`
+		} `json:"artists"`
+		AvailableMarkets []any `json:"available_markets"`
+		DiscNumber       int   `json:"disc_number"`
+		DurationMs       int   `json:"duration_ms"`
+		Explicit         bool  `json:"explicit"`
+		ExternalIds      struct {
+			Isrc string `json:"isrc"`
+		} `json:"external_ids"`
+		ExternalUrls struct {
+			Spotify string `json:"spotify"`
+		} `json:"external_urls"`
+		Href        string `json:"href"`
+		ID          string `json:"id"`
+		IsLocal     bool   `json:"is_local"`
+		Name        string `json:"name"`
+		Popularity  int    `json:"popularity"`
+		PreviewURL  any    `json:"preview_url"`
+		TrackNumber int    `json:"track_number"`
+		Type        string `json:"type"`
+		URI         string `json:"uri"`
+	}
+
+	var fetchTrackResponse FetchTrackResponse
+	if err := json.NewDecoder(resp.Body).Decode(&fetchTrackResponse); err != nil {
+		return TrackData{}, err
+	}
+
+	return TrackData{
+		DiscNumber:  fetchTrackResponse.DiscNumber,
+		DurationMs:  fetchTrackResponse.DurationMs,
+		ID:          trackId,
+		Name:        fetchTrackResponse.Name,
+		TrackNumber: fetchTrackResponse.TrackNumber,
+	}, nil
+}
+func (p *SpotifySongProvider) FetchAlbum(accessToken, albumId string) (AlbumData, error) {
+	requestURL := fmt.Sprintf("https://api.spotify.com/v1/albums/%s", albumId)
+	req, err := http.NewRequest("GET", requestURL, nil)
+	if err != nil {
+		return AlbumData{}, err
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
+
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return AlbumData{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return AlbumData{}, err
+	}
+
+	type FetchAlbumResponse struct {
+		AlbumType        string   `json:"album_type"`
+		TotalTracks      int      `json:"total_tracks"`
+		AvailableMarkets []string `json:"available_markets"`
+		ExternalUrls     struct {
+			Spotify string `json:"spotify"`
+		} `json:"external_urls"`
+		Href   string `json:"href"`
+		ID     string `json:"id"`
+		Images []struct {
+			URL    string `json:"url"`
+			Height int    `json:"height"`
+			Width  int    `json:"width"`
+		} `json:"images"`
+		Name                 string `json:"name"`
+		ReleaseDate          string `json:"release_date"`
+		ReleaseDatePrecision string `json:"release_date_precision"`
+		Type                 string `json:"type"`
+		URI                  string `json:"uri"`
+		Artists              []struct {
+			ExternalUrls struct {
+				Spotify string `json:"spotify"`
+			} `json:"external_urls"`
+			Href string `json:"href"`
+			ID   string `json:"id"`
+			Name string `json:"name"`
+			Type string `json:"type"`
+			URI  string `json:"uri"`
+		} `json:"artists"`
+		Tracks struct {
+			Href     string `json:"href"`
+			Limit    int    `json:"limit"`
+			Next     any    `json:"next"`
+			Offset   int    `json:"offset"`
+			Previous any    `json:"previous"`
+			Total    int    `json:"total"`
+			Items    []struct {
+				Artists []struct {
+					ExternalUrls struct {
+						Spotify string `json:"spotify"`
+					} `json:"external_urls"`
+					Href string `json:"href"`
+					ID   string `json:"id"`
+					Name string `json:"name"`
+					Type string `json:"type"`
+					URI  string `json:"uri"`
+				} `json:"artists"`
+				AvailableMarkets []string `json:"available_markets"`
+				DiscNumber       int      `json:"disc_number"`
+				DurationMs       int      `json:"duration_ms"`
+				Explicit         bool     `json:"explicit"`
+				ExternalUrls     struct {
+					Spotify string `json:"spotify"`
+				} `json:"external_urls"`
+				Href        string `json:"href"`
+				ID          string `json:"id"`
+				Name        string `json:"name"`
+				PreviewURL  any    `json:"preview_url"`
+				TrackNumber int    `json:"track_number"`
+				Type        string `json:"type"`
+				URI         string `json:"uri"`
+				IsLocal     bool   `json:"is_local"`
+			} `json:"items"`
+		} `json:"tracks"`
+		Copyrights []struct {
+			Text string `json:"text"`
+			Type string `json:"type"`
+		} `json:"copyrights"`
+		ExternalIds struct {
+			Upc string `json:"upc"`
+		} `json:"external_ids"`
+		Genres     []any  `json:"genres"`
+		Label      string `json:"label"`
+		Popularity int    `json:"popularity"`
+	}
+
+	var fetchAlbumResponse FetchAlbumResponse
+	if err := json.NewDecoder(resp.Body).Decode(&fetchAlbumResponse); err != nil {
+		return AlbumData{}, err
+	}
+
+	imageUrl := ""
+	if len(fetchAlbumResponse.Images) > 0 {
+		imageUrl = fetchAlbumResponse.Images[len(fetchAlbumResponse.Images)-1].URL
+	}
+
+	return AlbumData{
+		AlbumType:   fetchAlbumResponse.AlbumType,
+		TotalTracks: fetchAlbumResponse.TotalTracks,
+		ID:          albumId,
+		ImagesURL:   imageUrl,
+		Name:        fetchAlbumResponse.Name,
+		ReleaseDate: fetchAlbumResponse.ReleaseDate,
+	}, nil
+}
+func (p *SpotifySongProvider) FetchArtist(accessToken, artistId string) (ArtistData, error) {
+
+	requestURL := fmt.Sprintf("https://api.spotify.com/v1/artists/%s", artistId)
+	req, err := http.NewRequest("GET", requestURL, nil)
+	if err != nil {
+		return ArtistData{}, err
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
+
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return ArtistData{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return ArtistData{}, err
+	}
+
+	type FetchArtistResponse struct {
+		ExternalUrls struct {
+			Spotify string `json:"spotify"`
+		} `json:"external_urls"`
+		Followers struct {
+			Href  string `json:"href"`
+			Total int    `json:"total"`
+		} `json:"followers"`
+		Genres []string `json:"genres"`
+		Href   string   `json:"href"`
+		ID     string   `json:"id"`
+		Images []struct {
+			URL    string `json:"url"`
+			Height int    `json:"height"`
+			Width  int    `json:"width"`
+		} `json:"images"`
+		Name       string `json:"name"`
+		Popularity int    `json:"popularity"`
+		Type       string `json:"type"`
+		URI        string `json:"uri"`
+	}
+
+	var fetchArtistResponse FetchArtistResponse
+	if err := json.NewDecoder(resp.Body).Decode(&fetchArtistResponse); err != nil {
+		return ArtistData{}, err
+	}
+
+	imageUrl := ""
+	if len(fetchArtistResponse.Images) > 0 {
+		imageUrl = fetchArtistResponse.Images[len(fetchArtistResponse.Images)-1].URL
+	}
+
+	return ArtistData{
+		Id:         artistId,
+		Name:       fetchArtistResponse.Name,
+		ImageUrl:   imageUrl,
+		Popularity: fetchArtistResponse.Popularity,
+	}, nil
+}
+
 // fetch album by ID: retireves all songs
 // https://api.spotify.com/v1/artists/{id}/albums&
 // id=album&

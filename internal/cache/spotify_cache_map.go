@@ -29,18 +29,52 @@ func NewSpotifyCacheMap() *SpotifyCacheMap {
 }
 
 func (c *SpotifyCacheMap) GetArtistsByName(s *spotify_api.SpotifySongProvider, artistName string) ([]spotify_api.ArtistData, error) {
+
 	return []spotify_api.ArtistData{}, nil
 }
 
-func (c *SpotifyCacheMap) GetTrack(s *spotify_api.SpotifySongProvider, trackId string) (spotify_api.TrackData, error) {
-	return spotify_api.TrackData{}, nil
+func (c *SpotifyCacheMap) GetTrack(s *spotify_api.SpotifySongProvider, accessToken, trackId string) (spotify_api.TrackData, error) {
+
+	val, ok := c.TrackMap[trackId]
+	if !ok {
+		fmt.Println("[SpotifyCacheMap] GetTrack miss chache")
+
+		// TODO: Fetching
+		trackData, err := s.FetchTrack(accessToken, trackId)
+		if err != nil {
+			return spotify_api.TrackData{}, nil
+		}
+		c.TrackMap[trackId] = trackData
+	}
+	return val, nil
 }
-func (c *SpotifyCacheMap) GetAlbum(s *spotify_api.SpotifySongProvider, albumId string) (spotify_api.AlbumData, error) {
-	return spotify_api.AlbumData{}, nil
+func (c *SpotifyCacheMap) GetAlbum(s *spotify_api.SpotifySongProvider, accessToken, albumId string) (spotify_api.AlbumData, error) {
+	val, ok := c.AlbumMap[albumId]
+	if !ok {
+		fmt.Println("[SpotifyCacheMap] GetAlbum miss chache")
+
+		albumData, err := s.FetchAlbum(accessToken, albumId)
+		if err != nil {
+			return spotify_api.AlbumData{}, nil
+		}
+		c.AlbumMap[albumId] = albumData
+	}
+	return val, nil
 }
-func (c *SpotifyCacheMap) GetArtist(s *spotify_api.SpotifySongProvider, artistId string) (spotify_api.ArtistData, error) {
-	return spotify_api.ArtistData{}, nil
+func (c *SpotifyCacheMap) GetArtist(s *spotify_api.SpotifySongProvider, accessToken, artistId string) (spotify_api.ArtistData, error) {
+	val, ok := c.ArtistMap[artistId]
+	if !ok {
+		fmt.Println("[SpotifyCacheMap] GetArtist miss chache")
+
+		artistData, err := s.FetchArtist(accessToken, artistId)
+		if err != nil {
+			return spotify_api.ArtistData{}, nil
+		}
+		c.ArtistMap[artistId] = artistData
+	}
+	return val, nil
 }
+
 func (c *SpotifyCacheMap) GetAlbumsIdFromArtistId(s *spotify_api.SpotifySongProvider, artistId string) ([]string, error) {
 	return []string{}, nil
 }
