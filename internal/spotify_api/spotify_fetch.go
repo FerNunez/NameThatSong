@@ -2,6 +2,7 @@ package spotify_api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -32,7 +33,7 @@ func (p *SpotifySongProvider) FetchTrack(accessToken, trackId string) (TrackData
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return TrackData{}, err
+		return TrackData{}, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
 	}
 
 	type FetchTrackResponse struct {
@@ -128,7 +129,8 @@ func (p *SpotifySongProvider) FetchAlbum(accessToken, albumId string) (AlbumData
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return AlbumData{}, []TrackData{}, err
+		return AlbumData{}, []TrackData{}, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
+
 	}
 
 	type FetchAlbumResponse struct {
@@ -218,14 +220,14 @@ func (p *SpotifySongProvider) FetchAlbum(accessToken, albumId string) (AlbumData
 	}
 
 	tracks := make([]TrackData, len(fetchAlbumResponse.Tracks.Items))
-	for _, track := range fetchAlbumResponse.Tracks.Items {
-		tracks = append(tracks, TrackData{
+	for idx, track := range fetchAlbumResponse.Tracks.Items {
+		tracks[idx] = TrackData{
 			DiscNumber:  track.DiscNumber,
 			DurationMs:  track.DurationMs,
 			ID:          track.ID,
 			Name:        track.Name,
 			TrackNumber: track.TrackNumber,
-		})
+		}
 	}
 
 	return AlbumData{
@@ -255,7 +257,8 @@ func (p *SpotifySongProvider) FetchArtist(accessToken, artistId string) (ArtistD
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return ArtistData{}, err
+		return ArtistData{}, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
+
 	}
 
 	type FetchArtistResponse struct {
@@ -334,7 +337,7 @@ func (p *SpotifySongProvider) FetchPlaylist(accessToken, playlistId string) (Pla
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return PlaylistData{}, []TrackData{}, err
+		return PlaylistData{}, []TrackData{}, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
 	}
 
 	type FetchPlaylistResponse struct {
@@ -411,16 +414,16 @@ func (p *SpotifySongProvider) FetchPlaylist(accessToken, playlistId string) (Pla
 	}
 
 	tracks := make([]TrackData, len(fetchPlaylistResponse.Tracks.Items))
-	tracksIds := make([]string, len(fetchPlaylistResponse.Tracks.Items), 0)
+	tracksIds := make([]string, len(fetchPlaylistResponse.Tracks.Items))
 	for idx, track := range fetchPlaylistResponse.Tracks.Items {
 		tracksIds[idx] = track.Track.ID
-		tracks = append(tracks, TrackData{
+		tracks[idx] = TrackData{
 			DiscNumber:  track.Track.DiscNumber,
 			DurationMs:  track.Track.DurationMs,
 			ID:          track.Track.ID,
 			Name:        track.Track.Name,
 			TrackNumber: track.Track.TrackNumber,
-		})
+		}
 	}
 
 	return PlaylistData{
@@ -459,7 +462,8 @@ func (p *SpotifySongProvider) FetchAlbumByArtistID(accesToken, artistId string) 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, err
+		return nil, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
+
 	}
 
 	type FetchAlbumByArtistIDResponse struct {
@@ -559,7 +563,8 @@ func (p *SpotifySongProvider) FetchTracksByAlbumID(accessToken, albumId string) 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, err
+		return nil, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
+
 	}
 
 	type FetchTracksByAlbumIDResponse struct {
@@ -637,7 +642,8 @@ func (p *SpotifySongProvider) CreateTopTracksAlbum(accessToken, artistId string)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return AlbumData{}, nil, err
+		return AlbumData{}, nil, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
+
 	}
 
 	type TopTracks struct {
