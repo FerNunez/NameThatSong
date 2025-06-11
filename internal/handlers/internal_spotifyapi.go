@@ -93,3 +93,22 @@ func (h *GetSpotifyApiPlaylist) ServeHttp(w http.ResponseWriter, r *http.Request
 	}
 	w.Write(fmt.Appendf(nil, "fetchplaylist %#v, with tracks: %#v", fetchPlaylist, fetchTracks))
 }
+
+type GetSpotifyApiTrackName struct {
+	accessToken string
+	SpotifyApi  *spotify_api.SpotifySongProvider
+}
+
+func NewGetSpotifyApiTrackName(accessToken string, s *spotify_api.SpotifySongProvider) *GetSpotifyApiTrackName {
+	return &GetSpotifyApiTrackName{accessToken, s}
+}
+func (h *GetSpotifyApiTrackName) ServeHttp(w http.ResponseWriter, r *http.Request) {
+	trackName := "Re forro"
+	fetchTrackName, err := h.SpotifyApi.SearchTracksByName(h.accessToken, trackName)
+	if err != nil {
+		fmt.Println("couldnt fetch tracks", err)
+		return
+	}
+	fmt.Printf("fetchTrackName%+v\n ", fetchTrackName)
+	w.Write(fmt.Appendf(nil, "fetchTrackName %#v", fetchTrackName))
+}

@@ -53,4 +53,20 @@ templ InternalSpotifyApi() {
 			<div id="playlist-response"></div>
 		</form>
 	</div>
+	<h1 class="text-2xl font-bold mb-6 text-center">Search by name</h1>
+	<div class="flex flex-col justify-evenly h-[80vh] max-w-xl mx-auto">
+		<!-- track id form -->
+		<form>
+			<label for="track-name">track name</label>
+			<input type="text" id="track-name" name="name" placeholder="Re forro" required/>
+			<button
+				type="button"
+				hx-get="/internal/spotifyapi/track/name"
+				hx-include="#track-name"
+				hx-target="#track-name-response"
+				hx-trigger="click"
+			>submit</button>
+			<div id="track-name-response"></div>
+		</form>
+	</div>
 }

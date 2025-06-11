@@ -18,6 +18,7 @@ type AlbumData struct {
 }
 
 func (p *SpotifySongProvider) FetchTrack(accessToken, trackId string) (TrackData, error) {
+	fmt.Println("[SpotifySongProvider] FetchTrack: trackId:", trackId)
 	requestURL := fmt.Sprintf("https://api.spotify.com/v1/tracks/%s", trackId)
 	req, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
