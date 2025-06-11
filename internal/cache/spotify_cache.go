@@ -16,4 +16,5 @@ type SpotifyCache interface {
 	GetTrack(s *spotify_api.SpotifySongProvider, accessToken, trackId string) (spotify_api.TrackData, error)
 	GetAlbum(s *spotify_api.SpotifySongProvider, accessToken, albumId string) (spotify_api.AlbumData, error)
 	GetArtist(s *spotify_api.SpotifySongProvider, accessToken, artistId string) (spotify_api.ArtistData, error)
+	GetPlaylist(s *spotify_api.SpotifySongProvider, accessToken, playlistId string) (spotify_api.PlaylistData, error)
 }
