@@ -9,9 +9,11 @@ import (
 
 	"database/sql"
 
+	"github.com/FerNunez/NameThatSong/internal/cache"
 	"github.com/FerNunez/NameThatSong/internal/crypto"
 	"github.com/FerNunez/NameThatSong/internal/handlers"
 	"github.com/FerNunez/NameThatSong/internal/manager"
+	"github.com/FerNunez/NameThatSong/internal/spotify_api"
 	"github.com/FerNunez/NameThatSong/internal/store"
 	"github.com/FerNunez/NameThatSong/internal/store/database"
 	"github.com/joho/godotenv"
@@ -105,9 +107,27 @@ func main() {
 		r.Post("/skip", handlers.NewPostSkip(gm).ServeHttp)
 		r.Post("/clear-queue", handlers.NewPostClearQueue(gm).ServeHttp)
 
+		r.Post("/clear-queue", handlers.NewPostClearQueue(gm).ServeHttp)
 		//r.Get("/song-time", handlers.NewGetSongTime(gm).ServeHttp)
-
 	})
+
+	spotifyCache := cache.NewSpotifyCacheMap()
+	songProvider := spotify_api.NewSpotifySongProvider("", "", "", "")
+	accessToken := "TODO"
+	songProvider.AccessToken = accessToken
+
+	r.Get("/internal-spotifyapi", handlers.NewGetSpotifyApi().ServeHttp)
+	r.Get("/internal-spotifyapi/track", handlers.NewGetSpotifyApiTrack(accessToken, songProvider).ServeHttp)
+	r.Get("/internal-spotifyapi/album", handlers.NewGetSpotifyApiAlbum(accessToken, songProvider).ServeHttp)
+	r.Get("/internal-spotifyapi/artist", handlers.NewGetSpotifyApiArtist(accessToken, songProvider).ServeHttp)
+	r.Get("/internal-spotifyapi/playlist", handlers.NewGetSpotifyApiPlaylist(accessToken, songProvider).ServeHttp)
+	r.Get("/internal/spotifyapi/track/name", handlers.NewGetSpotifyApiTrackName(accessToken, songProvider).ServeHttp)
+
+	r.Get("/internal-spotifycache", handlers.NewGetSpotifyCache().ServeHttp)
+	r.Get("/internal-spotifycache/track", handlers.NewGetSpotifyCacheTrack(accessToken, songProvider, spotifyCache).ServeHttp)
+	r.Get("/internal-spotifycache/album", handlers.NewGetSpotifyCacheAlbum(accessToken, songProvider, spotifyCache).ServeHttp)
+	r.Get("/internal-spotifycache/artist", handlers.NewGetSpotifyCacheArtist(accessToken, songProvider, spotifyCache).ServeHttp)
+	r.Get("/internal-spotifycache/playlist", handlers.NewGetSpotifyCachePlaylist(accessToken, songProvider, spotifyCache).ServeHttp)
 
 	// Start the server
 	port := os.Getenv("PORT")

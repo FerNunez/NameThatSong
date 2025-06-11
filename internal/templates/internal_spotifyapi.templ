@@ -1,0 +1,56 @@
+package templates
+
+templ InternalSpotifyApi() {
+	<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+	<h1 class="text-2xl font-bold mb-6 text-center">Music Info Lookup!!</h1>
+	<div class="flex flex-col justify-evenly h-[80vh] max-w-xl mx-auto">
+		<!-- Track ID Form -->
+		<form>
+			<label for="track-id">Track ID</label>
+			<input type="text" id="track-id" name="id" placeholder="11dFghVXANMlKmJXsNCbNl" required/>
+			<button
+				type="button"
+				hx-get="/internal-spotifyapi/track"
+				hx-target="#track-response"
+				hx-trigger="click"
+			>Submit</button>
+			<div id="track-response"></div>
+		</form>
+		<!-- Album ID Form -->
+		<form>
+			<label for="album-id">Album ID</label>
+			<input type="text" id="album-id" name="id" placeholder="11dFghVXANMlKmJXsNCbNl" required/>
+			<button
+				type="button"
+				hx-get="/internal-spotifyapi/album"
+				hx-target="#album-response"
+				hx-trigger="click"
+			>Submit</button>
+			<div id="album-response"></div>
+		</form>
+		<!-- Artist ID Form -->
+		<form>
+			<label for="artist-id">Artist ID</label>
+			<input type="text" id="artist-id" name="id" placeholder="11dFghVXANMlKmJXsNCbNl" required/>
+			<button
+				type="button"
+				hx-get="/internal-spotifyapi/artist"
+				hx-target="#artist-response"
+				hx-trigger="click"
+			>Submit</button>
+			<div id="artist-response"></div>
+		</form>
+		<!-- Playlist ID Form -->
+		<form>
+			<label for="playlist-id">Playlist ID</label>
+			<input type="text" id="playlist-id" name="id" placeholder="11dFghVXANMlKmJXsNCbNl" required/>
+			<button
+				type="button"
+				hx-get="/internal-spotifyapi/playlist"
+				hx-target="#playlist-response"
+				hx-trigger="click"
+			>Submit</button>
+			<div id="playlist-response"></div>
+		</form>
+	</div>
+}
