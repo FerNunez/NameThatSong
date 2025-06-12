@@ -10,7 +10,7 @@ templ InternalSpotifyApi() {
 			<input type="text" id="track-id" name="id" placeholder="11dFghVXANMlKmJXsNCbNl" required/>
 			<button
 				type="button"
-				hx-get="/internal-spotifyapi/track"
+				hx-get="/internal/spotifyapi/track"
 				hx-target="#track-response"
 				hx-trigger="click"
 			>Submit</button>
@@ -22,7 +22,7 @@ templ InternalSpotifyApi() {
 			<input type="text" id="album-id" name="id" placeholder="11dFghVXANMlKmJXsNCbNl" required/>
 			<button
 				type="button"
-				hx-get="/internal-spotifyapi/album"
+				hx-get="/internal/spotifyapi/album"
 				hx-target="#album-response"
 				hx-trigger="click"
 			>Submit</button>
@@ -34,7 +34,7 @@ templ InternalSpotifyApi() {
 			<input type="text" id="artist-id" name="id" placeholder="11dFghVXANMlKmJXsNCbNl" required/>
 			<button
 				type="button"
-				hx-get="/internal-spotifyapi/artist"
+				hx-get="/internal/spotifyapi/artist"
 				hx-target="#artist-response"
 				hx-trigger="click"
 			>Submit</button>
@@ -46,7 +46,7 @@ templ InternalSpotifyApi() {
 			<input type="text" id="playlist-id" name="id" placeholder="11dFghVXANMlKmJXsNCbNl" required/>
 			<button
 				type="button"
-				hx-get="/internal-spotifyapi/playlist"
+				hx-get="/internal/spotifyapi/playlist"
 				hx-target="#playlist-response"
 				hx-trigger="click"
 			>Submit</button>
@@ -57,7 +57,7 @@ templ InternalSpotifyApi() {
 	<div class="flex flex-col justify-evenly h-[80vh] max-w-xl mx-auto">
 		<!-- track id form -->
 		<form>
-			<label for="track-name">track name</label>
+			<label for="track-name">Track name</label>
 			<input type="text" id="track-name" name="name" placeholder="Re forro" required/>
 			<button
 				type="button"
@@ -67,6 +67,45 @@ templ InternalSpotifyApi() {
 				hx-trigger="click"
 			>submit</button>
 			<div id="track-name-response"></div>
+		</form>
+		<!-- album id form -->
+		<form>
+			<label for="album-name">Album name</label>
+			<input type="text" id="album-name" name="name" placeholder="Papota" required/>
+			<button
+				type="button"
+				hx-get="/internal/spotifyapi/album/name"
+				hx-include="#album-name"
+				hx-target="#album-name-response"
+				hx-trigger="click"
+			>submit</button>
+			<div id="album-name-response"></div>
+		</form>
+		<!-- artist id form -->
+		<form>
+			<label for="artist-name">Artist name</label>
+			<input type="text" id="artist-name" name="name" placeholder="Lady Gaga" required/>
+			<button
+				type="button"
+				hx-get="/internal/spotifyapi/artist/name"
+				hx-include="#artist-name"
+				hx-target="#artist-name-response"
+				hx-trigger="click"
+			>submit</button>
+			<div id="artist-name-response"></div>
+		</form>
+		<!-- playlist id form -->
+		<form>
+			<label for="playlist-name">Playlist name</label>
+			<input type="text" id="playlist-name" name="name" placeholder="Salsa" required/>
+			<button
+				type="button"
+				hx-get="/internal/spotifyapi/playlist/name"
+				hx-include="#playlist-name"
+				hx-target="#playlist-name-response"
+				hx-trigger="click"
+			>submit</button>
+			<div id="playlist-name-response"></div>
 		</form>
 	</div>
 }

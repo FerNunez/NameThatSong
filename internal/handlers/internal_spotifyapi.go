@@ -112,3 +112,60 @@ func (h *GetSpotifyApiTrackName) ServeHttp(w http.ResponseWriter, r *http.Reques
 	fmt.Printf("fetchTrackName%+v\n ", fetchTrackName)
 	w.Write(fmt.Appendf(nil, "fetchTrackName %#v", fetchTrackName))
 }
+
+type GetSpotifyApiAlbumName struct {
+	accessToken string
+	SpotifyApi  *spotify_api.SpotifySongProvider
+}
+
+func NewGetSpotifyApiAlbumName(accessToken string, s *spotify_api.SpotifySongProvider) *GetSpotifyApiAlbumName {
+	return &GetSpotifyApiAlbumName{accessToken, s}
+}
+func (h *GetSpotifyApiAlbumName) ServeHttp(w http.ResponseWriter, r *http.Request) {
+	// albumName := "Papota"
+	// fetchAlbumName, err := h.SpotifyApi.SearchAlbumsByName(h.accessToken, albumName)
+	// if err != nil {
+	// 	fmt.Println("couldnt fetch albums", err)
+	// 	return
+	// }
+	// fmt.Printf("fetchAlbumName%+v\n ", fetchAlbumName)
+	// w.Write(fmt.Appendf(nil, "fetchAlbumName %#v", fetchAlbumName))
+}
+
+type GetSpotifyApiArtistName struct {
+	accessToken string
+	SpotifyApi  *spotify_api.SpotifySongProvider
+}
+
+func NewGetSpotifyApiArtistName(accessToken string, s *spotify_api.SpotifySongProvider) *GetSpotifyApiArtistName {
+	return &GetSpotifyApiArtistName{accessToken, s}
+}
+func (h *GetSpotifyApiArtistName) ServeHttp(w http.ResponseWriter, r *http.Request) {
+	artistName := "Lady Gaga"
+	fetchArtistName, err := h.SpotifyApi.SearchArtistsByName(h.accessToken, artistName)
+	if err != nil {
+		fmt.Println("couldnt fetch artists", err)
+		return
+	}
+	fmt.Printf("[fetchArtistName] for %v\n", artistName)
+	w.Write(fmt.Appendf(nil, "fetchArtistName %#v", fetchArtistName))
+}
+
+type GetSpotifyApiPlaylistName struct {
+	accessToken string
+	SpotifyApi  *spotify_api.SpotifySongProvider
+}
+
+func NewGetSpotifyApiPlaylistName(accessToken string, s *spotify_api.SpotifySongProvider) *GetSpotifyApiPlaylistName {
+	return &GetSpotifyApiPlaylistName{accessToken, s}
+}
+func (h *GetSpotifyApiPlaylistName) ServeHttp(w http.ResponseWriter, r *http.Request) {
+	// playlistName := "Re forro"
+	// fetchPlaylistName, err := h.SpotifyApi.SearchPlaylistsByName(h.accessToken, playlistName)
+	// if err != nil {
+	// 	fmt.Println("couldnt fetch playlists", err)
+	// 	return
+	// }
+	// fmt.Printf("fetchPlaylistName%+v\n ", fetchPlaylistName)
+	// w.Write(fmt.Appendf(nil, "fetchPlaylistName %#v", fetchPlaylistName))
+}
