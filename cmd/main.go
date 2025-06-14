@@ -131,6 +131,10 @@ func main() {
 	r.Get("/internal/spotifycache/album", handlers.NewGetSpotifyCacheAlbum(accessToken, songProvider, spotifyCache).ServeHttp)
 	r.Get("/internal/spotifycache/artist", handlers.NewGetSpotifyCacheArtist(accessToken, songProvider, spotifyCache).ServeHttp)
 	r.Get("/internal/spotifycache/playlist", handlers.NewGetSpotifyCachePlaylist(accessToken, songProvider, spotifyCache).ServeHttp)
+	r.Get("/internal/spotifycache/track/name", handlers.NewGetSpotifyCacheTrackName(accessToken, songProvider, spotifyCache).ServeHttp)
+	r.Get("/internal/spotifycache/album/name", handlers.NewGetSpotifyCacheAlbumName(accessToken, songProvider, spotifyCache).ServeHttp)
+	r.Get("/internal/spotifycache/artist/name", handlers.NewGetSpotifyCacheArtistName(accessToken, songProvider, spotifyCache).ServeHttp)
+	r.Get("/internal/spotifycache/playlist/name", handlers.NewGetSpotifyCachePlaylistName(accessToken, songProvider, spotifyCache).ServeHttp)
 
 	// Start the server
 	port := os.Getenv("PORT")

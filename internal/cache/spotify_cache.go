@@ -6,6 +6,7 @@ import (
 
 type SpotifyCache interface {
 	GetArtistsByName(s *spotify_api.SpotifySongProvider, artistName string) ([]spotify_api.ArtistData, error)
+
 	GetAlbumsIdFromArtistId(s *spotify_api.SpotifySongProvider, artistId string) ([]string, error)
 
 	GetArtistData(s *spotify_api.SpotifySongProvider, id string) (spotify_api.ArtistData, error)

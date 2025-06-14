@@ -118,3 +118,32 @@ func (h *GetSpotifyCachePlaylist) ServeHttp(w http.ResponseWriter, r *http.Reque
 	}
 	w.Write(fmt.Appendf(nil, "fetchplaylist %#v", fetchPlaylist))
 }
+
+// ///
+type GetSpotifyCacheTrackName struct {
+	accessToken string
+	SpotifyApi  *spotify_api.SpotifySongProvider
+	Cache       cache.SpotifyCache
+}
+
+func NewGetSpotifyCacheTrackName(accessToken string, s *spotify_api.SpotifySongProvider, c cache.SpotifyCache) *GetSpotifyCacheTrackName {
+	return &GetSpotifyCacheTrackName{accessToken, s, c}
+}
+func (h *GetSpotifyCacheTrackName) ServeHttp(w http.ResponseWriter, r *http.Request) {
+	trackName := "Salsa"
+	fetchPlaylistName, err := h.SpotifyApi.SearchPlaylistsByName(h.accessToken, playlistName)
+
+	trackID := "11dFghVXANMlKmJXsNCbNl"
+	query := r.URL.Query().Get("id")
+	if query != "" {
+		trackID = query
+	}
+
+	fetchTrackName, err := h.Cache.GetTrack(h.SpotifyApi, h.accessToken, trackID)
+	if err != nil {
+		fmt.Println("couldnt fetch tracks", err)
+		return
+	}
+	fmt.Printf("fetchTrackName%+v\n", fetchTrack)
+	w.Write(fmt.Appendf(nil, "fetchTrackName %#v", fetchTrack))
+}

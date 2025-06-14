@@ -105,6 +105,7 @@ func (s *SQLSpotifyTokenStore) IsValid(ctx context.Context, user_id uuid.UUID) (
 }
 
 func (s *SQLSpotifyTokenStore) Update(ctx context.Context, user_id uuid.UUID, new_access_token string, expires_at time.Time) error {
+	fmt.Printf("[SQLSpotifyTokenStore] Update: new access_token %v\n\n", new_access_token)
 
 	access_token_crypted, err := s.encryptor.Encrypt(new_access_token)
 	if err != nil {

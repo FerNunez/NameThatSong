@@ -109,7 +109,7 @@ func (h *GetSpotifyApiTrackName) ServeHttp(w http.ResponseWriter, r *http.Reques
 		fmt.Println("couldnt fetch tracks", err)
 		return
 	}
-	fmt.Printf("fetchTrackName%+v\n ", fetchTrackName)
+	fmt.Printf("[fetchTrackName]Searched %v\n", trackName)
 	w.Write(fmt.Appendf(nil, "fetchTrackName %#v", fetchTrackName))
 }
 
@@ -122,14 +122,14 @@ func NewGetSpotifyApiAlbumName(accessToken string, s *spotify_api.SpotifySongPro
 	return &GetSpotifyApiAlbumName{accessToken, s}
 }
 func (h *GetSpotifyApiAlbumName) ServeHttp(w http.ResponseWriter, r *http.Request) {
-	// albumName := "Papota"
-	// fetchAlbumName, err := h.SpotifyApi.SearchAlbumsByName(h.accessToken, albumName)
-	// if err != nil {
-	// 	fmt.Println("couldnt fetch albums", err)
-	// 	return
-	// }
-	// fmt.Printf("fetchAlbumName%+v\n ", fetchAlbumName)
-	// w.Write(fmt.Appendf(nil, "fetchAlbumName %#v", fetchAlbumName))
+	albumName := "Papota"
+	fetchAlbumName, err := h.SpotifyApi.SearchAlbumsByName(h.accessToken, albumName)
+	if err != nil {
+		fmt.Println("couldnt fetch albums", err)
+		return
+	}
+	fmt.Printf("fetchAlbumName%+v\n ", fetchAlbumName)
+	w.Write(fmt.Appendf(nil, "fetchAlbumName %#v", fetchAlbumName))
 }
 
 type GetSpotifyApiArtistName struct {
@@ -160,12 +160,12 @@ func NewGetSpotifyApiPlaylistName(accessToken string, s *spotify_api.SpotifySong
 	return &GetSpotifyApiPlaylistName{accessToken, s}
 }
 func (h *GetSpotifyApiPlaylistName) ServeHttp(w http.ResponseWriter, r *http.Request) {
-	// playlistName := "Re forro"
-	// fetchPlaylistName, err := h.SpotifyApi.SearchPlaylistsByName(h.accessToken, playlistName)
-	// if err != nil {
-	// 	fmt.Println("couldnt fetch playlists", err)
-	// 	return
-	// }
-	// fmt.Printf("fetchPlaylistName%+v\n ", fetchPlaylistName)
-	// w.Write(fmt.Appendf(nil, "fetchPlaylistName %#v", fetchPlaylistName))
+	playlistName := "Salsa"
+	fetchPlaylistName, err := h.SpotifyApi.SearchPlaylistsByName(h.accessToken, playlistName)
+	if err != nil {
+		fmt.Println("couldnt fetch playlists", err)
+		return
+	}
+	fmt.Printf("fetchPlaylistName for %v\n", playlistName)
+	w.Write(fmt.Appendf(nil, "fetchPlaylistName %#v", fetchPlaylistName))
 }

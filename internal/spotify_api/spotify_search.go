@@ -3,22 +3,22 @@ package spotify_api
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
-	"sort"
 	"strings"
 )
 
-func (p *SpotifySongProvider) SearchTracksByName(accessToken, name string) ([]TrackData, error) {
-	limit := "50"
-	trackQuery := "track:" + strings.ToLower(name)
+func Search(accessToken, limit, atype, query string) ([]byte, error) {
+
+	trackQuery := atype + ":" + strings.ToLower(query)
 
 	apiURL, err := url.Parse("https://api.spotify.com/v1/search")
 	if err != nil {
 		return nil, err
 	}
 	q := apiURL.Query()
-	q.Set("type", "track")
+	q.Set("type", atype)
 	q.Set("q", trackQuery)
 	q.Set("limit", limit)
 	apiURL.RawQuery = q.Encode()
@@ -38,6 +38,22 @@ func (p *SpotifySongProvider) SearchTracksByName(accessToken, name string) ([]Tr
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code: %v", resp.StatusCode)
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+func (p *SpotifySongProvider) SearchTracksByName(accessToken, name string) ([]TrackData, error) {
+	limit := "50"
+
+	data, err := Search(accessToken, limit, "track", name)
+	if err != nil {
+		return nil, err
 	}
 
 	type SearchTrachByNameResponse struct {
@@ -114,7 +130,7 @@ func (p *SpotifySongProvider) SearchTracksByName(accessToken, name string) ([]Tr
 		} `json:"tracks"`
 	}
 	var searchTrackResponse SearchTrachByNameResponse
-	if err := json.NewDecoder(resp.Body).Decode(&searchTrackResponse); err != nil {
+	if err := json.Unmarshal(data, &searchTrackResponse); err != nil {
 		return nil, err
 	}
 
@@ -131,94 +147,87 @@ func (p *SpotifySongProvider) SearchTracksByName(accessToken, name string) ([]Tr
 		}
 		tracks = append(tracks, trackInfo)
 	}
-	// sort.Slice(tracks, func(i, j int) bool {
-	// 	return tracks[i].Popularity > artists[j].Popularity
-	// })
 	return tracks, nil
 }
 
 func (p *SpotifySongProvider) SearchAlbumsByName(accessToken, name string) ([]AlbumData, error) {
 	limit := "50"
-	albumQuery := "album:" + strings.ToLower(name)
 
-	apiURL, err := url.Parse("https://api.spotify.com/v1/search")
-	if err != nil {
-		return nil, err
-	}
-	q := apiURL.Query()
-	q.Set("type", "album")
-	q.Set("q", albumQuery)
-	q.Set("limit", limit)
-	apiURL.RawQuery = q.Encode()
-
-	req, err := http.NewRequest("GET", apiURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	data, err := Search(accessToken, limit, "album", name)
 	if err != nil {
 		return nil, err
 	}
 
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %v", resp.StatusCode)
+	type SearchAlbumResponse struct {
+		Albums struct {
+			Href     string `json:"href"`
+			Limit    int    `json:"limit"`
+			Next     string `json:"next"`
+			Offset   int    `json:"offset"`
+			Previous any    `json:"previous"`
+			Total    int    `json:"total"`
+			Items    []struct {
+				AlbumType        string   `json:"album_type"`
+				TotalTracks      int      `json:"total_tracks"`
+				AvailableMarkets []string `json:"available_markets"`
+				ExternalUrls     struct {
+					Spotify string `json:"spotify"`
+				} `json:"external_urls"`
+				Href   string `json:"href"`
+				ID     string `json:"id"`
+				Images []struct {
+					Height int    `json:"height"`
+					URL    string `json:"url"`
+					Width  int    `json:"width"`
+				} `json:"images"`
+				Name                 string `json:"name"`
+				ReleaseDate          string `json:"release_date"`
+				ReleaseDatePrecision string `json:"release_date_precision"`
+				Type                 string `json:"type"`
+				URI                  string `json:"uri"`
+				Artists              []struct {
+					ExternalUrls struct {
+						Spotify string `json:"spotify"`
+					} `json:"external_urls"`
+					Href string `json:"href"`
+					ID   string `json:"id"`
+					Name string `json:"name"`
+					Type string `json:"type"`
+					URI  string `json:"uri"`
+				} `json:"artists"`
+			} `json:"items"`
+		} `json:"albums"`
+	}
+	var searchAlbumResponse SearchAlbumResponse
+	if err := json.Unmarshal(data, &searchAlbumResponse); err != nil {
+		return nil, err
 	}
 
-	// var searchAlbumResponse struct {
-	// 	Albums struct {
-	// 		Items []struct {
-	// 			ID         string `json:"id"`
-	// 			Name       string `json:"name"`
-	// 			Popularity int    `json:"popularity"`
-	// 			Images     []struct {
-	// 				URL    string `json:"url"`
-	// 				Height int    `json:"height"`
-	// 				Width  int    `json:"width"`
-	// 			} `json:"images"`
-	// 		} `json:"items"`
-	// 	} `json:"artists"`
-	// }
-	//
-	// if err := json.NewDecoder(resp.Body).Decode(&searchAlbumResponse); err != nil {
-	// 	return nil, err
-	// }
+	albums := make([]AlbumData, len(searchAlbumResponse.Albums.Items))
+	for idx, r := range searchAlbumResponse.Albums.Items {
+		imageUrl := ""
+		if len(r.Images) > 0 {
+			imageUrl = r.Images[0].URL
+		}
 
-	return []AlbumData{}, nil
+		albums[idx] = AlbumData{
+			AlbumType:   r.AlbumType,
+			TotalTracks: r.TotalTracks,
+			ID:          r.ID,
+			ImagesURL:   imageUrl,
+			Name:        r.Name,
+			ReleaseDate: r.ReleaseDate,
+		}
+	}
+	return albums, nil
 }
 
 func (p *SpotifySongProvider) SearchArtistsByName(accessToken, name string) ([]ArtistData, error) {
 	limit := "50"
-	artistQuery := "artist:" + strings.ToLower(name)
 
-	apiURL, err := url.Parse("https://api.spotify.com/v1/search")
+	data, err := Search(accessToken, limit, "artist", name)
 	if err != nil {
 		return nil, err
-	}
-	q := apiURL.Query()
-	q.Set("type", "artist")
-	q.Set("q", artistQuery)
-	q.Set("limit", limit)
-	apiURL.RawQuery = q.Encode()
-
-	req, err := http.NewRequest("GET", apiURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %v", resp.StatusCode)
 	}
 
 	var searchArtistResponse struct {
@@ -236,7 +245,7 @@ func (p *SpotifySongProvider) SearchArtistsByName(accessToken, name string) ([]A
 		} `json:"artists"`
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&searchArtistResponse); err != nil {
+	if err := json.Unmarshal(data, &searchArtistResponse); err != nil {
 		return nil, err
 	}
 
@@ -257,61 +266,89 @@ func (p *SpotifySongProvider) SearchArtistsByName(accessToken, name string) ([]A
 		}
 		artists = append(artists, artistInfo)
 	}
-	sort.Slice(artists, func(i, j int) bool {
-		return artists[i].Popularity > artists[j].Popularity
-	})
 	return artists, nil
 }
 
 func (p *SpotifySongProvider) SearchPlaylistsByName(accessToken, name string) ([]PlaylistData, error) {
 	limit := "50"
-	playlistQuery := "playlist:" + strings.ToLower(name)
-
-	apiURL, err := url.Parse("https://api.spotify.com/v1/search")
-	if err != nil {
-		return nil, err
-	}
-	q := apiURL.Query()
-	q.Set("type", "playlist")
-	q.Set("q", playlistQuery)
-	q.Set("limit", limit)
-	apiURL.RawQuery = q.Encode()
-
-	req, err := http.NewRequest("GET", apiURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	data, err := Search(accessToken, limit, "playlist", name)
 	if err != nil {
 		return nil, err
 	}
 
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %v", resp.StatusCode)
+	type SearchPlaylistResponse struct {
+		Playlists struct {
+			Href     string  `json:"href"`
+			Limit    int     `json:"limit"`
+			Next     *string `json:"next"`
+			Offset   int     `json:"offset"`
+			Previous *string `json:"previous"`
+			Total    int     `json:"total"`
+			Items    []*struct {
+				Collaborative bool   `json:"collaborative"`
+				Description   string `json:"description"`
+				ExternalUrls  struct {
+					Spotify string `json:"spotify"`
+				} `json:"external_urls"`
+				Href   string `json:"href"`
+				ID     string `json:"id"`
+				Images []struct {
+					Height *int   `json:"height"`
+					URL    string `json:"url"`
+					Width  *int   `json:"width"`
+				} `json:"images"`
+				Name  string `json:"name"`
+				Owner struct {
+					DisplayName  string `json:"display_name"`
+					ExternalUrls struct {
+						Spotify string `json:"spotify"`
+					} `json:"external_urls"`
+					Href string `json:"href"`
+					ID   string `json:"id"`
+					Type string `json:"type"`
+					URI  string `json:"uri"`
+				} `json:"owner"`
+				PrimaryColor *string `json:"primary_color"` // pointer because it can be null
+				Public       bool    `json:"public"`
+				SnapshotID   string  `json:"snapshot_id"`
+				Tracks       struct {
+					Href  string `json:"href"`
+					Total int    `json:"total"`
+				} `json:"tracks"`
+				Type string `json:"type"`
+				URI  string `json:"uri"`
+			} `json:"items"` // slice of pointers to handle null values
+		} `json:"playlists"`
 	}
 
-	// var searchPlaylistResponse struct {
-	// 	Playlists struct {
-	// 		Items []struct {
-	// 			ID         string `json:"id"`
-	// 			Name       string `json:"name"`
-	// 			Popularity int    `json:"popularity"`
-	// 			Images     []struct {
-	// 				URL    string `json:"url"`
-	// 				Height int    `json:"height"`
-	// 				Width  int    `json:"width"`
-	// 			} `json:"images"`
-	// 		} `json:"items"`
-	// 	} `json:"artists"`
-	// }
-	//
-	// if err := json.NewDecoder(resp.Body).Decode(&searchPlaylistResponse); err != nil {
-	// 	return nil, err
-	// }
+	var searchPlaylistResponse SearchPlaylistResponse
+	if err := json.Unmarshal(data, &searchPlaylistResponse); err != nil {
+		return nil, err
+	}
 
-	return []PlaylistData{}, nil
+	playlists := make([]PlaylistData, 0, len(searchPlaylistResponse.Playlists.Items))
+	for _, p := range searchPlaylistResponse.Playlists.Items {
+
+		if p == nil {
+			continue
+		}
+
+		imageUrl := ""
+		if len(p.Images) > 0 {
+			imageUrl = p.Images[0].URL
+		}
+
+		playlists = append(playlists, PlaylistData{
+			Description:    p.Description,
+			FollowersTotal: 0,
+			ID:             p.ID,
+			ImageUrl:       imageUrl,
+			Name:           p.Name,
+			Public:         p.Public,
+			TotalTracks:    p.Tracks.Total,
+			TrackIDs:       []string{}, // TOD FIX THIS
+		})
+
+	}
+	return playlists, nil
 }

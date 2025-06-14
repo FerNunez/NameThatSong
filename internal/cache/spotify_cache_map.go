@@ -6,15 +6,19 @@ import (
 	"github.com/FerNunez/NameThatSong/internal/spotify_api"
 )
 
+type SpotifyID string
+
 type SpotifyCacheMap struct {
-	ArtistMap         map[string]spotify_api.ArtistData
-	ArtistToAlbumsMap map[string][]string
-	AlbumMap          map[string]spotify_api.AlbumData
-	AlbumToTracksMap  map[string][]string
-	TrackMap          map[string]spotify_api.TrackData
-	TrackIdToAlbumId  map[string]string
-	AlbumIdToArtistId map[string]string
-	PlaylistMap       map[string]spotify_api.PlaylistData
+	// Core informations
+	ArtistMap   map[string]spotify_api.ArtistData
+	AlbumMap    map[string]spotify_api.AlbumData
+	TrackMap    map[string]spotify_api.TrackData
+	PlaylistMap map[string]spotify_api.PlaylistData
+
+	// Many-to-many relationship maps
+	ArtistToAlbumsMap   map[string][]string
+	AlbumToTracksMap    map[string][]string
+	PlaylistToTracksMap map[string][]string
 }
 
 func NewSpotifyCacheMap() *SpotifyCacheMap {
@@ -24,8 +28,6 @@ func NewSpotifyCacheMap() *SpotifyCacheMap {
 		AlbumMap:          map[string]spotify_api.AlbumData{},
 		AlbumToTracksMap:  map[string][]string{},
 		TrackMap:          map[string]spotify_api.TrackData{},
-		TrackIdToAlbumId:  make(map[string]string),
-		AlbumIdToArtistId: make(map[string]string),
 		PlaylistMap:       map[string]spotify_api.PlaylistData{},
 	}
 }
@@ -42,6 +44,7 @@ func (c *SpotifyCacheMap) GetTrack(s *spotify_api.SpotifySongProvider, accessTok
 	c.TrackMap[trackId] = trackData
 	return trackData, nil
 }
+
 func (c *SpotifyCacheMap) GetAlbum(s *spotify_api.SpotifySongProvider, accessToken, albumId string) (spotify_api.AlbumData, error) {
 	if val, ok := c.AlbumMap[albumId]; ok {
 		return val, nil
@@ -88,8 +91,33 @@ func (c *SpotifyCacheMap) GetPlaylist(s *spotify_api.SpotifySongProvider, access
 	return playlistData, nil
 }
 
-// /
-func (c *SpotifyCacheMap) GetArtistsByName(s *spotify_api.SpotifySongProvider, artistName string) ([]spotify_api.ArtistData, error) {
+func (c *SpotifyCacheMap) GetAlbumsFromArtist(s *spotify_api.SpotifySongProvider, artistId string) ([]string, error) {
+	if val, ok := c.ArtistToAlbumsMap[artistId]; ok {
+		return val, nil
+	}
+	// TODO: Implement get a AlbumsFromArtist
+	return []string{}, nil
+}
+
+func (c *SpotifyCacheMap) GetTracksFromAlbum(s *spotify_api.SpotifySongProvider, albumId string) ([]string, error) {
+	if val, ok := c.AlbumToTracksMap[albumId]; ok {
+		return val, nil
+	}
+	// TODO: Implement get a TracksFromAlbum
+	return []string{}, nil
+}
+
+func (c *SpotifyCacheMap) GetTracksFromPlaylist(s *spotify_api.SpotifySongProvider, playlistId string) ([]string, error) {
+	if val, ok := c.PlaylistToTracksMap[playlistId]; ok {
+		return val, nil
+	}
+	// TODO: Implement get a TracksFromPlaylist()
+	return []string{}, nil
+}
+
+/////////////////
+
+func (c *SpotifyCacheMap) GetArtistsByName(s *spotify_api.SpotifySongProvider, artistName string, limit int) ([]spotify_api.ArtistData, error) {
 
 	return []spotify_api.ArtistData{}, nil
 }

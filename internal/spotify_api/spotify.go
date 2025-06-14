@@ -1,12 +1,5 @@
 package spotify_api
 
-type ArtistData struct {
-	Id         string
-	Name       string
-	ImageUrl   string
-	Popularity int
-}
-
 // SpotifySongProvider implements the SongProvider interface for Spotify
 type SpotifySongProvider struct {
 	ClientID     string
