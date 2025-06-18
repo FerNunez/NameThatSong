@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/FerNunez/NameThatSong/internal/spotify_api"
 	"github.com/FerNunez/NameThatSong/internal/templates"
@@ -23,88 +24,100 @@ func (h *GetSpotifyApi) ServeHttp(w http.ResponseWriter, r *http.Request) {
 
 type GetSpotifyApiTrack struct {
 	accessToken string
-	SpotifyApi  *spotify_api.SpotifySongProvider
 }
 
-func NewGetSpotifyApiTrack(accessToken string, s *spotify_api.SpotifySongProvider) *GetSpotifyApiTrack {
-	return &GetSpotifyApiTrack{accessToken, s}
+func NewGetSpotifyApiTrack(accessToken string) *GetSpotifyApiTrack {
+	return &GetSpotifyApiTrack{accessToken}
 }
 func (h *GetSpotifyApiTrack) ServeHttp(w http.ResponseWriter, r *http.Request) {
-	tracklID := "11dFghVXANMlKmJXsNCbNl"
-	fetchTrack, err := h.SpotifyApi.FetchTrack(h.accessToken, tracklID)
+	trackID := "11dFghVXANMlKmJXsNCbNl"
+	fetchTrack, err := spotify_api.FetchTrack(h.accessToken, trackID)
 	if err != nil {
 		fmt.Println("couldnt fetch tracks", err)
 		return
 	}
-	fmt.Printf("fetchTrack%+v\n ", fetchTrack)
+	fmt.Printf("[fetchTrack] for %+v\n ", trackID)
 	w.Write(fmt.Appendf(nil, "fetchTrack %#v", fetchTrack))
 }
 
 type GetSpotifyApiAlbum struct {
 	accessToken string
-	SpotifyApi  *spotify_api.SpotifySongProvider
 }
 
-func NewGetSpotifyApiAlbum(accessToken string, s *spotify_api.SpotifySongProvider) *GetSpotifyApiAlbum {
-	return &GetSpotifyApiAlbum{accessToken, s}
+func NewGetSpotifyApiAlbum(accessToken string) *GetSpotifyApiAlbum {
+	return &GetSpotifyApiAlbum{accessToken}
 }
 func (h *GetSpotifyApiAlbum) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	albumID := "4aawyAB9vmqN3uQ7FjRGTy"
-	fetchAlbum, tracks, err := h.SpotifyApi.FetchAlbum(h.accessToken, albumID)
+	fetchAlbum, _, err := spotify_api.FetchAlbum(h.accessToken, albumID)
 	if err != nil {
 		fmt.Println("couldnt fetch albums", err)
 		return
 	}
-	w.Write(fmt.Appendf(nil, "fetchAlbum %#v with \n **tracks: %#v ", fetchAlbum, tracks))
+	trackList, err := spotify_api.FetchTracksFromAlbum(h.accessToken, albumID)
+	if err != nil {
+		fmt.Println("couldnt fetch tracks from albums: ", err)
+		return
+	}
+
+	w.Write(fmt.Appendf(nil, "fetchAlbum %#v with tracks: %#v ", fetchAlbum, strings.Join(trackList, ", ")))
 }
 
 type GetSpotifyApiArtist struct {
 	accessToken string
-	SpotifyApi  *spotify_api.SpotifySongProvider
 }
 
-func NewGetSpotifyApiArtist(accessToken string, s *spotify_api.SpotifySongProvider) *GetSpotifyApiArtist {
-	return &GetSpotifyApiArtist{accessToken, s}
+func NewGetSpotifyApiArtist(accessToken string) *GetSpotifyApiArtist {
+	return &GetSpotifyApiArtist{accessToken}
 }
 func (h *GetSpotifyApiArtist) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	artistID := "0TnOYISbd1XYRBk9myaseg"
-	fetchArtist, err := h.SpotifyApi.FetchArtist(h.accessToken, artistID)
+	fetchArtist, err := spotify_api.FetchArtist(h.accessToken, artistID)
 	if err != nil {
 		fmt.Println("couldnt fetch artists", err)
 		return
 	}
-	w.Write(fmt.Appendf(nil, "fetchArtist %#v", fetchArtist))
+
+	albumList, err := spotify_api.FetchAlbumsFromArtist(h.accessToken, artistID)
+	if err != nil {
+		fmt.Println("couldnt fetch tracks from albums: ", err)
+		return
+	}
+	w.Write(fmt.Appendf(nil, "fetchArtist %#v, it has albums: %#v", fetchArtist, strings.Join(albumList, ", ")))
 }
 
 type GetSpotifyApiPlaylist struct {
 	accessToken string
-	SpotifyApi  *spotify_api.SpotifySongProvider
 }
 
-func NewGetSpotifyApiPlaylist(accessToken string, s *spotify_api.SpotifySongProvider) *GetSpotifyApiPlaylist {
-	return &GetSpotifyApiPlaylist{accessToken, s}
+func NewGetSpotifyApiPlaylist(accessToken string) *GetSpotifyApiPlaylist {
+	return &GetSpotifyApiPlaylist{accessToken}
 }
 func (h *GetSpotifyApiPlaylist) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	playlistID := "3cEYpjA9oz9GiPac4AsH4n"
-	fetchPlaylist, fetchTracks, err := h.SpotifyApi.FetchPlaylist(h.accessToken, playlistID)
+	fetchPlaylist, _, err := spotify_api.FetchPlaylist(h.accessToken, playlistID)
 	if err != nil {
 		fmt.Println("couldnt fetch playlists", err)
 		return
 	}
-	w.Write(fmt.Appendf(nil, "fetchplaylist %#v, with tracks: %#v", fetchPlaylist, fetchTracks))
+	trackList, err := spotify_api.FetchTracksFromPlaylist(h.accessToken, playlistID)
+	if err != nil {
+		fmt.Println("couldnt fetch tracks from playlist: ", err)
+		return
+	}
+	w.Write(fmt.Appendf(nil, "fetchplaylist %#v, with tracks: %#v", fetchPlaylist, strings.Join(trackList, ", ")))
 }
 
 type GetSpotifyApiTrackName struct {
 	accessToken string
-	SpotifyApi  *spotify_api.SpotifySongProvider
 }
 
-func NewGetSpotifyApiTrackName(accessToken string, s *spotify_api.SpotifySongProvider) *GetSpotifyApiTrackName {
-	return &GetSpotifyApiTrackName{accessToken, s}
+func NewGetSpotifyApiTrackName(accessToken string) *GetSpotifyApiTrackName {
+	return &GetSpotifyApiTrackName{accessToken}
 }
 func (h *GetSpotifyApiTrackName) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	trackName := "Re forro"
-	fetchTrackName, err := h.SpotifyApi.SearchTracksByName(h.accessToken, trackName)
+	fetchTrackName, err := spotify_api.SearchTracksByName(h.accessToken, trackName)
 	if err != nil {
 		fmt.Println("couldnt fetch tracks", err)
 		return
@@ -115,34 +128,32 @@ func (h *GetSpotifyApiTrackName) ServeHttp(w http.ResponseWriter, r *http.Reques
 
 type GetSpotifyApiAlbumName struct {
 	accessToken string
-	SpotifyApi  *spotify_api.SpotifySongProvider
 }
 
-func NewGetSpotifyApiAlbumName(accessToken string, s *spotify_api.SpotifySongProvider) *GetSpotifyApiAlbumName {
-	return &GetSpotifyApiAlbumName{accessToken, s}
+func NewGetSpotifyApiAlbumName(accessToken string) *GetSpotifyApiAlbumName {
+	return &GetSpotifyApiAlbumName{accessToken}
 }
 func (h *GetSpotifyApiAlbumName) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	albumName := "Papota"
-	fetchAlbumName, err := h.SpotifyApi.SearchAlbumsByName(h.accessToken, albumName)
+	fetchAlbumName, err := spotify_api.SearchAlbumsByName(h.accessToken, albumName)
 	if err != nil {
 		fmt.Println("couldnt fetch albums", err)
 		return
 	}
-	fmt.Printf("fetchAlbumName%+v\n ", fetchAlbumName)
+	fmt.Printf("[fetchAlbumName] for %+v\n", albumName)
 	w.Write(fmt.Appendf(nil, "fetchAlbumName %#v", fetchAlbumName))
 }
 
 type GetSpotifyApiArtistName struct {
 	accessToken string
-	SpotifyApi  *spotify_api.SpotifySongProvider
 }
 
-func NewGetSpotifyApiArtistName(accessToken string, s *spotify_api.SpotifySongProvider) *GetSpotifyApiArtistName {
-	return &GetSpotifyApiArtistName{accessToken, s}
+func NewGetSpotifyApiArtistName(accessToken string) *GetSpotifyApiArtistName {
+	return &GetSpotifyApiArtistName{accessToken}
 }
 func (h *GetSpotifyApiArtistName) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	artistName := "Lady Gaga"
-	fetchArtistName, err := h.SpotifyApi.SearchArtistsByName(h.accessToken, artistName)
+	fetchArtistName, err := spotify_api.SearchArtistsByName(h.accessToken, artistName)
 	if err != nil {
 		fmt.Println("couldnt fetch artists", err)
 		return
@@ -153,15 +164,14 @@ func (h *GetSpotifyApiArtistName) ServeHttp(w http.ResponseWriter, r *http.Reque
 
 type GetSpotifyApiPlaylistName struct {
 	accessToken string
-	SpotifyApi  *spotify_api.SpotifySongProvider
 }
 
-func NewGetSpotifyApiPlaylistName(accessToken string, s *spotify_api.SpotifySongProvider) *GetSpotifyApiPlaylistName {
-	return &GetSpotifyApiPlaylistName{accessToken, s}
+func NewGetSpotifyApiPlaylistName(accessToken string) *GetSpotifyApiPlaylistName {
+	return &GetSpotifyApiPlaylistName{accessToken}
 }
 func (h *GetSpotifyApiPlaylistName) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	playlistName := "Salsa"
-	fetchPlaylistName, err := h.SpotifyApi.SearchPlaylistsByName(h.accessToken, playlistName)
+	fetchPlaylistName, err := spotify_api.SearchPlaylistsByName(h.accessToken, playlistName)
 	if err != nil {
 		fmt.Println("couldnt fetch playlists", err)
 		return

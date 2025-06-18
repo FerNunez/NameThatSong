@@ -117,25 +117,25 @@ func main() {
 	songProvider.AccessToken = accessToken
 
 	r.Get("/internal/spotifyapi", handlers.NewGetSpotifyApi().ServeHttp)
-	r.Get("/internal/spotifyapi/track", handlers.NewGetSpotifyApiTrack(accessToken, songProvider).ServeHttp)
-	r.Get("/internal/spotifyapi/album", handlers.NewGetSpotifyApiAlbum(accessToken, songProvider).ServeHttp)
-	r.Get("/internal/spotifyapi/artist", handlers.NewGetSpotifyApiArtist(accessToken, songProvider).ServeHttp)
-	r.Get("/internal/spotifyapi/playlist", handlers.NewGetSpotifyApiPlaylist(accessToken, songProvider).ServeHttp)
-	r.Get("/internal/spotifyapi/track/name", handlers.NewGetSpotifyApiTrackName(accessToken, songProvider).ServeHttp)
-	r.Get("/internal/spotifyapi/album/name", handlers.NewGetSpotifyApiAlbumName(accessToken, songProvider).ServeHttp)
-	r.Get("/internal/spotifyapi/artist/name", handlers.NewGetSpotifyApiArtistName(accessToken, songProvider).ServeHttp)
-	r.Get("/internal/spotifyapi/playlist/name", handlers.NewGetSpotifyApiPlaylistName(accessToken, songProvider).ServeHttp)
+	r.Get("/internal/spotifyapi/track", handlers.NewGetSpotifyApiTrack(accessToken).ServeHttp)
+	r.Get("/internal/spotifyapi/album", handlers.NewGetSpotifyApiAlbum(accessToken).ServeHttp)
+	r.Get("/internal/spotifyapi/artist", handlers.NewGetSpotifyApiArtist(accessToken).ServeHttp)
+	r.Get("/internal/spotifyapi/playlist", handlers.NewGetSpotifyApiPlaylist(accessToken).ServeHttp)
+	r.Get("/internal/spotifyapi/track/name", handlers.NewGetSpotifyApiTrackName(accessToken).ServeHttp)
+	r.Get("/internal/spotifyapi/album/name", handlers.NewGetSpotifyApiAlbumName(accessToken).ServeHttp)
+	r.Get("/internal/spotifyapi/artist/name", handlers.NewGetSpotifyApiArtistName(accessToken).ServeHttp)
+	r.Get("/internal/spotifyapi/playlist/name", handlers.NewGetSpotifyApiPlaylistName(accessToken).ServeHttp)
 
 	r.Get("/internal/spotifycache", handlers.NewGetSpotifyCache().ServeHttp)
 	r.Get("/internal/spotifycache/track", handlers.NewGetSpotifyCacheTrack(accessToken, songProvider, spotifyCache).ServeHttp)
 	r.Get("/internal/spotifycache/album", handlers.NewGetSpotifyCacheAlbum(accessToken, songProvider, spotifyCache).ServeHttp)
 	r.Get("/internal/spotifycache/artist", handlers.NewGetSpotifyCacheArtist(accessToken, songProvider, spotifyCache).ServeHttp)
 	r.Get("/internal/spotifycache/playlist", handlers.NewGetSpotifyCachePlaylist(accessToken, songProvider, spotifyCache).ServeHttp)
-	r.Get("/internal/spotifycache/track/name", handlers.NewGetSpotifyCacheTrackName(accessToken, songProvider, spotifyCache).ServeHttp)
-	r.Get("/internal/spotifycache/album/name", handlers.NewGetSpotifyCacheAlbumName(accessToken, songProvider, spotifyCache).ServeHttp)
-	r.Get("/internal/spotifycache/artist/name", handlers.NewGetSpotifyCacheArtistName(accessToken, songProvider, spotifyCache).ServeHttp)
-	r.Get("/internal/spotifycache/playlist/name", handlers.NewGetSpotifyCachePlaylistName(accessToken, songProvider, spotifyCache).ServeHttp)
-
+	// r.Get("/internal/spotifycache/track/name", handlers.NewGetSpotifyCacheTrackName(accessToken, songProvider, spotifyCache).ServeHttp)
+	// r.Get("/internal/spotifycache/album/name", handlers.NewGetSpotifyCacheAlbumName(accessToken, songProvider, spotifyCache).ServeHttp)
+	// r.Get("/internal/spotifycache/artist/name", handlers.NewGetSpotifyCacheArtistName(accessToken, songProvider, spotifyCache).ServeHttp)
+	// r.Get("/internal/spotifycache/playlist/name", handlers.NewGetSpotifyCachePlaylistName(accessToken, songProvider, spotifyCache).ServeHttp)
+	//
 	// Start the server
 	port := os.Getenv("PORT")
 	if port == "" {

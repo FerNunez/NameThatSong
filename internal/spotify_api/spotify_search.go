@@ -48,7 +48,7 @@ func Search(accessToken, limit, atype, query string) ([]byte, error) {
 	return data, nil
 }
 
-func (p *SpotifySongProvider) SearchTracksByName(accessToken, name string) ([]TrackData, error) {
+func SearchTracksByName(accessToken, name string) ([]TrackData, error) {
 	limit := "50"
 
 	data, err := Search(accessToken, limit, "track", name)
@@ -150,7 +150,7 @@ func (p *SpotifySongProvider) SearchTracksByName(accessToken, name string) ([]Tr
 	return tracks, nil
 }
 
-func (p *SpotifySongProvider) SearchAlbumsByName(accessToken, name string) ([]AlbumData, error) {
+func SearchAlbumsByName(accessToken, name string) ([]AlbumData, error) {
 	limit := "50"
 
 	data, err := Search(accessToken, limit, "album", name)
@@ -222,7 +222,7 @@ func (p *SpotifySongProvider) SearchAlbumsByName(accessToken, name string) ([]Al
 	return albums, nil
 }
 
-func (p *SpotifySongProvider) SearchArtistsByName(accessToken, name string) ([]ArtistData, error) {
+func SearchArtistsByName(accessToken, name string) ([]ArtistData, error) {
 	limit := "50"
 
 	data, err := Search(accessToken, limit, "artist", name)
@@ -269,7 +269,7 @@ func (p *SpotifySongProvider) SearchArtistsByName(accessToken, name string) ([]A
 	return artists, nil
 }
 
-func (p *SpotifySongProvider) SearchPlaylistsByName(accessToken, name string) ([]PlaylistData, error) {
+func SearchPlaylistsByName(accessToken, name string) ([]PlaylistData, error) {
 	limit := "50"
 	data, err := Search(accessToken, limit, "playlist", name)
 	if err != nil {
@@ -346,7 +346,6 @@ func (p *SpotifySongProvider) SearchPlaylistsByName(accessToken, name string) ([
 			Name:           p.Name,
 			Public:         p.Public,
 			TotalTracks:    p.Tracks.Total,
-			TrackIDs:       []string{}, // TOD FIX THIS
 		})
 
 	}
