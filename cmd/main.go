@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"database/sql"
 
@@ -21,7 +22,6 @@ import (
 	m "github.com/FerNunez/NameThatSong/internal/middleware"
 	"github.com/go-chi/chi/v5"
 	_ "github.com/lib/pq"
-	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -29,14 +29,8 @@ func main() {
 	err := godotenv.Load()
 
 	// Redis
-	// TODO: Change to connection string
 	// TODO: check TLS/SSL
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "", // no password set
-		DB:       0,  // use default DB
-	})
-	fmt.Println("redis db created: ", rdb)
+	redisCache := cache.NewRedisSpotifyCache("127.0.0.1:6379", "", 0, time.Hour)
 
 	//encription key
 	encryptionKey := os.Getenv("SPOTIFY_TOKEN_ENCRYPTION_KEY")
@@ -111,7 +105,7 @@ func main() {
 		//r.Get("/song-time", handlers.NewGetSongTime(gm).ServeHttp)
 	})
 
-	spotifyCache := cache.NewSpotifyCacheMap()
+	//spotifyCache := cache.NewSpotifyCacheMap()
 	songProvider := spotify_api.NewSpotifySongProvider("", "", "", "")
 	accessToken := "TODO"
 	songProvider.AccessToken = accessToken
@@ -127,10 +121,10 @@ func main() {
 	r.Get("/internal/spotifyapi/playlist/name", handlers.NewGetSpotifyApiPlaylistName(accessToken).ServeHttp)
 
 	r.Get("/internal/spotifycache", handlers.NewGetSpotifyCache().ServeHttp)
-	r.Get("/internal/spotifycache/track", handlers.NewGetSpotifyCacheTrack(accessToken, songProvider, spotifyCache).ServeHttp)
-	r.Get("/internal/spotifycache/album", handlers.NewGetSpotifyCacheAlbum(accessToken, songProvider, spotifyCache).ServeHttp)
-	r.Get("/internal/spotifycache/artist", handlers.NewGetSpotifyCacheArtist(accessToken, songProvider, spotifyCache).ServeHttp)
-	r.Get("/internal/spotifycache/playlist", handlers.NewGetSpotifyCachePlaylist(accessToken, songProvider, spotifyCache).ServeHttp)
+	r.Get("/internal/spotifycache/track", handlers.NewGetSpotifyCacheTrack(accessToken, redisCache).ServeHttp)
+	r.Get("/internal/spotifycache/album", handlers.NewGetSpotifyCacheAlbum(accessToken, redisCache).ServeHttp)
+	r.Get("/internal/spotifycache/artist", handlers.NewGetSpotifyCacheArtist(accessToken, redisCache).ServeHttp)
+	r.Get("/internal/spotifycache/playlist", handlers.NewGetSpotifyCachePlaylist(accessToken, redisCache).ServeHttp)
 	// r.Get("/internal/spotifycache/track/name", handlers.NewGetSpotifyCacheTrackName(accessToken, songProvider, spotifyCache).ServeHttp)
 	// r.Get("/internal/spotifycache/album/name", handlers.NewGetSpotifyCacheAlbumName(accessToken, songProvider, spotifyCache).ServeHttp)
 	// r.Get("/internal/spotifycache/artist/name", handlers.NewGetSpotifyCacheArtistName(accessToken, songProvider, spotifyCache).ServeHttp)
