@@ -129,6 +129,8 @@ func main() {
 	r.Get("/internal/spotifycache/album/name", handlers.NewGetSpotifyCacheAlbumName(accessToken, redisCache).ServeHttp)
 	r.Get("/internal/spotifycache/artist/name", handlers.NewGetSpotifyCacheArtistName(accessToken, redisCache).ServeHttp)
 	r.Get("/internal/spotifycache/playlist/name", handlers.NewGetSpotifyCachePlaylistName(accessToken, redisCache).ServeHttp)
+
+	r.Get("/internal/frontend/search-music", handlers.NewGetSearchMusic(accessToken, redisCache).ServeHttp)
 	//
 	// Start the server
 	port := os.Getenv("PORT")
