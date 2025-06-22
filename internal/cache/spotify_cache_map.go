@@ -17,6 +17,9 @@ type SpotifyCacheMap struct {
 	ArtistToAlbumsMap   map[string][]string
 	AlbumToTracksMap    map[string][]string
 	PlaylistToTracksMap map[string][]string
+
+	// Test: SearchToMap
+
 }
 
 func NewSpotifyCacheMap() *SpotifyCacheMap {
@@ -127,6 +130,22 @@ func (c *SpotifyCacheMap) GetTracksFromPlaylist(accessToken, playlistId string) 
 	}
 	c.PlaylistToTracksMap[playlistId] = trackIDs
 	return trackIDs, nil
+}
+
+func (c *SpotifyCacheMap) SearchTracks(accessToken, query string) ([]spotify_api.TrackSearch, error) {
+	panic("Shouldnt happy")
+	return []spotify_api.TrackSearch{}, nil
+}
+func (c *SpotifyCacheMap) SearchAlbums(accessToken, query string) ([]spotify_api.AlbumSearch, error) {
+	panic("Shouldnt happy")
+	return nil, nil
+}
+func (c *SpotifyCacheMap) SearchArtists(accessToken, query string) ([]spotify_api.ArtistSearch, error) {
+	panic("Shouldnt happy")
+	return nil, nil
+}
+func (c *SpotifyCacheMap) SearchPlaylists(accessToken, query string) ([]spotify_api.PlaylistSearch, error) {
+	panic("Shouldnt happy")
 }
 
 /////////////////

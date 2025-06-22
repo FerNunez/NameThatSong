@@ -9,8 +9,7 @@ import (
 	"strings"
 )
 
-func Search(accessToken, limit, atype, query string) ([]byte, error) {
-
+func search(accessToken, limit, atype, query string) ([]byte, error) {
 	trackQuery := atype + ":" + strings.ToLower(query)
 
 	apiURL, err := url.Parse("https://api.spotify.com/v1/search")
@@ -28,7 +27,6 @@ func Search(accessToken, limit, atype, query string) ([]byte, error) {
 		return nil, err
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -44,14 +42,37 @@ func Search(accessToken, limit, atype, query string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return data, nil
 }
 
-func SearchTracksByName(accessToken, name string) ([]TrackData, error) {
+type TrackSearch struct {
+	Name       string
+	Id         string
+	Popularity int
+}
+
+type AlbumSearch struct {
+	Name     string
+	Id       string
+	ImageUrl string
+}
+type ArtistSearch struct {
+	Name       string
+	Id         string
+	ImageUrl   string
+	Popularity int
+}
+
+type PlaylistSearch struct {
+	Name     string
+	Id       string
+	ImageUrl string
+}
+
+func SearchTracksByName(accessToken, name string) ([]TrackSearch, error) {
 	limit := "50"
 
-	data, err := Search(accessToken, limit, "track", name)
+	data, err := search(accessToken, limit, "track", name)
 	if err != nil {
 		return nil, err
 	}
@@ -135,25 +156,22 @@ func SearchTracksByName(accessToken, name string) ([]TrackData, error) {
 	}
 
 	// Convert to trackInfo
-	tracks := make([]TrackData, 0, len(searchTrackResponse.Tracks.Items))
+	tracks := make([]TrackSearch, 0, len(searchTrackResponse.Tracks.Items))
 	for _, t := range searchTrackResponse.Tracks.Items {
-		trackInfo := TrackData{
-			DiscNumber:  t.DiscNumber,
-			DurationMs:  t.DurationMs,
-			ID:          t.ID,
-			Name:        t.Name,
-			TrackNumber: t.TrackNumber,
-			//Popularity: 		t.Popularity,
+		trackInfo := TrackSearch{
+			Id:         t.ID,
+			Name:       t.Name,
+			Popularity: t.Popularity,
 		}
 		tracks = append(tracks, trackInfo)
 	}
 	return tracks, nil
 }
 
-func SearchAlbumsByName(accessToken, name string) ([]AlbumData, error) {
+func SearchAlbumsByName(accessToken, name string) ([]AlbumSearch, error) {
 	limit := "50"
 
-	data, err := Search(accessToken, limit, "album", name)
+	data, err := search(accessToken, limit, "album", name)
 	if err != nil {
 		return nil, err
 	}
@@ -203,29 +221,26 @@ func SearchAlbumsByName(accessToken, name string) ([]AlbumData, error) {
 		return nil, err
 	}
 
-	albums := make([]AlbumData, len(searchAlbumResponse.Albums.Items))
+	albums := make([]AlbumSearch, len(searchAlbumResponse.Albums.Items))
 	for idx, r := range searchAlbumResponse.Albums.Items {
 		imageUrl := ""
 		if len(r.Images) > 0 {
 			imageUrl = r.Images[0].URL
 		}
 
-		albums[idx] = AlbumData{
-			AlbumType:   r.AlbumType,
-			TotalTracks: r.TotalTracks,
-			ID:          r.ID,
-			ImagesURL:   imageUrl,
-			Name:        r.Name,
-			ReleaseDate: r.ReleaseDate,
+		albums[idx] = AlbumSearch{
+			Id:       r.ID,
+			ImageUrl: imageUrl,
+			Name:     r.Name,
 		}
 	}
 	return albums, nil
 }
 
-func SearchArtistsByName(accessToken, name string) ([]ArtistData, error) {
+func SearchArtistsByName(accessToken, name string) ([]ArtistSearch, error) {
 	limit := "50"
 
-	data, err := Search(accessToken, limit, "artist", name)
+	data, err := search(accessToken, limit, "artist", name)
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +265,7 @@ func SearchArtistsByName(accessToken, name string) ([]ArtistData, error) {
 	}
 
 	// Convert to ArtistInfo
-	artists := make([]ArtistData, 0, len(searchArtistResponse.Artists.Items))
+	artists := make([]ArtistSearch, 0, len(searchArtistResponse.Artists.Items))
 	for _, a := range searchArtistResponse.Artists.Items {
 
 		// TODO: add here and temp url???
@@ -258,7 +273,7 @@ func SearchArtistsByName(accessToken, name string) ([]ArtistData, error) {
 		if len(a.Images) > 0 {
 			imageUrl = a.Images[0].URL
 		}
-		artistInfo := ArtistData{
+		artistInfo := ArtistSearch{
 			Id:         a.ID,
 			Name:       a.Name,
 			ImageUrl:   imageUrl,
@@ -269,9 +284,9 @@ func SearchArtistsByName(accessToken, name string) ([]ArtistData, error) {
 	return artists, nil
 }
 
-func SearchPlaylistsByName(accessToken, name string) ([]PlaylistData, error) {
+func SearchPlaylistsByName(accessToken, name string) ([]PlaylistSearch, error) {
 	limit := "50"
-	data, err := Search(accessToken, limit, "playlist", name)
+	data, err := search(accessToken, limit, "playlist", name)
 	if err != nil {
 		return nil, err
 	}
@@ -326,7 +341,7 @@ func SearchPlaylistsByName(accessToken, name string) ([]PlaylistData, error) {
 		return nil, err
 	}
 
-	playlists := make([]PlaylistData, 0, len(searchPlaylistResponse.Playlists.Items))
+	playlists := make([]PlaylistSearch, 0, len(searchPlaylistResponse.Playlists.Items))
 	for _, p := range searchPlaylistResponse.Playlists.Items {
 
 		if p == nil {
@@ -338,14 +353,10 @@ func SearchPlaylistsByName(accessToken, name string) ([]PlaylistData, error) {
 			imageUrl = p.Images[0].URL
 		}
 
-		playlists = append(playlists, PlaylistData{
-			Description:    p.Description,
-			FollowersTotal: 0,
-			ID:             p.ID,
-			ImageUrl:       imageUrl,
-			Name:           p.Name,
-			Public:         p.Public,
-			TotalTracks:    p.Tracks.Total,
+		playlists = append(playlists, PlaylistSearch{
+			Id:       p.ID,
+			ImageUrl: imageUrl,
+			Name:     p.Name,
 		})
 
 	}

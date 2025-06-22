@@ -129,31 +129,95 @@ func (h *GetSpotifyCachePlaylist) ServeHttp(w http.ResponseWriter, r *http.Reque
 	w.Write(fmt.Appendf(nil, "fetchplaylist %#v, with tracks: %#v", fetchPlaylist, strings.Join(trackList, ", ")))
 }
 
-// ///
-// type GetSpotifyCacheTrackName struct {
-// 	accessToken string
-// 	SpotifyApi  *spotify_api.SpotifySongProvider
-// 	Cache       cache.SpotifyCache
-// }
-//
-// func NewGetSpotifyCacheTrackName(accessToken string, s *spotify_api.SpotifySongProvider, c cache.SpotifyCache) *GetSpotifyCacheTrackName {
-// 	return &GetSpotifyCacheTrackName{accessToken, s, c}
-// }
-// func (h *GetSpotifyCacheTrackName) ServeHttp(w http.ResponseWriter, r *http.Request) {
-// 	trackName := "Salsa"
-// 	fetchPlaylistName, err := h.SpotifyApi.SearchPlaylistsByName(h.accessToken, playlistName)
-//
-// 	trackID := "11dFghVXANMlKmJXsNCbNl"
-// 	query := r.URL.Query().Get("id")
-// 	if query != "" {
-// 		trackID = query
-// 	}
-//
-// 	fetchTrackName, err := h.Cache.GetTrack(h.SpotifyApi, h.accessToken, trackID)
-// 	if err != nil {
-// 		fmt.Println("couldnt fetch tracks", err)
-// 		return
-// 	}
-// 	fmt.Printf("fetchTrackName%+v\n", fetchTrack)
-// 	w.Write(fmt.Appendf(nil, "fetchTrackName %#v", fetchTrack))
-// }
+// /
+type GetSpotifyCacheTrackName struct {
+	accessToken string
+	Cache       cache.SpotifyCache
+}
+
+func NewGetSpotifyCacheTrackName(accessToken string, c cache.SpotifyCache) *GetSpotifyCacheTrackName {
+	return &GetSpotifyCacheTrackName{accessToken, c}
+}
+func (h *GetSpotifyCacheTrackName) ServeHttp(w http.ResponseWriter, r *http.Request) {
+	trackName := "Re forro"
+	query := r.URL.Query().Get("name")
+	if query != "" {
+		trackName = query
+	}
+	trackList, err := h.Cache.SearchTracks(h.accessToken, trackName)
+	if err != nil {
+		fmt.Println("couldnt fetch tracks", err)
+		return
+	}
+	fmt.Printf("search tracks cache for:  %+v\n", trackName)
+	w.Write(fmt.Appendf(nil, "search track %#v", trackList))
+}
+
+type GetSpotifyCacheAlbumName struct {
+	accessToken string
+	Cache       cache.SpotifyCache
+}
+
+func NewGetSpotifyCacheAlbumName(accessToken string, c cache.SpotifyCache) *GetSpotifyCacheAlbumName {
+	return &GetSpotifyCacheAlbumName{accessToken, c}
+}
+func (h *GetSpotifyCacheAlbumName) ServeHttp(w http.ResponseWriter, r *http.Request) {
+	albumName := "Papota"
+	query := r.URL.Query().Get("name")
+	if query != "" {
+		albumName = query
+	}
+	albumList, err := h.Cache.SearchAlbums(h.accessToken, albumName)
+	if err != nil {
+		fmt.Println("couldnt fetch albums", err)
+		return
+	}
+	fmt.Printf("search albums cache for:  %+v\n", albumName)
+	w.Write(fmt.Appendf(nil, "search album %#v", albumList))
+}
+
+type GetSpotifyCacheArtistName struct {
+	accessToken string
+	Cache       cache.SpotifyCache
+}
+
+func NewGetSpotifyCacheArtistName(accessToken string, c cache.SpotifyCache) *GetSpotifyCacheArtistName {
+	return &GetSpotifyCacheArtistName{accessToken, c}
+}
+func (h *GetSpotifyCacheArtistName) ServeHttp(w http.ResponseWriter, r *http.Request) {
+	artistName := "Lady Gaga"
+	query := r.URL.Query().Get("name")
+	if query != "" {
+		artistName = query
+	}
+	artistList, err := h.Cache.SearchArtists(h.accessToken, artistName)
+	if err != nil {
+		fmt.Println("couldnt fetch artists", err)
+		return
+	}
+	fmt.Printf("search artists cache for:  %+v\n", artistName)
+	w.Write(fmt.Appendf(nil, "search artist %#v", artistList))
+}
+
+type GetSpotifyCachePlaylistName struct {
+	accessToken string
+	Cache       cache.SpotifyCache
+}
+
+func NewGetSpotifyCachePlaylistName(accessToken string, c cache.SpotifyCache) *GetSpotifyCachePlaylistName {
+	return &GetSpotifyCachePlaylistName{accessToken, c}
+}
+func (h *GetSpotifyCachePlaylistName) ServeHttp(w http.ResponseWriter, r *http.Request) {
+	playlistName := "Salsa"
+	query := r.URL.Query().Get("name")
+	if query != "" {
+		playlistName = query
+	}
+	playlistList, err := h.Cache.SearchPlaylists(h.accessToken, playlistName)
+	if err != nil {
+		fmt.Println("couldnt fetch playlists", err)
+		return
+	}
+	fmt.Printf("search playlists cache for:  %+v\n", playlistName)
+	w.Write(fmt.Appendf(nil, "search playlist %#v", playlistList))
+}

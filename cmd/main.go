@@ -125,10 +125,10 @@ func main() {
 	r.Get("/internal/spotifycache/album", handlers.NewGetSpotifyCacheAlbum(accessToken, redisCache).ServeHttp)
 	r.Get("/internal/spotifycache/artist", handlers.NewGetSpotifyCacheArtist(accessToken, redisCache).ServeHttp)
 	r.Get("/internal/spotifycache/playlist", handlers.NewGetSpotifyCachePlaylist(accessToken, redisCache).ServeHttp)
-	// r.Get("/internal/spotifycache/track/name", handlers.NewGetSpotifyCacheTrackName(accessToken, songProvider, spotifyCache).ServeHttp)
-	// r.Get("/internal/spotifycache/album/name", handlers.NewGetSpotifyCacheAlbumName(accessToken, songProvider, spotifyCache).ServeHttp)
-	// r.Get("/internal/spotifycache/artist/name", handlers.NewGetSpotifyCacheArtistName(accessToken, songProvider, spotifyCache).ServeHttp)
-	// r.Get("/internal/spotifycache/playlist/name", handlers.NewGetSpotifyCachePlaylistName(accessToken, songProvider, spotifyCache).ServeHttp)
+	r.Get("/internal/spotifycache/track/name", handlers.NewGetSpotifyCacheTrackName(accessToken, redisCache).ServeHttp)
+	r.Get("/internal/spotifycache/album/name", handlers.NewGetSpotifyCacheAlbumName(accessToken, redisCache).ServeHttp)
+	r.Get("/internal/spotifycache/artist/name", handlers.NewGetSpotifyCacheArtistName(accessToken, redisCache).ServeHttp)
+	r.Get("/internal/spotifycache/playlist/name", handlers.NewGetSpotifyCachePlaylistName(accessToken, redisCache).ServeHttp)
 	//
 	// Start the server
 	port := os.Getenv("PORT")
