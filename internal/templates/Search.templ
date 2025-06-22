@@ -2,6 +2,133 @@ package templates
 
 import "github.com/FerNunez/NameThatSong/internal/spotify_api"
 
+templ SearchLayout() {
+	<div class="text-white p-6 bg-slate-900 ">
+		<form class="max-w-9/10 mx-auto mb-8">
+			<div class="relative overflow-hidden">
+				<div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+					<svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+						<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"></path>
+					</svg>
+				</div>
+				<input
+					type="search"
+					name="search"
+					hx-get="/search-helper"
+					hx-trigger="keyup changed delay:300ms"
+					hx-target="#search-results"
+					placeholder="Type your favorite artist"
+					id="default-search"
+					class="search-input block w-full p-4 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+					required
+					onkeydown="handleKeyDown(event)"
+				/>
+				<div class="absolute end-2.5 bottom-2.5 flex gap-2">
+					<button
+						hx-get="/search-albums"
+						hx-trigger="click"
+						hx-target="#album-dropdown-content"
+						hx-include="[name='search'], [name='artist-id']"
+						type="button"
+						class="search-button text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+					>Search</button>
+				</div>
+			</div>
+		</form>
+		@MusicLibrary()
+	</div>
+}
+
+templ MusicLibrary() {
+	<!-- Force 4 columns with explicit widths -->
+	<div class="flex flex-wrap -mx-2">
+		<!-- Tracks Column -->
+		<div class="w-full xl:w-1/4 lg:w-1/2 px-2 mb-8">
+			<h2 class="text-xl font-semibold text-white mb-2 flex items-center">
+				Tracks
+			</h2>
+			<div class="divide-y divide-zinc-600 bg-blue-800 rounded-lg">
+				@TrackItem("Drive", "Ed Sheeran")
+				@TrackItem("Papasito", "KAROL G")
+				@TrackItem("Mr Electric Blue", "Benson Boone")
+				@TrackItem("Outside", "Cardi B")
+			</div>
+		</div>
+		<!-- Albums Column -->
+		<div class="w-full xl:w-1/4 lg:w-1/2 px-2 mb-8">
+			<h2 class="text-xl font-semibold text-white mb-2 flex items-center">
+				Albums
+			</h2>
+			<div class="bg-green-800 rounded-lg">
+				@AlbumItem("6 Months Later", "Megan Moroney")
+				@AlbumItem("Victory Lap", "Fred again.., Skepra, PlaqueBoyMax")
+				@AlbumItem("Hammer", "Lorde")
+				@AlbumItem("GUILT TRIPPIN", "Central Cee, Sexyy Red")
+			</div>
+		</div>
+		<!-- Artists Column -->
+		<div class="w-full xl:w-1/4 lg:w-1/2 px-2 mb-8">
+			<h2 class="text-xl font-semibold text-white mb-2 flex items-center">
+				Artists
+			</h2>
+			<div class="bg-purple-800 rounded-lg">
+				@ArtistItem("All over me", "HAIM")
+				@ArtistItem("I'd Rather Go Blind", "AKIA")
+				@ArtistItem("Bonde Do Brunão", "Bruno Mars")
+				@ArtistItem("Ghosts", "YUNGBLUD")
+			</div>
+		</div>
+		<!-- Playlists Column -->
+		<div class="w-full xl:w-1/4 lg:w-1/2 px-2 mb-8">
+			<h2 class="text-xl font-semibold text-white mb-2 flex items-center">
+				Playlists
+			</h2>
+			<div class="bg-red-800 rounded-lg">
+				@PlaylistItem("Not Like That Anymore", "Lola Young")
+				@PlaylistItem("Gabriela", "KATSEYE")
+				@PlaylistItem("Plastic Box", "JADE")
+				@PlaylistItem("Put Up", "Anycia, Quavo")
+			</div>
+		</div>
+	</div>
+}
+
+templ TrackItem(title, artist string) {
+	<div class="flex items-center space-x-3 p-4 hover:bg-slate-700 transition-colors group cursor-pointer first:rounded-t-lg last:rounded-b-lg">
+		<div class="flex-1 min-w-0">
+			<p class="text-white font-medium truncate">{ title }</p>
+			<p class="text-gray-400 text-sm truncate">{ artist }</p>
+		</div>
+	</div>
+}
+
+templ AlbumItem(title, artist string) {
+	<div class="flex items-center space-x-3 p-4 hover:bg-slate-700 transition-colors group cursor-pointer first:rounded-t-lg last:rounded-b-lg border-b border-slate-600 last:border-b-0">
+		<div class="flex-1 min-w-0">
+			<p class="text-white font-medium truncate">{ title }</p>
+			<p class="text-gray-400 text-sm truncate">{ artist }</p>
+		</div>
+	</div>
+}
+
+templ ArtistItem(title, artist string) {
+	<div class="flex items-center space-x-3 p-4 hover:bg-slate-700 transition-colors group cursor-pointer first:rounded-t-lg last:rounded-b-lg border-b border-slate-600 last:border-b-0">
+		<div class="flex-1 min-w-0">
+			<p class="text-white font-medium truncate">{ title }</p>
+			<p class="text-gray-400 text-sm truncate">{ artist }</p>
+		</div>
+	</div>
+}
+
+templ PlaylistItem(title, artist string) {
+	<div class="flex items-center space-x-3 p-4 hover:bg-slate-700 transition-colors group cursor-pointer first:rounded-t-lg last:rounded-b-lg border-b border-slate-600 last:border-b-0">
+		<div class="flex-1 min-w-0">
+			<p class="text-white font-medium truncate">{ title }</p>
+			<p class="text-gray-400 text-sm truncate">{ artist }</p>
+		</div>
+	</div>
+}
+
 templ SearchInput(spotifyConnected bool) {
 	<div class="relative">
 		<form class="max-w-md mx-auto">

@@ -10,7 +10,7 @@ templ header(title string) {
 		<script src="/static/script/htmx.min.js"></script>
 		<script src="/static/script/response-targets.js"></script>
 		<script src="/static/script/custom.js"></script>
-		<link rel="stylesheet" href="/static/css/style.min.css"/>
+		<link rel="stylesheet" href="/static/css/style.css"/>
 	</head>
 }
 
@@ -50,15 +50,13 @@ templ nav() {
 }
 
 templ Layout(contents templ.Component, title string) {
-	<html class="bg-slate-900">
+	<html class="bg-slate-800">
 		@header(title)
-		<body class=" min-h-screen flex flex-col h-full">
+		<body>
 			@nav()
-			<div class="w-full  justify-center">
-				<main>
-					@contents
-				</main>
-			</div>
+			<main>
+				@contents
+			</main>
 			@footer()
 			<script src="https://unpkg.com/htmx.org@2.0.3"></script>
 			<script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
