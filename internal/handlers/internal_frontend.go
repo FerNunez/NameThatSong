@@ -37,7 +37,7 @@ func (h *GetSearchMusic) ServeHttp(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("couldnt search playlist", err)
 	}
 
-	fmt.Println("got %v, %v, %v, %v", len(trackList), len(albumList), len(artistList), len(playlistList))
+	fmt.Printf("got %v, %v, %v, %v\n", len(trackList), len(albumList), len(artistList), len(playlistList))
 	component := templates.MusicSearch(trackList, albumList, artistList, playlistList)
 	component.Render(r.Context(), w)
 }

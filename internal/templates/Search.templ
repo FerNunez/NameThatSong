@@ -4,37 +4,43 @@ import "github.com/FerNunez/NameThatSong/internal/spotify_api"
 
 templ SearchLayout() {
 	<div class="text-white p-6 bg-slate-900 ">
-		<form class="max-w-9/10 mx-auto mb-8">
-			<div class="relative overflow-hidden">
-				<div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-					<svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
-						<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"></path>
-					</svg>
-				</div>
-				<input
-					type="search"
-					name="search"
-					hx-get="/internal/frontend/search-music"
-					hx-trigger="keyup changed delay:200ms"
-					hx-target="#music-search"
-					placeholder="Type your favorite track, album, artist or playlist"
-					class="search-input block w-full p-4 ps-10 text-sm text-gray-800 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-					require
-				/>
-				<button
-					type="submit"
-					hx-get="/spotify-auth"
-					hx-trigger="click"
-					class="connect-button py-2 px-4 rounded-lg bg-green-500 hover:bg-green-600 text-white font-bold text-sm shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer border-2 border-green-400 hover:border-green-300 hover:translate-y-1 hover:scale-105"
-				>
-					Connect 
-				</button>
-			</div>
-		</form>
+		<div id="search-input">
+			@SearchInput()
+		</div>
 		<div id="music-search">
 			@MusicSearch([]spotify_api.TrackSearch{}, []spotify_api.AlbumSearch{}, []spotify_api.ArtistSearch{}, []spotify_api.PlaylistSearch{})
 		</div>
 	</div>
+}
+
+templ SearchInput() {
+	<form class="max-w-9/10 mx-auto mb-8">
+		<div class="relative overflow-hidden">
+			<div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+				<svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+					<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"></path>
+				</svg>
+			</div>
+			<input
+				type="search"
+				name="search"
+				hx-get="/internal/frontend/search-music"
+				hx-trigger="keyup changed delay:200ms"
+				hx-target="#music-search"
+				placeholder="Type your favorite track, album, artist or playlist"
+				class="search-input block w-full p-4 ps-10 text-sm text-gray-800 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+				require
+			/>
+			<button
+				type="submit"
+				hx-get="/spotify-auth"
+				hx-trigger="click"
+				class="connect-button py-2 px-4 rounded-lg bg-green-500 hover:bg-green-600 text-white font-bold text-sm shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer border-2 border-green-400 hover:border-green-300 hover:translate-y-1 hover:scale-105"
+			>
+				Connect 
+			</button>
+		</div>
+	</form>
 }
 
 templ MusicSearch(tracks []spotify_api.TrackSearch, albums []spotify_api.AlbumSearch, artists []spotify_api.ArtistSearch, playlists []spotify_api.PlaylistSearch) {
@@ -47,7 +53,7 @@ templ MusicSearch(tracks []spotify_api.TrackSearch, albums []spotify_api.AlbumSe
 			</h2>
 			<div class="divide-y divide-zinc-600 bg-blue-800 rounded-lg">
 				for _, t := range tracks {
-					@TrackItem(t.Name, "Ed Sheeran")
+					@TrackItem(t.Name, ArtistsListString(20, t.ArtistList))
 				}
 			</div>
 		</div>
@@ -58,7 +64,7 @@ templ MusicSearch(tracks []spotify_api.TrackSearch, albums []spotify_api.AlbumSe
 			</h2>
 			<div class="bg-green-800 rounded-lg">
 				for _, a := range albums {
-					@AlbumItem(a.Name, "Ed Sheeran")
+					@AlbumItem(a.Name, ArtistsListString(20, a.ArtistList))
 				}
 				//@AlbumItem("6 Months Later", "Megan Moroney")
 			</div>
@@ -70,7 +76,7 @@ templ MusicSearch(tracks []spotify_api.TrackSearch, albums []spotify_api.AlbumSe
 			</h2>
 			<div class="bg-purple-800 rounded-lg">
 				for _, a := range artists {
-					@ArtistItem(a.Name, "Ed Sheeran")
+					@ArtistItem(a.Name)
 				}
 				//@ArtistItem("All over me", "HAIM")
 			</div>
@@ -82,7 +88,7 @@ templ MusicSearch(tracks []spotify_api.TrackSearch, albums []spotify_api.AlbumSe
 			</h2>
 			<div class="bg-red-800 rounded-lg">
 				for _, p := range playlists {
-					@PlaylistItem(p.Name, "Ed Sheeran")
+					@PlaylistItem(p.Name)
 				}
 				//@PlaylistItem("Not Like That Anymore", "Lola Young")
 			</div>
@@ -108,25 +114,24 @@ templ AlbumItem(title, artist string) {
 	</div>
 }
 
-templ ArtistItem(title, artist string) {
+templ ArtistItem(title string) {
 	<div class="flex items-center space-x-3 p-4 hover:bg-slate-700 transition-colors group cursor-pointer first:rounded-t-lg last:rounded-b-lg border-b border-slate-600 last:border-b-0">
 		<div class="flex-1 min-w-0">
 			<p class="text-white font-medium truncate">{ title }</p>
-			<p class="text-gray-400 text-sm truncate">{ artist }</p>
 		</div>
 	</div>
 }
 
-templ PlaylistItem(title, artist string) {
+templ PlaylistItem(title string) {
 	<div class="flex items-center space-x-3 p-4 hover:bg-slate-700 transition-colors group cursor-pointer first:rounded-t-lg last:rounded-b-lg border-b border-slate-600 last:border-b-0">
 		<div class="flex-1 min-w-0">
 			<p class="text-white font-medium truncate">{ title }</p>
-			<p class="text-gray-400 text-sm truncate">{ artist }</p>
 		</div>
 	</div>
 }
 
-templ SearchInput(spotifyConnected bool) {
+///
+templ SearchInput2(spotifyConnected bool) {
 	<div class="relative">
 		<form class="max-w-md mx-auto">
 			<div class="relative overflow-hidden">

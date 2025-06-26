@@ -49,12 +49,14 @@ type TrackSearch struct {
 	Name       string
 	Id         string
 	Popularity int
+	ArtistList []string
 }
 
 type AlbumSearch struct {
-	Name     string
-	Id       string
-	ImageUrl string
+	Name       string
+	Id         string
+	ImageUrl   string
+	ArtistList []string
 }
 type ArtistSearch struct {
 	Name       string
@@ -158,10 +160,17 @@ func SearchTracksByName(accessToken, name string) ([]TrackSearch, error) {
 	// Convert to trackInfo
 	tracks := make([]TrackSearch, 0, len(searchTrackResponse.Tracks.Items))
 	for _, t := range searchTrackResponse.Tracks.Items {
+
+		artists := make([]string, len(t.Artists))
+		for idx, a := range t.Artists {
+			artists[idx] = a.Name
+		}
+
 		trackInfo := TrackSearch{
 			Id:         t.ID,
 			Name:       t.Name,
 			Popularity: t.Popularity,
+			ArtistList: artists,
 		}
 		tracks = append(tracks, trackInfo)
 	}
@@ -222,16 +231,23 @@ func SearchAlbumsByName(accessToken, name string) ([]AlbumSearch, error) {
 	}
 
 	albums := make([]AlbumSearch, len(searchAlbumResponse.Albums.Items))
-	for idx, r := range searchAlbumResponse.Albums.Items {
+	for idx, alb := range searchAlbumResponse.Albums.Items {
+
+		artists := make([]string, len(alb.Artists))
+		for idx, art := range alb.Artists {
+			artists[idx] = art.Name
+		}
+
 		imageUrl := ""
-		if len(r.Images) > 0 {
-			imageUrl = r.Images[0].URL
+		if len(alb.Images) > 0 {
+			imageUrl = alb.Images[0].URL
 		}
 
 		albums[idx] = AlbumSearch{
-			Id:       r.ID,
-			ImageUrl: imageUrl,
-			Name:     r.Name,
+			Id:         alb.ID,
+			ImageUrl:   imageUrl,
+			Name:       alb.Name,
+			ArtistList: artists,
 		}
 	}
 	return albums, nil
