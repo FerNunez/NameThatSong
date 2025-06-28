@@ -13,13 +13,30 @@ templ SearchLayout() {
 	</div>
 }
 
+templ playIcon() {
+	<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+		<path d="M8 5v14l11-7z"></path>
+	</svg>
+}
+
+templ addIcon() {
+	<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5">
+		<line x1="12" y1="5" x2="12" y2="19"></line>
+		<line x1="5" y1="12" x2="19" y2="12"></line>
+	</svg>
+}
+
+templ searchIcon() {
+	<svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+		<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"></path>
+	</svg>
+}
+
 templ SearchInput() {
 	<form class="max-w-9/10 mx-auto mb-8">
 		<div class="relative overflow-hidden">
 			<div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-				<svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
-					<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"></path>
-				</svg>
+				@searchIcon()
 			</div>
 			<input
 				type="search"
@@ -53,7 +70,7 @@ templ MusicSearch(tracks []spotify_api.TrackSearch, albums []spotify_api.AlbumSe
 			</h2>
 			<div class="divide-y divide-zinc-600 bg-blue-800 rounded-lg">
 				for _, t := range tracks {
-					@TrackItem(t.Name, ArtistsListString(20, t.ArtistList))
+					@TrackItem(t)
 				}
 			</div>
 		</div>
@@ -64,9 +81,8 @@ templ MusicSearch(tracks []spotify_api.TrackSearch, albums []spotify_api.AlbumSe
 			</h2>
 			<div class="bg-green-800 rounded-lg">
 				for _, a := range albums {
-					@AlbumItem(a.Name, ArtistsListString(20, a.ArtistList))
+					@AlbumItem(a)
 				}
-				//@AlbumItem("6 Months Later", "Megan Moroney")
 			</div>
 		</div>
 		<!-- Artists Column -->
@@ -76,9 +92,8 @@ templ MusicSearch(tracks []spotify_api.TrackSearch, albums []spotify_api.AlbumSe
 			</h2>
 			<div class="bg-purple-800 rounded-lg">
 				for _, a := range artists {
-					@ArtistItem(a.Name)
+					@ArtistItem(a)
 				}
-				//@ArtistItem("All over me", "HAIM")
 			</div>
 		</div>
 		<!-- Playlists Column -->
@@ -90,35 +105,98 @@ templ MusicSearch(tracks []spotify_api.TrackSearch, albums []spotify_api.AlbumSe
 				for _, p := range playlists {
 					@PlaylistItem(p.Name)
 				}
-				//@PlaylistItem("Not Like That Anymore", "Lola Young")
 			</div>
 		</div>
 	</div>
 }
 
-templ TrackItem(title, artist string) {
+templ TrackItem(t spotify_api.TrackSearch) {
 	<div class="flex items-center space-x-3 p-4 hover:bg-slate-700 transition-colors group cursor-pointer first:rounded-t-lg last:rounded-b-lg">
 		<div class="flex-1 min-w-0">
-			<p class="text-white font-medium truncate">{ title }</p>
-			<p class="text-gray-400 text-sm truncate">{ artist }</p>
+			<p class="text-white font-medium truncate">{ t.Name }</p>
+			<p class="text-gray-400 text-sm truncate">{ TruncateAndJoin(100, t.ArtistList) }</p>
 		</div>
+		<button
+			class="text-gray-400 hover:text-green-400 hover:scale-110 transition-all duration-200 p-1"
+			hx-post="todo"
+		>
+			@addIcon()
+		</button>
+		<button
+			class="text-gray-400 hover:text-white hover:scale-110 transition-all duration-200 p-1"
+			hx-post="todo"
+		>
+			@playIcon()
+		</button>
+		<button
+			class="text-gray-400 hover:text-white hover:scale-110 transition-all duration-200 p-1"
+			hx-post="todo"
+		>
+			@searchIcon()
+		</button>
 	</div>
 }
 
-templ AlbumItem(title, artist string) {
+templ AlbumItem(a spotify_api.AlbumSearch) {
 	<div class="flex items-center space-x-3 p-4 hover:bg-slate-700 transition-colors group cursor-pointer first:rounded-t-lg last:rounded-b-lg border-b border-slate-600 last:border-b-0">
+		<img
+			src={ a.ImageUrl }
+			alt={ a.Name }
+			class="w-12 h-12 rounded object-cover flex-shrink-0"
+		/>
 		<div class="flex-1 min-w-0">
-			<p class="text-white font-medium truncate">{ title }</p>
-			<p class="text-gray-400 text-sm truncate">{ artist }</p>
+			<p class="text-white font-medium truncate">{ a.Name }</p>
+			<p class="text-gray-400 text-sm truncate">{ TruncateAndJoin(100, a.ArtistList) }</p>
 		</div>
+		<button
+			class="text-gray-400 hover:text-green-400 hover:scale-110 transition-all duration-200 p-1"
+			hx-post="todo"
+		>
+			@addIcon()
+		</button>
+		<button
+			class="text-gray-400 hover:text-white hover:scale-110 transition-all duration-200 p-1"
+			hx-post="todo"
+		>
+			@playIcon()
+		</button>
+		<button
+			class="text-gray-400 hover:text-white hover:scale-110 transition-all duration-200 p-1"
+			hx-post="todo"
+		>
+			@searchIcon()
+		</button>
 	</div>
 }
 
-templ ArtistItem(title string) {
+templ ArtistItem(a spotify_api.ArtistSearch) {
 	<div class="flex items-center space-x-3 p-4 hover:bg-slate-700 transition-colors group cursor-pointer first:rounded-t-lg last:rounded-b-lg border-b border-slate-600 last:border-b-0">
+		<img
+			src={ a.ImageUrl }
+			alt={ a.Name }
+			class="w-12 h-12 rounded object-cover flex-shrink-0"
+		/>
 		<div class="flex-1 min-w-0">
-			<p class="text-white font-medium truncate">{ title }</p>
+			<p class="text-white font-medium truncate">{  a.Name }</p>
 		</div>
+		<button
+			class="text-gray-400 hover:text-green-400 hover:scale-110 transition-all duration-200 p-1"
+			hx-post="todo"
+		>
+			@addIcon()
+		</button>
+		<button
+			class="text-gray-400 hover:text-white hover:scale-110 transition-all duration-200 p-1"
+			hx-post="todo"
+		>
+			@playIcon()
+		</button>
+		<button
+			class="text-gray-400 hover:text-white hover:scale-110 transition-all duration-200 p-1"
+			hx-post="todo"
+		>
+			@searchIcon()
+		</button>
 	</div>
 }
 
@@ -127,6 +205,24 @@ templ PlaylistItem(title string) {
 		<div class="flex-1 min-w-0">
 			<p class="text-white font-medium truncate">{ title }</p>
 		</div>
+		<button
+			class="text-gray-400 hover:text-green-400 hover:scale-110 transition-all duration-200 p-1"
+			hx-post="todo"
+		>
+			@addIcon()
+		</button>
+		<button
+			class="text-gray-400 hover:text-white hover:scale-110 transition-all duration-200 p-1"
+			hx-post="todo"
+		>
+			@playIcon()
+		</button>
+		<button
+			class="text-gray-400 hover:text-white hover:scale-110 transition-all duration-200 p-1"
+			hx-post="todo"
+		>
+			@searchIcon()
+		</button>
 	</div>
 }
 
