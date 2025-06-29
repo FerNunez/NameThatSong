@@ -19,6 +19,10 @@ func NewGetSearchMusic(accessToken string, c cache.SpotifyCache) *GetSearchMusic
 	return &GetSearchMusic{accessToken, c}
 }
 func (h *GetSearchMusic) ServeHttp(w http.ResponseWriter, r *http.Request) {
+	// TODO: add as request/depending on front end?
+	numElems := 5
+	startIdx := 1
+
 	query := r.URL.Query().Get("search")
 	if query == "" {
 		// TODO: Should I change to Result?
@@ -93,6 +97,12 @@ func (h *GetSearchMusic) ServeHttp(w http.ResponseWriter, r *http.Request) {
 
 	}
 	fmt.Printf("got %v tracks, %v album, %v artist, %v playlist\n", len(trackList), len(albumList), len(artistList), len(playlistList))
-	component := templates.MusicSearch(trackList, albumList, artistList, playlistList)
+
+	slicedTrackList := trackList[min(startIdx, len(trackList)):min(len(trackList), numElems+startIdx)]
+	slicedAlbumList := albumList[0:min(len(albumList), numElems)]
+	slicedArtistList := artistList[0:min(len(artistList), numElems)]
+	slicedPlaylistList := playlistList[0:min(len(playlistList), numElems)]
+
+	component := templates.MusicSearch(slicedTrackList, slicedAlbumList, slicedArtistList, slicedPlaylistList)
 	component.Render(r.Context(), w)
 }
