@@ -2,17 +2,6 @@ package templates
 
 import "github.com/FerNunez/NameThatSong/internal/spotify_api"
 
-templ SearchLayout() {
-	<div class="text-white p-6 bg-slate-900 ">
-		<div id="search-input">
-			@SearchInput()
-		</div>
-		<div id="music-search">
-			@MusicSearch([]spotify_api.TrackSearch{}, []spotify_api.AlbumSearch{}, []spotify_api.ArtistSearch{}, []spotify_api.PlaylistSearch{})
-		</div>
-	</div>
-}
-
 templ playIcon() {
 	<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
 		<path d="M8 5v14l11-7z"></path>
@@ -30,6 +19,17 @@ templ searchIcon() {
 	<svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
 		<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"></path>
 	</svg>
+}
+
+templ SearchLayout() {
+	<div class="text-white p-6 bg-slate-900 ">
+		<div id="search-input">
+			@SearchInput()
+		</div>
+		<div id="music-search">
+			@MusicSearch([]spotify_api.TrackSearch{}, []spotify_api.AlbumSearch{}, []spotify_api.ArtistSearch{}, []spotify_api.PlaylistSearch{})
+		</div>
+	</div>
 }
 
 templ SearchInput() {
@@ -177,7 +177,7 @@ templ ArtistItem(a spotify_api.ArtistSearch) {
 			class="w-12 h-12 rounded object-cover flex-shrink-0"
 		/>
 		<div class="flex-1 min-w-0">
-			<p class="text-white font-medium truncate">{  a.Name }</p>
+			<p class="text-white font-medium truncate">{ a.Name }</p>
 		</div>
 		<button
 			class="text-gray-400 hover:text-green-400 hover:scale-110 transition-all duration-200 p-1"
