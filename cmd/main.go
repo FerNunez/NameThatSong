@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/base64"
 	"fmt"
 	"log"
@@ -8,18 +9,18 @@ import (
 	"os"
 	"time"
 
-	"database/sql"
+	"github.com/FerNunez/NameThatSong/internal/repository"
+	"github.com/FerNunez/NameThatSong/internal/repository/database"
 
-	"github.com/FerNunez/NameThatSong/internal/cache"
-	"github.com/FerNunez/NameThatSong/internal/crypto"
-	"github.com/FerNunez/NameThatSong/internal/handlers"
-	"github.com/FerNunez/NameThatSong/internal/manager"
-	"github.com/FerNunez/NameThatSong/internal/spotify_api"
-	"github.com/FerNunez/NameThatSong/internal/store"
-	"github.com/FerNunez/NameThatSong/internal/store/database"
+	"github.com/FerNunez/NameThatSong/internal/api/handlers"
+	"github.com/FerNunez/NameThatSong/internal/services/cache"
+	"github.com/FerNunez/NameThatSong/internal/services/game"
+	"github.com/FerNunez/NameThatSong/internal/services/spotify"
+
+	"github.com/FerNunez/NameThatSong/internal/pkg/utils"
 	"github.com/joho/godotenv"
 
-	m "github.com/FerNunez/NameThatSong/internal/middleware"
+	m "github.com/FerNunez/NameThatSong/internal/api/middleware"
 	"github.com/go-chi/chi/v5"
 	_ "github.com/lib/pq"
 )
@@ -40,7 +41,7 @@ func main() {
 		log.Fatalf("SPOTIFY_TOKEN_ENCRYPTION_KEY error %v", err)
 	}
 
-	tokenEncryptor, err := crypto.NewTokenEncryptor(key)
+	tokenEncryptor, err := utils.NewTokenEncryptor(key)
 	if err != nil {
 		log.Fatalf("Error creating token encrypto: %v", err)
 	}
@@ -56,9 +57,9 @@ func main() {
 		log.Fatalf("Error opening db: %v", err)
 	}
 	dbQueries := database.New(db)
-	userStore := store.NewSQLUserStore(dbQueries)
+	userStore := repository.NewSQLUserStore(dbQueries)
 
-	gm := manager.NewGameManager()
+	gm := game.NewGameManager()
 
 	// Create new router
 	r := chi.NewRouter()
@@ -106,8 +107,8 @@ func main() {
 	})
 
 	//spotifyCache := cache.NewSpotifyCacheMap()
-	songProvider := spotify_api.NewSpotifySongProvider("", "", "", "")
-	accessToken := "TODO"
+	songProvider := spotify.NewSpotifySongProvider("", "", "", "")
+	accessToken := "BQBwioRufaWQxtoe3lkUwq6DaFlsY8mzWdOW18zhx_-bk047G6Pi4Zhd19c_kHDwgTnbA2p0sy7znDirTqUicySw9v3r7a1FyuWkBphj9Enp1Tt-RV9z468nR3UZgMlxZga15EddZUAtlfnqhV-TfSbdt5zSd2CnQV_-PvhXvQIjO2JKNGuLRjPUnXh4bMKU1Tu5ZT9PZt2vkCwJHFF7Qja5Nifhdf1C6sSOdlf0J_PxCoabg8lMkT0zprhdMkQUHAZGFnU"
 	songProvider.AccessToken = accessToken
 
 	r.Get("/internal/spotifyapi", handlers.NewGetSpotifyApi().ServeHttp)

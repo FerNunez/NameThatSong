@@ -1,0 +1,23 @@
+package spotify
+
+// SpotifySongProvider implements the SongProvider interface for Spotify
+type SpotifySongProvider struct {
+	ClientID     string
+	ClientSecret string
+	RedirectURI  string
+	State        string
+	AccessToken  string
+	RefreshToken string
+}
+
+// NewSpotifySongProvider creates a new SpotifySongProvider
+func NewSpotifySongProvider(clientID, clientSecret string, redirectURI string, state string) *SpotifySongProvider {
+	return &SpotifySongProvider{
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		RedirectURI:  redirectURI,
+		State:        state,
+		AccessToken:  "",
+		RefreshToken: "",
+	}
+}
