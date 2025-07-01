@@ -32,10 +32,6 @@ type GameService struct {
 func NewGameService(clientID, clientSecret, redirectURI string, userId uuid.UUID, spotifyTokenStore repository.SpotifyTokenStore) (*GameService, error) {
 
 	// Generate a random state for OAuth
-	state, err := utils.GenerateState(16)
-	if err != nil {
-		return nil, fmt.Errorf("error generating state: %v", err)
-	}
 	// Create song provider
 	songProvider := spotify.NewSpotifySongProvider(clientID, clientSecret, redirectURI, state)
 	// Create music service client
