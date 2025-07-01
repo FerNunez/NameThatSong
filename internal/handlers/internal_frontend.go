@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/FerNunez/NameThatSong/internal/cache"
@@ -24,7 +25,7 @@ func (h *GetSearchMusic) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	startIdx := 1
 
 	query := r.URL.Query().Get("search")
-	if query == "" {
+	if query == "" || len(query) < 2 {
 		// TODO: Should I change to Result?
 		component := templates.MusicSearch([]spotify_api.TrackSearch{}, []spotify_api.AlbumSearch{}, []spotify_api.ArtistSearch{}, []spotify_api.PlaylistSearch{})
 		component.Render(r.Context(), w)
@@ -37,7 +38,11 @@ func (h *GetSearchMusic) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	errorsChan := make(chan error, 4)
 
 	go func() {
+		now := time.Now()
+		fmt.Println("execute duration start: ", now)
 		trackList, err := h.Cache.SearchTracks(h.accessToken, query)
+
+		fmt.Println("over: ", time.Since(now))
 		if err != nil {
 			errorsChan <- fmt.Errorf("track search error: %v", err)
 			tracksChan <- nil
@@ -94,8 +99,8 @@ func (h *GetSearchMusic) ServeHttp(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Search timeout", http.StatusGatewayTimeout)
 			return
 		}
-
 	}
+
 	fmt.Printf("got %v tracks, %v album, %v artist, %v playlist\n", len(trackList), len(albumList), len(artistList), len(playlistList))
 
 	slicedTrackList := trackList[min(startIdx, len(trackList)):min(len(trackList), numElems+startIdx)]
@@ -103,6 +108,31 @@ func (h *GetSearchMusic) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	slicedArtistList := artistList[0:min(len(artistList), numElems)]
 	slicedPlaylistList := playlistList[0:min(len(playlistList), numElems)]
 
+	sort.Slice(slicedTrackList, func(i, j int) bool {
+		return slicedTrackList[i].Popularity > slicedTrackList[j].Popularity
+	})
+
 	component := templates.MusicSearch(slicedTrackList, slicedAlbumList, slicedArtistList, slicedPlaylistList)
+	component.Render(r.Context(), w)
+
+}
+
+type GetStackMusic struct {
+	accessToken string
+	Cache       cache.SpotifyCache
+}
+
+func NewGetStackMusic(accessToken string, c cache.SpotifyCache) *GetStackMusic {
+	return &GetStackMusic{accessToken, c}
+}
+func (h *GetStackMusic) ServeHttp(w http.ResponseWriter, r *http.Request) {
+
+	query := "Example"
+	trackList, err := h.Cache.SearchTracks(h.accessToken, query)
+	if err != nil {
+		return
+	}
+
+	component := templates.StackMusic(trackList)
 	component.Render(r.Context(), w)
 }
