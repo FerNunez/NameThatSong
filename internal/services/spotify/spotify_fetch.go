@@ -6,62 +6,28 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+
+	m "github.com/FerNunez/NameThatSong/internal/models"
 )
 
-type TrackData struct {
-	DiscNumber  int
-	DurationMs  int
-	ID          string
-	Name        string
-	TrackNumber int
-	Popularity  int
-	Explicit    bool
-}
-
-type AlbumData struct {
-	AlbumType   string
-	TotalTracks int
-	ID          string
-	ImagesURL   string
-	Name        string
-	ReleaseDate string
-}
-
-type ArtistData struct {
-	Id         string
-	Name       string
-	ImageUrl   string
-	Popularity int
-}
-
-type PlaylistData struct {
-	Description    string
-	FollowersTotal int
-	ID             string
-	ImageUrl       string
-	Name           string
-	Public         bool
-	TotalTracks    int
-}
-
-func FetchTrack(accessToken, trackId string) (TrackData, error) {
+func FetchTrack(accessToken, trackId string) (m.TrackData, error) {
 	fmt.Println("[SpotifySongProvider] FetchTrack: trackId:", trackId)
 	requestURL := fmt.Sprintf("https://api.spotify.com/v1/tracks/%s", trackId)
 	req, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
-		return TrackData{}, err
+		return m.TrackData{}, err
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 
 	client := http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return TrackData{}, err
+		return m.TrackData{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return TrackData{}, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
+		return m.TrackData{}, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
 	}
 
 	type FetchTrackResponse struct {
@@ -128,10 +94,10 @@ func FetchTrack(accessToken, trackId string) (TrackData, error) {
 
 	var fetchTrackResponse FetchTrackResponse
 	if err := json.NewDecoder(resp.Body).Decode(&fetchTrackResponse); err != nil {
-		return TrackData{}, err
+		return m.TrackData{}, err
 	}
 
-	return TrackData{
+	return m.TrackData{
 		DiscNumber:  fetchTrackResponse.DiscNumber,
 		DurationMs:  fetchTrackResponse.DurationMs,
 		ID:          trackId,
@@ -143,23 +109,23 @@ func FetchTrack(accessToken, trackId string) (TrackData, error) {
 }
 
 // Fetch album by ID: retireves all tracks of the album too
-func FetchAlbum(accessToken, albumId string) (AlbumData, []TrackData, error) {
+func FetchAlbum(accessToken, albumId string) (m.AlbumData, []m.TrackData, error) {
 	requestURL := fmt.Sprintf("https://api.spotify.com/v1/albums/%s", albumId)
 	req, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
-		return AlbumData{}, []TrackData{}, err
+		return m.AlbumData{}, []m.TrackData{}, err
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 
 	client := http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return AlbumData{}, []TrackData{}, err
+		return m.AlbumData{}, []m.TrackData{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return AlbumData{}, []TrackData{}, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
+		return m.AlbumData{}, []m.TrackData{}, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
 
 	}
 
@@ -241,7 +207,7 @@ func FetchAlbum(accessToken, albumId string) (AlbumData, []TrackData, error) {
 
 	var fetchAlbumResponse FetchAlbumResponse
 	if err := json.NewDecoder(resp.Body).Decode(&fetchAlbumResponse); err != nil {
-		return AlbumData{}, []TrackData{}, err
+		return m.AlbumData{}, []m.TrackData{}, err
 	}
 
 	imageUrl := ""
@@ -249,9 +215,9 @@ func FetchAlbum(accessToken, albumId string) (AlbumData, []TrackData, error) {
 		imageUrl = fetchAlbumResponse.Images[len(fetchAlbumResponse.Images)-1].URL
 	}
 
-	tracks := make([]TrackData, len(fetchAlbumResponse.Tracks.Items))
+	tracks := make([]m.TrackData, len(fetchAlbumResponse.Tracks.Items))
 	for idx, track := range fetchAlbumResponse.Tracks.Items {
-		tracks[idx] = TrackData{
+		tracks[idx] = m.TrackData{
 			DiscNumber:  track.DiscNumber,
 			DurationMs:  track.DurationMs,
 			ID:          track.ID,
@@ -260,7 +226,7 @@ func FetchAlbum(accessToken, albumId string) (AlbumData, []TrackData, error) {
 		}
 	}
 
-	return AlbumData{
+	return m.AlbumData{
 		AlbumType:   fetchAlbumResponse.AlbumType,
 		TotalTracks: fetchAlbumResponse.TotalTracks,
 		ID:          albumId,
@@ -270,24 +236,24 @@ func FetchAlbum(accessToken, albumId string) (AlbumData, []TrackData, error) {
 	}, tracks, nil
 }
 
-func FetchArtist(accessToken, artistId string) (ArtistData, error) {
+func FetchArtist(accessToken, artistId string) (m.ArtistData, error) {
 
 	requestURL := fmt.Sprintf("https://api.spotify.com/v1/artists/%s", artistId)
 	req, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
-		return ArtistData{}, err
+		return m.ArtistData{}, err
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 
 	client := http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return ArtistData{}, err
+		return m.ArtistData{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return ArtistData{}, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
+		return m.ArtistData{}, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
 
 	}
 
@@ -315,7 +281,7 @@ func FetchArtist(accessToken, artistId string) (ArtistData, error) {
 
 	var fetchArtistResponse FetchArtistResponse
 	if err := json.NewDecoder(resp.Body).Decode(&fetchArtistResponse); err != nil {
-		return ArtistData{}, err
+		return m.ArtistData{}, err
 	}
 
 	imageUrl := ""
@@ -323,7 +289,7 @@ func FetchArtist(accessToken, artistId string) (ArtistData, error) {
 		imageUrl = fetchArtistResponse.Images[len(fetchArtistResponse.Images)-1].URL
 	}
 
-	return ArtistData{
+	return m.ArtistData{
 		Id:         artistId,
 		Name:       fetchArtistResponse.Name,
 		ImageUrl:   imageUrl,
@@ -331,12 +297,12 @@ func FetchArtist(accessToken, artistId string) (ArtistData, error) {
 	}, nil
 }
 
-func FetchPlaylist(accessToken, playlistId string) (PlaylistData, []TrackData, error) {
+func FetchPlaylist(accessToken, playlistId string) (m.PlaylistData, []m.TrackData, error) {
 
 	baseURL := "https://api.spotify.com/v1/playlists/" + playlistId
 	u, err := url.Parse(baseURL)
 	if err != nil {
-		return PlaylistData{}, []TrackData{}, err
+		return m.PlaylistData{}, []m.TrackData{}, err
 	}
 	q := u.Query()
 	q.Set("fields", "id,name,description,public,followers(total),images(url),tracks(items(track(id,name,preview_url,external_urls(spotify),album(name,images(url)))))")
@@ -345,19 +311,19 @@ func FetchPlaylist(accessToken, playlistId string) (PlaylistData, []TrackData, e
 
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
-		return PlaylistData{}, []TrackData{}, err
+		return m.PlaylistData{}, []m.TrackData{}, err
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 
 	client := http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return PlaylistData{}, []TrackData{}, err
+		return m.PlaylistData{}, []m.TrackData{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return PlaylistData{}, []TrackData{}, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
+		return m.PlaylistData{}, []m.TrackData{}, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
 	}
 
 	type FetchPlaylistResponse struct {
@@ -425,7 +391,7 @@ func FetchPlaylist(accessToken, playlistId string) (PlaylistData, []TrackData, e
 
 	var fetchPlaylistResponse FetchPlaylistResponse
 	if err := json.NewDecoder(resp.Body).Decode(&fetchPlaylistResponse); err != nil {
-		return PlaylistData{}, []TrackData{}, err
+		return m.PlaylistData{}, []m.TrackData{}, err
 	}
 
 	imageUrl := ""
@@ -433,11 +399,11 @@ func FetchPlaylist(accessToken, playlistId string) (PlaylistData, []TrackData, e
 		imageUrl = fetchPlaylistResponse.Images[len(fetchPlaylistResponse.Images)-1].URL
 	}
 
-	tracks := make([]TrackData, len(fetchPlaylistResponse.Tracks.Items))
+	tracks := make([]m.TrackData, len(fetchPlaylistResponse.Tracks.Items))
 	tracksIds := make([]string, len(fetchPlaylistResponse.Tracks.Items))
 	for idx, track := range fetchPlaylistResponse.Tracks.Items {
 		tracksIds[idx] = track.Track.ID
-		tracks[idx] = TrackData{
+		tracks[idx] = m.TrackData{
 			DiscNumber:  track.Track.DiscNumber,
 			DurationMs:  track.Track.DurationMs,
 			ID:          track.Track.ID,
@@ -446,7 +412,7 @@ func FetchPlaylist(accessToken, playlistId string) (PlaylistData, []TrackData, e
 		}
 	}
 
-	return PlaylistData{
+	return m.PlaylistData{
 		Description:    fetchPlaylistResponse.Description,
 		FollowersTotal: fetchPlaylistResponse.Followers.Total,
 		ID:             playlistId,
@@ -652,7 +618,7 @@ func FetchTracksFromPlaylist(accessToken, playlistId string) ([]string, error) {
 }
 
 // ////////////////////
-// func  FetchAlbumByArtistID(accesToken, artistId string) ([]AlbumData, error) {
+// func  FetchAlbumByArtistID(accesToken, artistId string) ([]m.AlbumData, error) {
 //
 // 	limit := 50
 // 	include_groups := "album"
@@ -721,7 +687,7 @@ func FetchTracksFromPlaylist(accessToken, playlistId string) ([]string, error) {
 // 		return nil, err
 // 	}
 //
-// 	AlbumList := make([]AlbumData, 0, len(albumsResponse.Items))
+// 	AlbumList := make([]m.AlbumData, 0, len(albumsResponse.Items))
 // 	for _, item := range albumsResponse.Items {
 // 		if item.AlbumType != "album" {
 // 			continue
@@ -730,7 +696,7 @@ func FetchTracksFromPlaylist(accessToken, playlistId string) ([]string, error) {
 // 			panic("spotify response of album with no images")
 // 		}
 //
-// 		album := AlbumData{
+// 		album := m.AlbumData{
 // 			AlbumType:   item.AlbumType,
 // 			TotalTracks: item.TotalTracks,
 // 			ID:          item.ID,
@@ -747,7 +713,7 @@ func FetchTracksFromPlaylist(accessToken, playlistId string) ([]string, error) {
 // // id= 4aawyAB9vmqN3uQ7FjRGTy
 // // limit =50
 // // fetch artists by ID:
-// func  FetchTracksByAlbumID(accessToken, albumId string) ([]TrackData, error) {
+// func  FetchTracksByAlbumID(accessToken, albumId string) ([]m.TrackData, error) {
 // 	limit := 50
 // 	requestURL := fmt.Sprintf("https://api.spotify.com/v1/albums/%s/tracks?limit=%d", albumId, limit)
 // 	req, err := http.NewRequest("GET", requestURL, nil)
@@ -810,10 +776,10 @@ func FetchTracksFromPlaylist(accessToken, playlistId string) ([]string, error) {
 // 		return nil, err
 // 	}
 //
-// 	trackList := make([]TrackData, 0, len(tracksResponse.Items))
+// 	trackList := make([]m.TrackData, 0, len(tracksResponse.Items))
 // 	for _, item := range tracksResponse.Items {
 //
-// 		track := TrackData{
+// 		track := m.TrackData{
 // 			DiscNumber:  item.DiscNumber,
 // 			DurationMs:  item.DurationMs,
 // 			ID:          item.ID,
@@ -826,12 +792,12 @@ func FetchTracksFromPlaylist(accessToken, playlistId string) ([]string, error) {
 // }
 //
 // // Creates an album with the top tracks of an artist
-// func  CreateTopTracksAlbum(accessToken, artistId string) (AlbumData, []TrackData, error) {
+// func  CreateTopTracksAlbum(accessToken, artistId string) (m.AlbumData, []m.TrackData, error) {
 //
 // 	requestURL := fmt.Sprintf("https://api.spotify.com/v1/artists/%v/top-tracks", artistId)
 // 	req, err := http.NewRequest("GET", requestURL, nil)
 // 	if err != nil {
-// 		return AlbumData{}, nil, err
+// 		return m.AlbumData{}, nil, err
 // 	}
 //
 // 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
@@ -839,12 +805,12 @@ func FetchTracksFromPlaylist(accessToken, playlistId string) ([]string, error) {
 // 	client := http.Client{}
 // 	resp, err := client.Do(req)
 // 	if err != nil {
-// 		return AlbumData{}, nil, err
+// 		return m.AlbumData{}, nil, err
 // 	}
 // 	defer resp.Body.Close()
 //
 // 	if resp.StatusCode != http.StatusOK {
-// 		return AlbumData{}, nil, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
+// 		return m.AlbumData{}, nil, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
 //
 // 	}
 //
@@ -916,13 +882,13 @@ func FetchTracksFromPlaylist(accessToken, playlistId string) ([]string, error) {
 //
 // 	var tt TopTracks
 // 	if err := json.NewDecoder(resp.Body).Decode(&tt); err != nil {
-// 		return AlbumData{}, nil, err
+// 		return m.AlbumData{}, nil, err
 // 	}
 //
-// 	trackList := make([]TrackData, 0, len(tt.Tracks))
+// 	trackList := make([]m.TrackData, 0, len(tt.Tracks))
 // 	for _, item := range tt.Tracks {
 //
-// 		track := TrackData{
+// 		track := m.TrackData{
 // 			DiscNumber:  item.DiscNumber,
 // 			DurationMs:  item.DurationMs,
 // 			ID:          item.ID,
@@ -933,7 +899,7 @@ func FetchTracksFromPlaylist(accessToken, playlistId string) ([]string, error) {
 // 	}
 //
 // 	fakeID := "topTracks" + artistId
-// 	album := AlbumData{
+// 	album := m.AlbumData{
 // 		AlbumType:   "TopTracks",
 // 		TotalTracks: len(trackList),
 // 		ID:          fakeID,

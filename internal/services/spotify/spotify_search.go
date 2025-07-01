@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	m "github.com/FerNunez/NameThatSong/internal/models"
 )
 
 func search(accessToken, limit, atype, query string) ([]byte, error) {
@@ -45,33 +47,7 @@ func search(accessToken, limit, atype, query string) ([]byte, error) {
 	return data, nil
 }
 
-type TrackSearch struct {
-	Name       string
-	Id         string
-	Popularity int
-	ArtistList []string
-}
-
-type AlbumSearch struct {
-	Name       string
-	Id         string
-	ImageUrl   string
-	ArtistList []string
-}
-type ArtistSearch struct {
-	Name       string
-	Id         string
-	ImageUrl   string
-	Popularity int
-}
-
-type PlaylistSearch struct {
-	Name     string
-	Id       string
-	ImageUrl string
-}
-
-func SearchTracksByName(accessToken, name string) ([]TrackSearch, error) {
+func SearchTracksByName(accessToken, name string) ([]m.TrackSearch, error) {
 	limit := "50"
 
 	data, err := search(accessToken, limit, "track", name)
@@ -158,7 +134,7 @@ func SearchTracksByName(accessToken, name string) ([]TrackSearch, error) {
 	}
 
 	// Convert to trackInfo
-	tracks := make([]TrackSearch, 0, len(searchTrackResponse.Tracks.Items))
+	tracks := make([]m.TrackSearch, 0, len(searchTrackResponse.Tracks.Items))
 	for _, t := range searchTrackResponse.Tracks.Items {
 
 		artists := make([]string, len(t.Artists))
@@ -166,7 +142,7 @@ func SearchTracksByName(accessToken, name string) ([]TrackSearch, error) {
 			artists[idx] = a.Name
 		}
 
-		trackInfo := TrackSearch{
+		trackInfo := m.TrackSearch{
 			Id:         t.ID,
 			Name:       t.Name,
 			Popularity: t.Popularity,
@@ -177,7 +153,7 @@ func SearchTracksByName(accessToken, name string) ([]TrackSearch, error) {
 	return tracks, nil
 }
 
-func SearchAlbumsByName(accessToken, name string) ([]AlbumSearch, error) {
+func SearchAlbumsByName(accessToken, name string) ([]m.AlbumSearch, error) {
 	limit := "50"
 
 	data, err := search(accessToken, limit, "album", name)
@@ -230,7 +206,7 @@ func SearchAlbumsByName(accessToken, name string) ([]AlbumSearch, error) {
 		return nil, err
 	}
 
-	albums := make([]AlbumSearch, len(searchAlbumResponse.Albums.Items))
+	albums := make([]m.AlbumSearch, len(searchAlbumResponse.Albums.Items))
 	for idx, alb := range searchAlbumResponse.Albums.Items {
 
 		artists := make([]string, len(alb.Artists))
@@ -243,7 +219,7 @@ func SearchAlbumsByName(accessToken, name string) ([]AlbumSearch, error) {
 			imageUrl = alb.Images[0].URL
 		}
 
-		albums[idx] = AlbumSearch{
+		albums[idx] = m.AlbumSearch{
 			Id:         alb.ID,
 			ImageUrl:   imageUrl,
 			Name:       alb.Name,
@@ -253,7 +229,7 @@ func SearchAlbumsByName(accessToken, name string) ([]AlbumSearch, error) {
 	return albums, nil
 }
 
-func SearchArtistsByName(accessToken, name string) ([]ArtistSearch, error) {
+func SearchArtistsByName(accessToken, name string) ([]m.ArtistSearch, error) {
 	limit := "50"
 
 	data, err := search(accessToken, limit, "artist", name)
@@ -281,7 +257,7 @@ func SearchArtistsByName(accessToken, name string) ([]ArtistSearch, error) {
 	}
 
 	// Convert to ArtistInfo
-	artists := make([]ArtistSearch, 0, len(searchArtistResponse.Artists.Items))
+	artists := make([]m.ArtistSearch, 0, len(searchArtistResponse.Artists.Items))
 	for _, a := range searchArtistResponse.Artists.Items {
 
 		// TODO: add here and temp url???
@@ -289,7 +265,7 @@ func SearchArtistsByName(accessToken, name string) ([]ArtistSearch, error) {
 		if len(a.Images) > 0 {
 			imageUrl = a.Images[0].URL
 		}
-		artistInfo := ArtistSearch{
+		artistInfo := m.ArtistSearch{
 			Id:         a.ID,
 			Name:       a.Name,
 			ImageUrl:   imageUrl,
@@ -300,7 +276,7 @@ func SearchArtistsByName(accessToken, name string) ([]ArtistSearch, error) {
 	return artists, nil
 }
 
-func SearchPlaylistsByName(accessToken, name string) ([]PlaylistSearch, error) {
+func SearchPlaylistsByName(accessToken, name string) ([]m.PlaylistSearch, error) {
 	limit := "50"
 	data, err := search(accessToken, limit, "playlist", name)
 	if err != nil {
@@ -357,7 +333,7 @@ func SearchPlaylistsByName(accessToken, name string) ([]PlaylistSearch, error) {
 		return nil, err
 	}
 
-	playlists := make([]PlaylistSearch, 0, len(searchPlaylistResponse.Playlists.Items))
+	playlists := make([]m.PlaylistSearch, 0, len(searchPlaylistResponse.Playlists.Items))
 	for _, p := range searchPlaylistResponse.Playlists.Items {
 
 		if p == nil {
@@ -369,7 +345,7 @@ func SearchPlaylistsByName(accessToken, name string) ([]PlaylistSearch, error) {
 			imageUrl = p.Images[0].URL
 		}
 
-		playlists = append(playlists, PlaylistSearch{
+		playlists = append(playlists, m.PlaylistSearch{
 			Id:       p.ID,
 			ImageUrl: imageUrl,
 			Name:     p.Name,

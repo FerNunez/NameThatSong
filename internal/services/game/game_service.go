@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	m "github.com/FerNunez/NameThatSong/internal/models"
 	"github.com/FerNunez/NameThatSong/internal/repository"
 	"github.com/FerNunez/NameThatSong/internal/services/cache"
 	"github.com/FerNunez/NameThatSong/internal/services/spotify"
@@ -87,11 +88,11 @@ func (s *GameService) GetSelectedAlbums() []string {
 	return albums
 }
 
-func (s GameService) SearchArtists(ctx context.Context, artist string) ([]spotify.ArtistData, error) {
+func (s GameService) SearchArtists(ctx context.Context, artist string) ([]m.ArtistData, error) {
 
 	err := s.EnsureAccessToken(ctx)
 	if err != nil {
-		return []spotify.ArtistData{}, fmt.Errorf("No token spotify available")
+		return []m.ArtistData{}, fmt.Errorf("No token spotify available")
 	}
 
 	// artists, err := s.Cache.GetArtistsByName(s.SpotifyApi, artist)
@@ -101,27 +102,27 @@ func (s GameService) SearchArtists(ctx context.Context, artist string) ([]spotif
 	// // }
 	// return artists, err
 
-	return []spotify.ArtistData{}, fmt.Errorf("No token spotify available")
+	return []m.ArtistData{}, fmt.Errorf("No token spotify available")
 }
 
-func (s GameService) GetArtistsAlbum(ctx context.Context, artistId string) ([]spotify.AlbumData, error) {
+func (s GameService) GetArtistsAlbum(ctx context.Context, artistId string) ([]m.AlbumData, error) {
 
 	err := s.EnsureAccessToken(ctx)
 	if err != nil {
-		return []spotify.AlbumData{}, fmt.Errorf("No token spotify available")
+		return []m.AlbumData{}, fmt.Errorf("No token spotify available")
 	}
 
 	// return s.Cache.GetArtistsAlbum(s.SpotifyApi, s.SpotifyToken.AccessToken, artistId)
-	return []spotify.AlbumData{}, fmt.Errorf("No token spotify available")
+	return []m.AlbumData{}, fmt.Errorf("No token spotify available")
 }
 
-func (s GameService) GetAlbumTracks(ctx context.Context, albumId string) ([]spotify.TrackData, error) {
+func (s GameService) GetAlbumTracks(ctx context.Context, albumId string) ([]m.TrackData, error) {
 	err := s.EnsureAccessToken(ctx)
 	if err != nil {
-		return []spotify.TrackData{}, fmt.Errorf("No token spotify available")
+		return []m.TrackData{}, fmt.Errorf("No token spotify available")
 	}
 	// return s.Cache.GetAlbumTracks(s.SpotifyApi, s.SpotifyToken.AccessToken, albumId)
-	return []spotify.TrackData{}, fmt.Errorf("No token spotify available")
+	return []m.TrackData{}, fmt.Errorf("No token spotify available")
 }
 
 // StartGame prepares the game with selected albums
@@ -253,6 +254,7 @@ func (s *GameService) RequestUserAuthoritazion() (string, error) {
 }
 
 func (s *GameService) ExchangeToken(ctx context.Context, state, code string) error {
+	fmt.Println("Hello!")
 	if code == "" || state == "" {
 		return fmt.Errorf("Error guetting code and state from spotify api")
 	}

@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"sort"
 
+	m "github.com/FerNunez/NameThatSong/internal/models"
+
 	"github.com/FerNunez/NameThatSong/internal/services/game"
-	"github.com/FerNunez/NameThatSong/internal/services/spotify"
 	"github.com/FerNunez/NameThatSong/web/templates"
 )
 
@@ -28,7 +29,7 @@ func (h *GetSearchArtists) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("search")
 	if query == "" {
 		// Return empty results component
-		component := templates.SearchResults([]spotify.ArtistData{})
+		component := templates.SearchResults([]m.ArtistData{})
 		component.Render(r.Context(), w)
 		return
 	}
@@ -36,7 +37,7 @@ func (h *GetSearchArtists) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	artists, err := game.SearchArtists(r.Context(), query)
 	if err != nil || len(artists) == 0 {
 		// TODO: SEND ERROR TO REQUEST
-		component := templates.SearchResults([]spotify.ArtistData{})
+		component := templates.SearchResults([]m.ArtistData{})
 		component.Render(r.Context(), w)
 		return
 	}

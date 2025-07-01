@@ -1,16 +1,16 @@
 package cache
 
 import (
-	"github.com/FerNunez/NameThatSong/internal/services/spotify"
+	m "github.com/FerNunez/NameThatSong/internal/models"
 )
 
 type SpotifyCache interface {
 
 	// kind of internal
-	GetTrack(accessToken, trackId string) (spotify.TrackData, error)
-	GetAlbum(accessToken, albumId string) (spotify.AlbumData, error)
-	GetArtist(accessToken, artistId string) (spotify.ArtistData, error)
-	GetPlaylist(accessToken, playlistId string) (spotify.PlaylistData, error)
+	GetTrack(accessToken, trackId string) (m.TrackData, error)
+	GetAlbum(accessToken, albumId string) (m.AlbumData, error)
+	GetArtist(accessToken, artistId string) (m.ArtistData, error)
+	GetPlaylist(accessToken, playlistId string) (m.PlaylistData, error)
 
 	// Get realtions
 	GetAlbumsFromArtist(accessToken, artistId string) ([]string, error)
@@ -18,8 +18,8 @@ type SpotifyCache interface {
 	GetTracksFromPlaylist(accessToken, playlistId string) ([]string, error)
 
 	// Search
-	SearchTracks(accessToken, query string) ([]spotify.TrackSearch, error)
-	SearchAlbums(accessToken, query string) ([]spotify.AlbumSearch, error)
-	SearchArtists(accessToken, query string) ([]spotify.ArtistSearch, error)
-	SearchPlaylists(accessToken, query string) ([]spotify.PlaylistSearch, error)
+	SearchTracks(accessToken, query string) ([]m.TrackSearch, error)
+	SearchAlbums(accessToken, query string) ([]m.AlbumSearch, error)
+	SearchArtists(accessToken, query string) ([]m.ArtistSearch, error)
+	SearchPlaylists(accessToken, query string) ([]m.PlaylistSearch, error)
 }

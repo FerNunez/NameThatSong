@@ -1,6 +1,6 @@
 package templates
 
-import "github.com/FerNunez/NameThatSong/internal/services/spotify"
+import m "github.com/FerNunez/NameThatSong/internal/models"
 
 templ playIcon() {
 	<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -27,15 +27,15 @@ templ SearchLayout() {
 			@SearchInput()
 		</div>
 		<div id="music-search" class="p-3 bg-slate-900">
-			@MusicSearch([]spotify.TrackSearch{}, []spotify.AlbumSearch{}, []spotify.ArtistSearch{}, []spotify.PlaylistSearch{})
+			@MusicSearch([]m.TrackSearch{}, []m.AlbumSearch{}, []m.ArtistSearch{}, []m.PlaylistSearch{})
 		</div>
 		<div id="music-stack" class="p-3 bg-slate-900">
-			@StackMusic([]spotify.TrackSearch{})
+			@StackMusic([]m.TrackSearch{})
 		</div>
 	</div>
 }
 
-templ StackMusic(tracks []spotify.TrackSearch) {
+templ StackMusic(tracks []m.TrackSearch) {
 	<div class="w-full xl:w-1/4 lg:w-1/2 px-2 mb-8">
 		<h2 class="text-xl font-semibold text-white mb-2 flex items-center">
 			Your Stack
@@ -76,7 +76,7 @@ templ SearchInput() {
 	</form>
 }
 
-templ MusicSearch(tracks []spotify.TrackSearch, albums []spotify.AlbumSearch, artists []spotify.ArtistSearch, playlists []spotify.PlaylistSearch) {
+templ MusicSearch(tracks []m.TrackSearch, albums []m.AlbumSearch, artists []m.ArtistSearch, playlists []m.PlaylistSearch) {
 	<!-- Force 4 columns with explicit widths -->
 	<div class="flex flex-wrap  max-w-9/10 mx-auto">
 		<!-- Tracks Column -->
@@ -126,7 +126,7 @@ templ MusicSearch(tracks []spotify.TrackSearch, albums []spotify.AlbumSearch, ar
 	</div>
 }
 
-templ TrackItem(t spotify.TrackSearch) {
+templ TrackItem(t m.TrackSearch) {
 	<div class="flex items-center space-x-3 p-4 hover:bg-slate-700 transition-colors group cursor-pointer first:rounded-t-lg last:rounded-b-lg">
 		<div class="flex-1 min-w-0">
 			<p class="text-white font-medium truncate">{ t.Name }</p>
@@ -155,7 +155,7 @@ templ TrackItem(t spotify.TrackSearch) {
 	</div>
 }
 
-templ AlbumItem(a spotify.AlbumSearch) {
+templ AlbumItem(a m.AlbumSearch) {
 	<div class="flex items-center space-x-3 p-4 hover:bg-slate-700 transition-colors group cursor-pointer first:rounded-t-lg last:rounded-b-lg border-b border-slate-600 last:border-b-0">
 		<img
 			src={ a.ImageUrl }
@@ -187,7 +187,7 @@ templ AlbumItem(a spotify.AlbumSearch) {
 	</div>
 }
 
-templ ArtistItem(a spotify.ArtistSearch) {
+templ ArtistItem(a m.ArtistSearch) {
 	<div class="flex items-center space-x-3 p-4 hover:bg-slate-700 transition-colors group cursor-pointer first:rounded-t-lg last:rounded-b-lg border-b border-slate-600 last:border-b-0">
 		<img
 			src={ a.ImageUrl }
@@ -245,7 +245,7 @@ templ PlaylistItem(title string) {
 }
 
 ///
-templ SearchInput2(spotifyConnected bool) {
+templ SearchInput2(mConnected bool) {
 	<div class="relative">
 		<form class="max-w-md mx-auto">
 			<div class="relative overflow-hidden">
@@ -268,7 +268,7 @@ templ SearchInput2(spotifyConnected bool) {
 				/>
 				<input type="hidden" name="artist-id"/>
 				<div class="absolute end-2.5 bottom-2.5 flex gap-2">
-					if !spotifyConnected {
+					if !mConnected {
 						<button
 							type="submit"
 							hx-get="/spotify-auth"
@@ -328,7 +328,7 @@ templ SearchInput2(spotifyConnected bool) {
 	</script>
 }
 
-templ SearchResults(results []spotify.ArtistData) {
+templ SearchResults(results []m.ArtistData) {
 	<div class="search-results-list">
 		for _, result := range results {
 			<div
@@ -343,7 +343,7 @@ templ SearchResults(results []spotify.ArtistData) {
 }
 
 // AlbumDropdown is the new dropdown component for albums
-templ AlbumDropdown(albums []spotify.AlbumData, selectedAlbums map[string]bool, artistId string) {
+templ AlbumDropdown(albums []m.AlbumData, selectedAlbums map[string]bool, artistId string) {
 	<div class="relative">
 		<div class="album-dropdown-inner overflow-hidden bg-gray-900 p-4 rounded-lg shadow-lg">
 			<h2 class="text-white text-lg font-bold mb-3">Select albums</h2>
@@ -520,14 +520,14 @@ templ AlbumDropdown(albums []spotify.AlbumData, selectedAlbums map[string]bool, 
 }
 
 // AlbumBatch renders a batch of albums
-templ AlbumBatch(albums []spotify.AlbumData, start, end int, selectedAlbums map[string]bool, artistId string) {
+templ AlbumBatch(albums []m.AlbumData, start, end int, selectedAlbums map[string]bool, artistId string) {
 	for _, album := range albums {
 		{{ _, selected := selectedAlbums[album.ID] }}
 		@AlbumCard(album, selected, artistId)
 	}
 }
 
-templ AlbumCard(album spotify.AlbumData, selected bool, artistId string) {
+templ AlbumCard(album m.AlbumData, selected bool, artistId string) {
 	{{ class_selected := "album-card block bg-white border border-gray-200 rounded-lg shadow-md hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 flex-shrink-0 mx-3 my-2 transition-all duration-200 transform hover:scale-105" }}
 	if selected {
 		{{ class_selected = "album-card block bg-white border-2 border-green-500 rounded-lg shadow-md hover:bg-gray-100 dark:bg-gray-700 dark:border-green-500 dark:hover:bg-gray-700 flex-shrink-0 mx-3 my-2 transition-all duration-200 transform hover:scale-105" }}

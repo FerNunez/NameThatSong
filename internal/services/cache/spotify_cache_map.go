@@ -3,15 +3,16 @@ package cache
 import (
 	"fmt"
 
+	m "github.com/FerNunez/NameThatSong/internal/models"
 	"github.com/FerNunez/NameThatSong/internal/services/spotify"
 )
 
 type SpotifyCacheMap struct {
 	// Core informations
-	ArtistMap   map[string]spotify.ArtistData
-	AlbumMap    map[string]spotify.AlbumData
-	TrackMap    map[string]spotify.TrackData
-	PlaylistMap map[string]spotify.PlaylistData
+	ArtistMap   map[string]m.ArtistData
+	AlbumMap    map[string]m.AlbumData
+	TrackMap    map[string]m.TrackData
+	PlaylistMap map[string]m.PlaylistData
 
 	// Many-to-many relationship maps
 	ArtistToAlbumsMap   map[string][]string
@@ -24,37 +25,37 @@ type SpotifyCacheMap struct {
 
 func NewSpotifyCacheMap() *SpotifyCacheMap {
 	return &SpotifyCacheMap{
-		ArtistMap:           map[string]spotify.ArtistData{},
+		ArtistMap:           map[string]m.ArtistData{},
 		ArtistToAlbumsMap:   map[string][]string{},
-		AlbumMap:            map[string]spotify.AlbumData{},
+		AlbumMap:            map[string]m.AlbumData{},
 		AlbumToTracksMap:    map[string][]string{},
-		TrackMap:            map[string]spotify.TrackData{},
-		PlaylistMap:         map[string]spotify.PlaylistData{},
+		TrackMap:            map[string]m.TrackData{},
+		PlaylistMap:         map[string]m.PlaylistData{},
 		PlaylistToTracksMap: map[string][]string{},
 	}
 }
 
-func (c *SpotifyCacheMap) GetTrack(accessToken, trackId string) (spotify.TrackData, error) {
+func (c *SpotifyCacheMap) GetTrack(accessToken, trackId string) (m.TrackData, error) {
 	if val, ok := c.TrackMap[trackId]; ok {
 		return val, nil
 	}
 	fmt.Println("[SpotifyCacheMap] GetTrack miss chache trackId:", trackId)
 	trackData, err := spotify.FetchTrack(accessToken, trackId)
 	if err != nil {
-		return spotify.TrackData{}, err
+		return m.TrackData{}, err
 	}
 	c.TrackMap[trackId] = trackData
 	return trackData, nil
 }
 
-func (c *SpotifyCacheMap) GetAlbum(accessToken, albumId string) (spotify.AlbumData, error) {
+func (c *SpotifyCacheMap) GetAlbum(accessToken, albumId string) (m.AlbumData, error) {
 	if val, ok := c.AlbumMap[albumId]; ok {
 		return val, nil
 	}
 	fmt.Println("[SpotifyCacheMap] GetAlbum miss chache on AlbumId:", albumId)
 	albumData, tracksData, err := spotify.FetchAlbum(accessToken, albumId)
 	if err != nil {
-		return spotify.AlbumData{}, err
+		return m.AlbumData{}, err
 	}
 	c.AlbumMap[albumId] = albumData
 	for _, track := range tracksData {
@@ -62,27 +63,27 @@ func (c *SpotifyCacheMap) GetAlbum(accessToken, albumId string) (spotify.AlbumDa
 	}
 	return albumData, nil
 }
-func (c *SpotifyCacheMap) GetArtist(accessToken, artistId string) (spotify.ArtistData, error) {
+func (c *SpotifyCacheMap) GetArtist(accessToken, artistId string) (m.ArtistData, error) {
 	if val, ok := c.ArtistMap[artistId]; ok {
 		return val, nil
 	}
 	fmt.Println("[SpotifyCacheMap] GetArtist miss chache on ArtistID:", artistId)
 	artistData, err := spotify.FetchArtist(accessToken, artistId)
 	if err != nil {
-		return spotify.ArtistData{}, err
+		return m.ArtistData{}, err
 	}
 	c.ArtistMap[artistId] = artistData
 	return artistData, nil
 }
 
-func (c *SpotifyCacheMap) GetPlaylist(accessToken, playlistId string) (spotify.PlaylistData, error) {
+func (c *SpotifyCacheMap) GetPlaylist(accessToken, playlistId string) (m.PlaylistData, error) {
 	if val, ok := c.PlaylistMap[playlistId]; ok {
 		return val, nil
 	}
 	fmt.Println("[SpotifyCacheMap] GetPlaylist miss chache on playlistID:", playlistId)
 	playlistData, tracksData, err := spotify.FetchPlaylist(accessToken, playlistId)
 	if err != nil {
-		return spotify.PlaylistData{}, err
+		return m.PlaylistData{}, err
 	}
 
 	for _, track := range tracksData {
@@ -132,19 +133,19 @@ func (c *SpotifyCacheMap) GetTracksFromPlaylist(accessToken, playlistId string) 
 	return trackIDs, nil
 }
 
-func (c *SpotifyCacheMap) SearchTracks(accessToken, query string) ([]spotify.TrackSearch, error) {
+func (c *SpotifyCacheMap) SearchTracks(accessToken, query string) ([]m.TrackSearch, error) {
 	panic("Shouldnt happy")
-	return []spotify.TrackSearch{}, nil
+	return []m.TrackSearch{}, nil
 }
-func (c *SpotifyCacheMap) SearchAlbums(accessToken, query string) ([]spotify.AlbumSearch, error) {
-	panic("Shouldnt happy")
-	return nil, nil
-}
-func (c *SpotifyCacheMap) SearchArtists(accessToken, query string) ([]spotify.ArtistSearch, error) {
+func (c *SpotifyCacheMap) SearchAlbums(accessToken, query string) ([]m.AlbumSearch, error) {
 	panic("Shouldnt happy")
 	return nil, nil
 }
-func (c *SpotifyCacheMap) SearchPlaylists(accessToken, query string) ([]spotify.PlaylistSearch, error) {
+func (c *SpotifyCacheMap) SearchArtists(accessToken, query string) ([]m.ArtistSearch, error) {
+	panic("Shouldnt happy")
+	return nil, nil
+}
+func (c *SpotifyCacheMap) SearchPlaylists(accessToken, query string) ([]m.PlaylistSearch, error) {
 	panic("Shouldnt happy")
 }
 
@@ -152,14 +153,14 @@ func (c *SpotifyCacheMap) SearchPlaylists(accessToken, query string) ([]spotify.
 //
 // func (c *SpotifyCacheMap) GetArtistsByName(s *spotify.SpotifySongProvider, artistName string, limit int) ([]spotify_api.ArtistData, error) {
 //
-// 	return []spotify.ArtistData{}, nil
+// 	return []m.ArtistData{}, nil
 // }
 // func (c *SpotifyCacheMap) GetAlbumsIdFromArtistId(s *spotify.SpotifySongProvider, artistId string) ([]string, error) {
 // 	return []string{}, nil
 // }
 // func (c *SpotifyCacheMap) GetArtistData(s *spotify.SpotifySongProvider, id string) (spotify_api.ArtistData, error) {
 // 	//s.Cache.ArtistMap[artist.Id] = artist
-// 	return spotify.ArtistData{}, nil
+// 	return m.ArtistData{}, nil
 // }
 // func (c *SpotifyCacheMap) GetArtistsAlbum(s *spotify.SpotifySongProvider, accessToken, artistId string) ([]spotify_api.AlbumData, error) {
 // 	// check if artist already known
@@ -208,7 +209,7 @@ func (c *SpotifyCacheMap) SearchPlaylists(accessToken, query string) ([]spotify.
 // 		fmt.Println("[SpotifyCacheMap]GetArtistsAlbum: cache hit for ", artistId)
 // 	}
 //
-// 	albums := make([]spotify.AlbumData, 0, len(albumsIds))
+// 	albums := make([]m.AlbumData, 0, len(albumsIds))
 // 	for _, albumId := range albumsIds {
 // 		album, _ := c.AlbumMap[albumId]
 // 		albums = append(albums, album)
@@ -238,7 +239,7 @@ func (c *SpotifyCacheMap) SearchPlaylists(accessToken, query string) ([]spotify.
 // 		fmt.Println("[SpotifyCacheMap]GetAlbumTracks: cache hit for", albumId)
 // 	}
 //
-// 	tracks := make([]spotify.TrackData, 0, len(tracksIds))
+// 	tracks := make([]m.TrackData, 0, len(tracksIds))
 // 	for _, trackId := range tracksIds {
 // 		track, _ := c.TrackMap[trackId]
 // 		tracks = append(tracks, track)

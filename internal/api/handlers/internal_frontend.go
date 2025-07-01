@@ -6,8 +6,8 @@ import (
 	"sort"
 	"time"
 
+	m "github.com/FerNunez/NameThatSong/internal/models"
 	"github.com/FerNunez/NameThatSong/internal/services/cache"
-	"github.com/FerNunez/NameThatSong/internal/services/spotify"
 	"github.com/FerNunez/NameThatSong/web/templates"
 )
 
@@ -27,14 +27,14 @@ func (h *GetSearchMusic) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("search")
 	if query == "" || len(query) < 2 {
 		// TODO: Should I change to Result?
-		component := templates.MusicSearch([]spotify.TrackSearch{}, []spotify.AlbumSearch{}, []spotify.ArtistSearch{}, []spotify.PlaylistSearch{})
+		component := templates.MusicSearch([]m.TrackSearch{}, []m.AlbumSearch{}, []m.ArtistSearch{}, []m.PlaylistSearch{})
 		component.Render(r.Context(), w)
 	}
 
-	tracksChan := make(chan []spotify.TrackSearch)
-	albumsChan := make(chan []spotify.AlbumSearch)
-	artistsChan := make(chan []spotify.ArtistSearch)
-	playlistsChan := make(chan []spotify.PlaylistSearch)
+	tracksChan := make(chan []m.TrackSearch)
+	albumsChan := make(chan []m.AlbumSearch)
+	artistsChan := make(chan []m.ArtistSearch)
+	playlistsChan := make(chan []m.PlaylistSearch)
 	errorsChan := make(chan error, 4)
 
 	go func() {
@@ -77,10 +77,10 @@ func (h *GetSearchMusic) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	var (
-		trackList    []spotify.TrackSearch
-		albumList    []spotify.AlbumSearch
-		artistList   []spotify.ArtistSearch
-		playlistList []spotify.PlaylistSearch
+		trackList    []m.TrackSearch
+		albumList    []m.AlbumSearch
+		artistList   []m.ArtistSearch
+		playlistList []m.PlaylistSearch
 	)
 
 	timeout := time.After(5 * time.Second)
