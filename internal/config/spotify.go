@@ -7,13 +7,13 @@ import (
 
 // SpotifyConfig holds all Spotify-related configuration
 type SpotifyConfig struct {
-	ClientID        string
-	ClientSecret    string
-	RedirectURI     string
-	BaseURL         string
-	AuthURL         string
-	TokenURL        string
-	EncryptionKey   string
+	ClientID      string
+	ClientSecret  string
+	RedirectURI   string
+	BaseURL       string
+	AuthURL       string
+	TokenURL      string
+	EncryptionKey string
 }
 
 // NewSpotifyConfig creates a new Spotify configuration from environment variables
@@ -30,7 +30,7 @@ func NewSpotifyConfig() (*SpotifyConfig, error) {
 
 	redirectURI := os.Getenv("SPOTIFY_REDIRECT_URI")
 	if redirectURI == "" {
-		redirectURI = "http://localhost:8080/callback" // Default fallback
+		redirectURI = "http://localhost:8080/auth/callback" // Default fallback
 	}
 
 	encryptionKey := os.Getenv("SPOTIFY_TOKEN_ENCRYPTION_KEY")
@@ -63,3 +63,4 @@ func (c *SpotifyConfig) GetTokenURL() string {
 func (c *SpotifyConfig) GetAPIBaseURL() string {
 	return c.BaseURL
 }
+

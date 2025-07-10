@@ -237,3 +237,25 @@ func (r *RedisSpotifyCache) SetSearchPlaylists(query string, playlists []m.Playl
 	}
 	r.client.Set(r.ctx, key, playlistsJson, r.ttl)
 }
+
+// OAuth state management operations
+func (r *RedisSpotifyCache) GetOAuthState(userID string) (string, bool) {
+	key := r.generateStateKey(userID)
+	
+	val, err := r.client.Get(r.ctx, key).Result()
+	if err != nil {
+		return "", false
+	}
+	
+	return val, true
+}
+
+func (r *RedisSpotifyCache) SetOAuthState(userID, state string) {
+	key := r.generateStateKey(userID)
+	// OAuth state should have short TTL (5 minutes) for security
+	r.client.Set(r.ctx, key, state, 5*time.Minute)
+}
+
+func (r *RedisSpotifyCache) generateStateKey(userID string) string {
+	return fmt.Sprintf("spotify:oauth:state:%s", userID)
+}

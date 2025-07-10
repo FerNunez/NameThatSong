@@ -24,4 +24,8 @@ type SpotifyCache interface {
 	SetSearchArtists(query string, artists []m.ArtistSearch)
 	GetSearchPlaylists(query string) ([]m.PlaylistSearch, bool)
 	SetSearchPlaylists(query string, playlists []m.PlaylistSearch)
+
+	// OAuth state management
+	GetOAuthState(userID string) (string, bool)
+	SetOAuthState(userID, state string)
 }

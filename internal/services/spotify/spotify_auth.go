@@ -11,7 +11,9 @@ import (
 	"strings"
 
 	"github.com/FerNunez/NameThatSong/internal/config"
+	"github.com/FerNunez/NameThatSong/internal/pkg/utils"
 	"github.com/FerNunez/NameThatSong/internal/repository"
+	"github.com/FerNunez/NameThatSong/internal/services/cache"
 	"github.com/google/uuid"
 )
 
@@ -27,18 +29,29 @@ type TokenResponse struct {
 type SpotifyAuthService struct {
 	config     *config.SpotifyConfig
 	tokenStore repository.SpotifyTokenStore
+	cache      cache.SpotifyCache
 }
 
 // NewSpotifyAuthService creates a new Spotify auth service
-func NewSpotifyAuthService(config *config.SpotifyConfig, tokenStore repository.SpotifyTokenStore) *SpotifyAuthService {
+func NewSpotifyAuthService(config *config.SpotifyConfig, tokenStore repository.SpotifyTokenStore, cache cache.SpotifyCache) *SpotifyAuthService {
 	return &SpotifyAuthService{
 		config:     config,
 		tokenStore: tokenStore,
+		cache:      cache,
 	}
 }
 
-// AuthRequestURL generates the Spotify authorization URL
-func (s *SpotifyAuthService) AuthRequestURL(state string) (string, error) {
+// AuthRequestURL generates the Spotify authorization URL with internally managed state
+func (s *SpotifyAuthService) AuthRequestURL(userID string) (string, error) {
+	// Generate a secure random state using existing utils function
+	state, err := utils.GenerateState(32) // 32 bytes = 256 bits of entropy
+	if err != nil {
+		return "", fmt.Errorf("failed to generate OAuth state: %v", err)
+	}
+
+	// Store state in cache with 5 minute TTL
+	s.cache.SetOAuthState(userID, state)
+
 	u, err := url.Parse(s.config.GetAuthURL())
 	if err != nil {
 		return "", err
@@ -55,16 +68,19 @@ func (s *SpotifyAuthService) AuthRequestURL(state string) (string, error) {
 	return u.String(), nil
 }
 
-// ValidateState validates the OAuth state parameter
-func (s *SpotifyAuthService) ValidateState(receivedState, expectedState string) error {
-	if receivedState != expectedState {
-		return errors.New("state validation failed")
+// TokenExchange exchanges authorization code for access tokens with state validation
+func (s *SpotifyAuthService) TokenExchange(userID, code, receivedState string) (TokenResponse, error) {
+	// Validate OAuth state first
+	storedState, found := s.cache.GetOAuthState(userID)
+	if !found {
+		return TokenResponse{}, errors.New("OAuth state not found or expired")
 	}
-	return nil
-}
 
-// TokenExchange exchanges authorization code for access tokens
-func (s *SpotifyAuthService) TokenExchange(code string) (TokenResponse, error) {
+	if receivedState != storedState {
+		return TokenResponse{}, errors.New("OAuth state validation failed")
+	}
+
+	// State is valid, proceed with token exchange
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
 	data.Set("code", code)

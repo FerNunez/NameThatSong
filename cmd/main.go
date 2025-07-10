@@ -70,10 +70,13 @@ func main() {
 	}
 
 	// TODO: implement this
-	_, err = spotify.NewSpotifyService(spotifyConf, db, rdb)
+	ss, err := spotify.NewSpotifyService(spotifyConf, db, rdb)
 	if err != nil {
 		fmt.Println("error creating sptofy service:", err)
 	}
+
+	urll, err := ss.GetAuthService().AuthRequestURL("test")
+	fmt.Printf("url: %v", urll)
 
 	gm := game.NewGameManager()
 
@@ -100,7 +103,7 @@ func main() {
 
 		// Auth
 		r.Get("/spotify-auth", handlers.NewGetAuthHandler(gm).ServeHttp)
-		r.Get("/auth/callback", handlers.NewGetAuthCallbackHandler(gm).ServeHttp)
+		r.Get("/auth/callback", handlers.NewGetAuthCallbackHandler(ss).ServeHttp)
 
 		// Search
 		r.Get("/search-helper", handlers.NewGetSearchArtists(gm).ServeHttp)
