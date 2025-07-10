@@ -19,10 +19,12 @@ type SpotifyToken struct {
 }
 
 type SpotifyTokenStore interface {
-	Create(ctx context.Context, user_id uuid.UUID, refresh_token, access_token, token_type, score string, expires_at time.Time) error
+	Create(ctx context.Context, user_id uuid.UUID, refresh_token, access_token, token_type, scope string, expires_at time.Time) error
 	Get(ctx context.Context, user_id uuid.UUID) (SpotifyToken, error)
 	IsValid(ctx context.Context, user_id uuid.UUID) (bool, error)
 	Update(ctx context.Context, user_id uuid.UUID, new_refresh_token string, expires_at time.Time) error
+	GetValidAccessToken(ctx context.Context, userID string) (string, error)
+	StoreTokens(ctx context.Context, userID, accessToken, refreshToken string, expiresIn int) error
 }
 
 // ////////////////////////////////////////////
@@ -47,8 +49,7 @@ func (s *SQLSpotifyTokenStore) Create(ctx context.Context, user_id uuid.UUID, re
 		return err
 	}
 
-	fmt.Println("[Create] refresh_token", refresh_token)
-	fmt.Println("[Create] refresh_token_crypte", refresh_token_crypted)
+	// TODO: Add proper structured logging instead of println
 
 	// Store data
 	_, err = s.db.CreateSpotifyToken(ctx, database.CreateSpotifyTokenParams{
@@ -65,7 +66,7 @@ func (s *SQLSpotifyTokenStore) Create(ctx context.Context, user_id uuid.UUID, re
 func (s *SQLSpotifyTokenStore) Get(ctx context.Context, user_id uuid.UUID) (SpotifyToken, error) {
 	dbSpotifyToken, err := s.db.GetSpotifyTokenByID(ctx, user_id)
 	if err != nil {
-		return SpotifyToken{}, nil
+		return SpotifyToken{}, err
 	}
 
 	refresh_token_decrypted, err := s.encryptor.Decrypt(dbSpotifyToken.RefreshToken)
@@ -73,13 +74,13 @@ func (s *SQLSpotifyTokenStore) Get(ctx context.Context, user_id uuid.UUID) (Spot
 		return SpotifyToken{}, err
 	}
 
-	fmt.Printf("[GET] Fetching refresh token: %v, encrypted: %v\n", dbSpotifyToken.RefreshToken, refresh_token_decrypted)
+	// TODO: Add proper structured logging for token operations
 
 	access_token_decrypted, err := s.encryptor.Decrypt(dbSpotifyToken.AccessToken)
 	if err != nil {
 		return SpotifyToken{}, err
 	}
-	fmt.Printf("[GET] Fetching access token: %v, encrypted: %v\n", dbSpotifyToken.AccessToken, access_token_decrypted)
+	// TODO: Add proper structured logging for access token operations
 
 	return SpotifyToken{
 		RefreshToken: refresh_token_decrypted,
@@ -105,17 +106,54 @@ func (s *SQLSpotifyTokenStore) IsValid(ctx context.Context, user_id uuid.UUID) (
 }
 
 func (s *SQLSpotifyTokenStore) Update(ctx context.Context, user_id uuid.UUID, new_access_token string, expires_at time.Time) error {
-	fmt.Printf("[SQLSpotifyTokenStore] Update: new access_token %v\n\n", new_access_token)
-
+	// TODO: Add proper structured logging for token updates
 	access_token_crypted, err := s.encryptor.Encrypt(new_access_token)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("[SQLSpotifyTokenStore] Update: new access_token encrypted %v added in db\n\n", access_token_crypted)
+	// TODO: Log encrypted token storage operation
 
 	return s.db.UpdateSpotifyAccessToken(ctx, database.UpdateSpotifyAccessTokenParams{
 		AccessToken: access_token_crypted,
 		ExpiresAt:   expires_at,
 		UserID:      user_id,
 	})
+}
+
+// GetValidAccessToken returns a valid access token from storage
+func (s *SQLSpotifyTokenStore) GetValidAccessToken(ctx context.Context, userID string) (string, error) {
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		return "", fmt.Errorf("invalid user ID: %v", err)
+	}
+
+	// Check if current token is valid
+	isValid, err := s.IsValid(ctx, userUUID)
+	if err != nil {
+		return "", err
+	}
+
+	if isValid {
+		// Return current access token
+		token, err := s.Get(ctx, userUUID)
+		if err != nil {
+			return "", err
+		}
+		return token.AccessToken, nil
+	}
+
+	// Token is expired - return error to let the auth service handle refresh
+	return "", fmt.Errorf("token expired for user %s", userID)
+}
+
+// StoreTokens stores tokens from a TokenResponse
+func (s *SQLSpotifyTokenStore) StoreTokens(ctx context.Context, userID, accessToken, refreshToken string, expiresIn int) error {
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		return fmt.Errorf("invalid user ID: %v", err)
+	}
+
+	expiresAt := time.Now().Add(time.Duration(expiresIn) * time.Second)
+	
+	return s.Create(ctx, userUUID, refreshToken, accessToken, "Bearer", "user-read-private user-read-email streaming user-modify-playback-state user-read-playback-state", expiresAt)
 }

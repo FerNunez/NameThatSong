@@ -8,13 +8,93 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/FerNunez/NameThatSong/internal/config"
 	m "github.com/FerNunez/NameThatSong/internal/models"
+	"github.com/FerNunez/NameThatSong/internal/services/cache"
 )
 
-func search(accessToken, limit, atype, query string) ([]byte, error) {
+// SpotifySearchService handles searching for Spotify content with caching
+type SpotifySearchService struct {
+	config *config.SpotifyConfig
+	cache  cache.SpotifyCache
+}
+
+// NewSpotifySearchService creates a new Spotify search service
+func NewSpotifySearchService(config *config.SpotifyConfig, cache cache.SpotifyCache) *SpotifySearchService {
+	return &SpotifySearchService{
+		config: config,
+		cache:  cache,
+	}
+}
+
+// SearchTracks searches for tracks with caching
+func (s *SpotifySearchService) SearchTracks(accessToken, query string) ([]m.TrackSearch, error) {
+	// Check cache first
+	if cachedTracks, found := s.cache.GetSearchTracks(query); found {
+		return cachedTracks, nil
+	}
+
+	// Cache miss - search Spotify API
+	tracks, err := s.searchTracksFromAPI(accessToken, query)
+	if err != nil {
+		return nil, err
+	}
+
+	// Cache the results
+	s.cache.SetSearchTracks(query, tracks)
+	return tracks, nil
+}
+
+// SearchAlbums searches for albums with caching
+func (s *SpotifySearchService) SearchAlbums(accessToken, query string) ([]m.AlbumSearch, error) {
+	if cachedAlbums, found := s.cache.GetSearchAlbums(query); found {
+		return cachedAlbums, nil
+	}
+
+	albums, err := s.searchAlbumsFromAPI(accessToken, query)
+	if err != nil {
+		return nil, err
+	}
+
+	s.cache.SetSearchAlbums(query, albums)
+	return albums, nil
+}
+
+// SearchArtists searches for artists with caching
+func (s *SpotifySearchService) SearchArtists(accessToken, query string) ([]m.ArtistSearch, error) {
+	if cachedArtists, found := s.cache.GetSearchArtists(query); found {
+		return cachedArtists, nil
+	}
+
+	artists, err := s.searchArtistsFromAPI(accessToken, query)
+	if err != nil {
+		return nil, err
+	}
+
+	s.cache.SetSearchArtists(query, artists)
+	return artists, nil
+}
+
+// SearchPlaylists searches for playlists with caching
+func (s *SpotifySearchService) SearchPlaylists(accessToken, query string) ([]m.PlaylistSearch, error) {
+	if cachedPlaylists, found := s.cache.GetSearchPlaylists(query); found {
+		return cachedPlaylists, nil
+	}
+
+	playlists, err := s.searchPlaylistsFromAPI(accessToken, query)
+	if err != nil {
+		return nil, err
+	}
+
+	s.cache.SetSearchPlaylists(query, playlists)
+	return playlists, nil
+}
+
+// Private helper methods
+func (s *SpotifySearchService) search(accessToken, limit, atype, query string) ([]byte, error) {
 	trackQuery := atype + ":" + strings.ToLower(query)
 
-	apiURL, err := url.Parse("https://api.spotify.com/v1/search")
+	apiURL, err := url.Parse(s.config.GetAPIBaseURL() + "/search")
 	if err != nil {
 		return nil, err
 	}
@@ -47,13 +127,44 @@ func search(accessToken, limit, atype, query string) ([]byte, error) {
 	return data, nil
 }
 
-func SearchTracksByName(accessToken, name string) ([]m.TrackSearch, error) {
+func (s *SpotifySearchService) searchTracksFromAPI(accessToken, name string) ([]m.TrackSearch, error) {
 	limit := "50"
-
-	data, err := search(accessToken, limit, "track", name)
+	data, err := s.search(accessToken, limit, "track", name)
 	if err != nil {
 		return nil, err
 	}
+	return s.parseTrackSearchResponse(data)
+}
+
+func (s *SpotifySearchService) searchAlbumsFromAPI(accessToken, name string) ([]m.AlbumSearch, error) {
+	limit := "50"
+	data, err := s.search(accessToken, limit, "album", name)
+	if err != nil {
+		return nil, err
+	}
+	return s.parseAlbumSearchResponse(data)
+}
+
+func (s *SpotifySearchService) searchArtistsFromAPI(accessToken, name string) ([]m.ArtistSearch, error) {
+	limit := "50"
+	data, err := s.search(accessToken, limit, "artist", name)
+	if err != nil {
+		return nil, err
+	}
+	return s.parseArtistSearchResponse(data)
+}
+
+func (s *SpotifySearchService) searchPlaylistsFromAPI(accessToken, name string) ([]m.PlaylistSearch, error) {
+	limit := "50"
+	data, err := s.search(accessToken, limit, "playlist", name)
+	if err != nil {
+		return nil, err
+	}
+	return s.parsePlaylistSearchResponse(data)
+}
+
+
+func (s *SpotifySearchService) parseTrackSearchResponse(data []byte) ([]m.TrackSearch, error) {
 
 	type SearchTrachByNameResponse struct {
 		Tracks struct {
@@ -153,13 +264,7 @@ func SearchTracksByName(accessToken, name string) ([]m.TrackSearch, error) {
 	return tracks, nil
 }
 
-func SearchAlbumsByName(accessToken, name string) ([]m.AlbumSearch, error) {
-	limit := "50"
-
-	data, err := search(accessToken, limit, "album", name)
-	if err != nil {
-		return nil, err
-	}
+func (s *SpotifySearchService) parseAlbumSearchResponse(data []byte) ([]m.AlbumSearch, error) {
 
 	type SearchAlbumResponse struct {
 		Albums struct {
@@ -229,13 +334,7 @@ func SearchAlbumsByName(accessToken, name string) ([]m.AlbumSearch, error) {
 	return albums, nil
 }
 
-func SearchArtistsByName(accessToken, name string) ([]m.ArtistSearch, error) {
-	limit := "50"
-
-	data, err := search(accessToken, limit, "artist", name)
-	if err != nil {
-		return nil, err
-	}
+func (s *SpotifySearchService) parseArtistSearchResponse(data []byte) ([]m.ArtistSearch, error) {
 
 	var searchArtistResponse struct {
 		Artists struct {
@@ -276,12 +375,7 @@ func SearchArtistsByName(accessToken, name string) ([]m.ArtistSearch, error) {
 	return artists, nil
 }
 
-func SearchPlaylistsByName(accessToken, name string) ([]m.PlaylistSearch, error) {
-	limit := "50"
-	data, err := search(accessToken, limit, "playlist", name)
-	if err != nil {
-		return nil, err
-	}
+func (s *SpotifySearchService) parsePlaylistSearchResponse(data []byte) ([]m.PlaylistSearch, error) {
 
 	type SearchPlaylistResponse struct {
 		Playlists struct {

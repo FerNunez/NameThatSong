@@ -1,6 +1,7 @@
 package spotify
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -8,6 +9,10 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/FerNunez/NameThatSong/internal/config"
+	"github.com/FerNunez/NameThatSong/internal/repository"
+	"github.com/google/uuid"
 )
 
 type TokenResponse struct {
@@ -18,107 +23,145 @@ type TokenResponse struct {
 	Scope        string `json:"scope"`
 }
 
-func (p *SpotifySongProvider) AuthRequestURL() (string, error) {
-	// Build the authorization URL
-	authURL := "https://accounts.spotify.com/authorize"
-	u, err := url.Parse(authURL)
+// SpotifyAuthService handles OAuth authentication with Spotify
+type SpotifyAuthService struct {
+	config     *config.SpotifyConfig
+	tokenStore repository.SpotifyTokenStore
+}
+
+// NewSpotifyAuthService creates a new Spotify auth service
+func NewSpotifyAuthService(config *config.SpotifyConfig, tokenStore repository.SpotifyTokenStore) *SpotifyAuthService {
+	return &SpotifyAuthService{
+		config:     config,
+		tokenStore: tokenStore,
+	}
+}
+
+// AuthRequestURL generates the Spotify authorization URL
+func (s *SpotifyAuthService) AuthRequestURL(state string) (string, error) {
+	u, err := url.Parse(s.config.GetAuthURL())
 	if err != nil {
 		return "", err
 	}
 
-	// Add query parameters
 	q := u.Query()
 	q.Set("response_type", "code")
-	q.Set("client_id", p.ClientID)
+	q.Set("client_id", s.config.ClientID)
 	q.Set("scope", "user-read-private user-read-email streaming user-modify-playback-state user-read-playback-state")
-	q.Set("redirect_uri", p.RedirectURI)
-	q.Set("state", p.State)
+	q.Set("redirect_uri", s.config.RedirectURI)
+	q.Set("state", state)
 	u.RawQuery = q.Encode()
 
-	// Redirect to Spotify
-	//http.Redirect(w, r, u.String(), http.StatusFound)
 	return u.String(), nil
 }
 
-func (p *SpotifySongProvider) ValidateState(state string) error {
-	if state != p.State {
-		return errors.New("state is not validated")
+// ValidateState validates the OAuth state parameter
+func (s *SpotifyAuthService) ValidateState(receivedState, expectedState string) error {
+	if receivedState != expectedState {
+		return errors.New("state validation failed")
 	}
 	return nil
 }
 
-// / Exchange new generated tokens (Refresh+Access)
-func (p *SpotifySongProvider) TokenExchange(code string) (TokenResponse, error) {
-	tokenURL := "https://accounts.spotify.com/api/token"
+// TokenExchange exchanges authorization code for access tokens
+func (s *SpotifyAuthService) TokenExchange(code string) (TokenResponse, error) {
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
 	data.Set("code", code)
-	data.Set("redirect_uri", p.RedirectURI)
-	req, err := http.NewRequest("POST", tokenURL, strings.NewReader(data.Encode()))
+	data.Set("redirect_uri", s.config.RedirectURI)
+
+	req, err := http.NewRequest("POST", s.config.GetTokenURL(), strings.NewReader(data.Encode()))
 	if err != nil {
-		fmt.Printf("Error creating request: %v", err)
-		return TokenResponse{}, err
+		return TokenResponse{}, fmt.Errorf("error creating request: %v", err)
 	}
 
-	// Set headers
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	auth := base64.StdEncoding.EncodeToString([]byte(p.ClientID + ":" + p.ClientSecret))
+	auth := base64.StdEncoding.EncodeToString([]byte(s.config.ClientID + ":" + s.config.ClientSecret))
 	req.Header.Set("Authorization", "Basic "+auth)
 
-	// Send request
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Printf("Error getting token: %v", err)
-		return TokenResponse{}, err
+		return TokenResponse{}, fmt.Errorf("error getting token: %v", err)
 	}
 	defer resp.Body.Close()
 
 	var tokenResponse TokenResponse
 	if err := json.NewDecoder(resp.Body).Decode(&tokenResponse); err != nil {
-		fmt.Printf("Error parsing token response: %v", err)
-		return TokenResponse{}, err
+		return TokenResponse{}, fmt.Errorf("error parsing token response: %v", err)
 	}
-	fmt.Println("[TokenExchange] Token Exchanged")
-	// DEBUG LOGGER
-	// fmt.Printf("[TokenExchange] Token Exchanged: RefreshToken: %v, AccessToken: %v, ExpiresAt: %v \n", tokenResponse.RefreshToken, tokenResponse.AccessToken, tokenResponse.ExpiresIn)
+
 	return tokenResponse, nil
 }
 
-// / Regenerate Access token from a Refresh token
-func (p *SpotifySongProvider) RegenerateToken() (TokenResponse, error) {
-	tokenURL := "https://accounts.spotify.com/api/token"
+// RefreshToken regenerates access token from refresh token
+func (s *SpotifyAuthService) RefreshToken(refreshToken string) (TokenResponse, error) {
 	data := url.Values{}
 	data.Set("grant_type", "refresh_token")
-	data.Set("refresh_token", p.RefreshToken)
-	data.Set("client_id", p.ClientID)
+	data.Set("refresh_token", refreshToken)
+	data.Set("client_id", s.config.ClientID)
 
-	req, err := http.NewRequest("POST", tokenURL, strings.NewReader(data.Encode()))
+	req, err := http.NewRequest("POST", s.config.GetTokenURL(), strings.NewReader(data.Encode()))
 	if err != nil {
-		fmt.Printf("Error creating request: %v", err)
-		return TokenResponse{}, err
+		return TokenResponse{}, fmt.Errorf("error creating request: %v", err)
 	}
 
-	// Set headers
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	auth := base64.StdEncoding.EncodeToString([]byte(p.ClientID + ":" + p.ClientSecret))
+	auth := base64.StdEncoding.EncodeToString([]byte(s.config.ClientID + ":" + s.config.ClientSecret))
 	req.Header.Set("Authorization", "Basic "+auth)
 
-	// Send request
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Printf("Error getting token: %v", err)
-		return TokenResponse{}, err
+		return TokenResponse{}, fmt.Errorf("error refreshing token: %v", err)
 	}
 	defer resp.Body.Close()
 
 	var tokenResponse TokenResponse
 	if err := json.NewDecoder(resp.Body).Decode(&tokenResponse); err != nil {
-		fmt.Printf("Error parsing token response: %v", err)
-		return TokenResponse{}, err
+		return TokenResponse{}, fmt.Errorf("error parsing token response: %v", err)
 	}
 
-	fmt.Printf("[RegenerateToken] New refreshed access token: %v, expiring at %v \n", tokenResponse.AccessToken, tokenResponse.ExpiresIn)
 	return tokenResponse, nil
 }
+
+// StoreTokens stores user tokens in the database
+func (s *SpotifyAuthService) StoreTokens(ctx context.Context, userID string, tokens TokenResponse) error {
+	return s.tokenStore.StoreTokens(ctx, userID, tokens.AccessToken, tokens.RefreshToken, tokens.ExpiresIn)
+}
+
+// GetValidAccessToken retrieves a valid access token for the user (refreshing if necessary)
+func (s *SpotifyAuthService) GetValidAccessToken(ctx context.Context, userID string) (string, error) {
+	// Try to get valid token from store
+	accessToken, err := s.tokenStore.GetValidAccessToken(ctx, userID)
+	if err == nil {
+		return accessToken, nil
+	}
+
+	// If token is expired, try to refresh it
+	userUUID, parseErr := uuid.Parse(userID)
+	if parseErr != nil {
+		return "", fmt.Errorf("invalid user ID: %v", parseErr)
+	}
+
+	// Get the refresh token
+	token, getErr := s.tokenStore.Get(ctx, userUUID)
+	if getErr != nil {
+		return "", fmt.Errorf("failed to get refresh token: %v", getErr)
+	}
+
+	// Use the existing refresh token logic
+	newTokens, refreshErr := s.RefreshToken(token.RefreshToken)
+	if refreshErr != nil {
+		return "", fmt.Errorf("failed to refresh token: %v", refreshErr)
+	}
+
+	// Store the new tokens
+	storeErr := s.StoreTokens(ctx, userID, newTokens)
+	if storeErr != nil {
+		return "", fmt.Errorf("failed to store refreshed tokens: %v", storeErr)
+	}
+
+	return newTokens.AccessToken, nil
+}
+

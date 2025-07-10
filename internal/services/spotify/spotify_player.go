@@ -5,10 +5,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/FerNunez/NameThatSong/internal/config"
 )
 
+// SpotifyPlayerService handles playback controls
+type SpotifyPlayerService struct {
+	config *config.SpotifyConfig
+}
+
+// NewSpotifyPlayerService creates a new Spotify player service
+func NewSpotifyPlayerService(config *config.SpotifyConfig) *SpotifyPlayerService {
+	return &SpotifyPlayerService{
+		config: config,
+	}
+}
+
 // PlaySong starts playing a specific song on the user's active device
-func (p *SpotifySongProvider) PlaySong(accessToken, songID string) error {
+func (s *SpotifyPlayerService) PlaySong(accessToken, songID string) error {
 	type PlaySongRequest struct {
 		Uris       []string `json:"uris"`
 		PositionMs int      `json:"position_ms"`
@@ -25,7 +39,7 @@ func (p *SpotifySongProvider) PlaySong(accessToken, songID string) error {
 	}
 
 	// Set request
-	url := "https://api.spotify.com/v1/me/player/play"
+	url := s.config.GetAPIBaseURL() + "/me/player/play"
 	//if c.DeviceID != "" {
 	//	url = fmt.Sprintf("%s?device_id=%s", url, c.DeviceID)
 	//}
@@ -53,8 +67,8 @@ func (p *SpotifySongProvider) PlaySong(accessToken, songID string) error {
 }
 
 // PausePlayback pauses the current playback on the user's active device
-func (p *SpotifySongProvider) PausePlayback(accessToken string) error {
-	url := "https://api.spotify.com/v1/me/player/pause"
+func (s *SpotifyPlayerService) PausePlayback(accessToken string) error {
+	url := s.config.GetAPIBaseURL() + "/me/player/pause"
 	//if c.DeviceID != "" {
 	//	url = fmt.Sprintf("%s?device_id=%s", url, c.DeviceID)
 	//}
@@ -81,8 +95,8 @@ func (p *SpotifySongProvider) PausePlayback(accessToken string) error {
 }
 
 // ResumePlayback resumes the current playback on the user's active device
-func (p *SpotifySongProvider) ResumePlayback(accessToken string) error {
-	url := "https://api.spotify.com/v1/me/player/play"
+func (s *SpotifyPlayerService) ResumePlayback(accessToken string) error {
+	url := s.config.GetAPIBaseURL() + "/me/player/play"
 	// if c.DeviceID != "" {
 	// 	url = fmt.Sprintf("%s?device_id=%s", url, c.DeviceID)
 	// }

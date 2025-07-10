@@ -18,16 +18,16 @@ func NewGetIndexHandler(gm *game.GameManager) *GetIndexHandler {
 
 func (h GetIndexHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 
-	game, err := h.gm.GetGame(r.Context())
+	_, err := h.gm.GetGame(r.Context())
 	if err != nil {
 		fmt.Println("[GetIndexHandler] Cant get game in context:", err)
-		component := templates.IndexPage(nil)
+		component := templates.IndexPage()
 		layout := templates.Layout(component, "NameThatSong")
 		layout.Render(r.Context(), w)
 		return
 	}
 
-	component := templates.IndexPage(game)
+	component := templates.IndexPage()
 	layout := templates.Layout(component, "NameThatSong")
 	layout.Render(r.Context(), w)
 

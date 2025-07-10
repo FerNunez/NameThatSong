@@ -7,12 +7,92 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/FerNunez/NameThatSong/internal/config"
 	m "github.com/FerNunez/NameThatSong/internal/models"
+	"github.com/FerNunez/NameThatSong/internal/services/cache"
 )
 
-func FetchTrack(accessToken, trackId string) (m.TrackData, error) {
-	fmt.Println("[SpotifySongProvider] FetchTrack: trackId:", trackId)
-	requestURL := fmt.Sprintf("https://api.spotify.com/v1/tracks/%s", trackId)
+// SpotifyFetchService handles fetching individual Spotify entities with caching
+type SpotifyFetchService struct {
+	config *config.SpotifyConfig
+	cache  cache.SpotifyCache
+}
+
+// NewSpotifyFetchService creates a new Spotify fetch service
+func NewSpotifyFetchService(config *config.SpotifyConfig, cache cache.SpotifyCache) *SpotifyFetchService {
+	return &SpotifyFetchService{
+		config: config,
+		cache:  cache,
+	}
+}
+
+// FetchTrack fetches a track with caching
+func (s *SpotifyFetchService) FetchTrack(accessToken, trackId string) (m.TrackData, error) {
+	// Check cache first
+	if cachedTrack, found := s.cache.GetTrack(trackId); found {
+		return cachedTrack, nil
+	}
+
+	// Cache miss - fetch from Spotify API
+	track, err := s.fetchTrackFromAPI(accessToken, trackId)
+	if err != nil {
+		return m.TrackData{}, err
+	}
+
+	// Cache the result
+	s.cache.SetTrack(trackId, track)
+	return track, nil
+}
+
+// FetchAlbum fetches an album with caching
+func (s *SpotifyFetchService) FetchAlbum(accessToken, albumId string) (m.AlbumData, error) {
+	if cachedAlbum, found := s.cache.GetAlbum(albumId); found {
+		return cachedAlbum, nil
+	}
+
+	album, err := s.fetchAlbumFromAPI(accessToken, albumId)
+	if err != nil {
+		return m.AlbumData{}, err
+	}
+
+	s.cache.SetAlbum(albumId, album)
+	return album, nil
+}
+
+// FetchArtist fetches an artist with caching
+func (s *SpotifyFetchService) FetchArtist(accessToken, artistId string) (m.ArtistData, error) {
+	if cachedArtist, found := s.cache.GetArtist(artistId); found {
+		return cachedArtist, nil
+	}
+
+	artist, err := s.fetchArtistFromAPI(accessToken, artistId)
+	if err != nil {
+		return m.ArtistData{}, err
+	}
+
+	s.cache.SetArtist(artistId, artist)
+	return artist, nil
+}
+
+// FetchPlaylist fetches a playlist with caching
+func (s *SpotifyFetchService) FetchPlaylist(accessToken, playlistId string) (m.PlaylistData, error) {
+	if cachedPlaylist, found := s.cache.GetPlaylist(playlistId); found {
+		return cachedPlaylist, nil
+	}
+
+	playlist, err := s.fetchPlaylistFromAPI(accessToken, playlistId)
+	if err != nil {
+		return m.PlaylistData{}, err
+	}
+
+	s.cache.SetPlaylist(playlistId, playlist)
+	return playlist, nil
+}
+
+// Private API fetch methods
+func (s *SpotifyFetchService) fetchTrackFromAPI(accessToken, trackId string) (m.TrackData, error) {
+	fmt.Println("[SpotifyFetchService] FetchTrack: trackId:", trackId)
+	requestURL := fmt.Sprintf("%s/tracks/%s", s.config.GetAPIBaseURL(), trackId)
 	req, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
 		return m.TrackData{}, err
@@ -109,24 +189,23 @@ func FetchTrack(accessToken, trackId string) (m.TrackData, error) {
 }
 
 // Fetch album by ID: retireves all tracks of the album too
-func FetchAlbum(accessToken, albumId string) (m.AlbumData, []m.TrackData, error) {
-	requestURL := fmt.Sprintf("https://api.spotify.com/v1/albums/%s", albumId)
+func (s *SpotifyFetchService) fetchAlbumFromAPI(accessToken, albumId string) (m.AlbumData, error) {
+	requestURL := fmt.Sprintf("%s/albums/%s", s.config.GetAPIBaseURL(), albumId)
 	req, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
-		return m.AlbumData{}, []m.TrackData{}, err
+		return m.AlbumData{}, err
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 
 	client := http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return m.AlbumData{}, []m.TrackData{}, err
+		return m.AlbumData{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return m.AlbumData{}, []m.TrackData{}, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
-
+		return m.AlbumData{}, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
 	}
 
 	type FetchAlbumResponse struct {
@@ -207,23 +286,12 @@ func FetchAlbum(accessToken, albumId string) (m.AlbumData, []m.TrackData, error)
 
 	var fetchAlbumResponse FetchAlbumResponse
 	if err := json.NewDecoder(resp.Body).Decode(&fetchAlbumResponse); err != nil {
-		return m.AlbumData{}, []m.TrackData{}, err
+		return m.AlbumData{}, err
 	}
 
 	imageUrl := ""
 	if len(fetchAlbumResponse.Images) > 0 {
 		imageUrl = fetchAlbumResponse.Images[len(fetchAlbumResponse.Images)-1].URL
-	}
-
-	tracks := make([]m.TrackData, len(fetchAlbumResponse.Tracks.Items))
-	for idx, track := range fetchAlbumResponse.Tracks.Items {
-		tracks[idx] = m.TrackData{
-			DiscNumber:  track.DiscNumber,
-			DurationMs:  track.DurationMs,
-			ID:          track.ID,
-			Name:        track.Name,
-			TrackNumber: track.TrackNumber,
-		}
 	}
 
 	return m.AlbumData{
@@ -233,12 +301,11 @@ func FetchAlbum(accessToken, albumId string) (m.AlbumData, []m.TrackData, error)
 		ImagesURL:   imageUrl,
 		Name:        fetchAlbumResponse.Name,
 		ReleaseDate: fetchAlbumResponse.ReleaseDate,
-	}, tracks, nil
+	}, nil
 }
 
-func FetchArtist(accessToken, artistId string) (m.ArtistData, error) {
-
-	requestURL := fmt.Sprintf("https://api.spotify.com/v1/artists/%s", artistId)
+func (s *SpotifyFetchService) fetchArtistFromAPI(accessToken, artistId string) (m.ArtistData, error) {
+	requestURL := fmt.Sprintf("%s/artists/%s", s.config.GetAPIBaseURL(), artistId)
 	req, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
 		return m.ArtistData{}, err
@@ -297,33 +364,31 @@ func FetchArtist(accessToken, artistId string) (m.ArtistData, error) {
 	}, nil
 }
 
-func FetchPlaylist(accessToken, playlistId string) (m.PlaylistData, []m.TrackData, error) {
-
-	baseURL := "https://api.spotify.com/v1/playlists/" + playlistId
+func (s *SpotifyFetchService) fetchPlaylistFromAPI(accessToken, playlistId string) (m.PlaylistData, error) {
+	baseURL := s.config.GetAPIBaseURL() + "/playlists/" + playlistId
 	u, err := url.Parse(baseURL)
 	if err != nil {
-		return m.PlaylistData{}, []m.TrackData{}, err
+		return m.PlaylistData{}, err
 	}
 	q := u.Query()
-	q.Set("fields", "id,name,description,public,followers(total),images(url),tracks(items(track(id,name,preview_url,external_urls(spotify),album(name,images(url)))))")
-	// q.Set("fields", "id,name,description,images(url),external_urls(spotify),followers(total),public,owner(display_name),tracks(items(track(id)))")
+	q.Set("fields", "id,name,description,public,followers(total),images(url)")
 	u.RawQuery = q.Encode()
 
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
-		return m.PlaylistData{}, []m.TrackData{}, err
+		return m.PlaylistData{}, err
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 
 	client := http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return m.PlaylistData{}, []m.TrackData{}, err
+		return m.PlaylistData{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return m.PlaylistData{}, []m.TrackData{}, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
+		return m.PlaylistData{}, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
 	}
 
 	type FetchPlaylistResponse struct {
@@ -391,25 +456,12 @@ func FetchPlaylist(accessToken, playlistId string) (m.PlaylistData, []m.TrackDat
 
 	var fetchPlaylistResponse FetchPlaylistResponse
 	if err := json.NewDecoder(resp.Body).Decode(&fetchPlaylistResponse); err != nil {
-		return m.PlaylistData{}, []m.TrackData{}, err
+		return m.PlaylistData{}, err
 	}
 
 	imageUrl := ""
 	if len(fetchPlaylistResponse.Images) > 0 {
 		imageUrl = fetchPlaylistResponse.Images[len(fetchPlaylistResponse.Images)-1].URL
-	}
-
-	tracks := make([]m.TrackData, len(fetchPlaylistResponse.Tracks.Items))
-	tracksIds := make([]string, len(fetchPlaylistResponse.Tracks.Items))
-	for idx, track := range fetchPlaylistResponse.Tracks.Items {
-		tracksIds[idx] = track.Track.ID
-		tracks[idx] = m.TrackData{
-			DiscNumber:  track.Track.DiscNumber,
-			DurationMs:  track.Track.DurationMs,
-			ID:          track.Track.ID,
-			Name:        track.Track.Name,
-			TrackNumber: track.Track.TrackNumber,
-		}
 	}
 
 	return m.PlaylistData{
@@ -419,8 +471,8 @@ func FetchPlaylist(accessToken, playlistId string) (m.PlaylistData, []m.TrackDat
 		ImageUrl:       imageUrl,
 		Name:           fetchPlaylistResponse.Name,
 		Public:         fetchPlaylistResponse.Public,
-		TotalTracks:    len(fetchPlaylistResponse.Tracks.Items),
-	}, tracks, nil
+		TotalTracks:    0, // Will be set when tracks are fetched separately
+	}, nil
 }
 
 func FetchAlbumsFromArtist(accessToken, artistId string) ([]string, error) {
