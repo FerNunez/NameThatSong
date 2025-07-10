@@ -1,9 +1,7 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/FerNunez/NameThatSong/internal/services/cache"
 	"github.com/FerNunez/NameThatSong/web/templates"
@@ -31,19 +29,19 @@ func NewGetSpotifyCacheTrack(accessToken string, c cache.SpotifyCache) *GetSpoti
 	return &GetSpotifyCacheTrack{accessToken, c}
 }
 func (h *GetSpotifyCacheTrack) ServeHttp(w http.ResponseWriter, r *http.Request) {
-	trackID := "11dFghVXANMlKmJXsNCbNl"
-	query := r.URL.Query().Get("id")
-	if query != "" {
-		trackID = query
-	}
-
-	fetchTrack, err := h.Cache.GetTrack(h.accessToken, trackID)
-	if err != nil {
-		fmt.Println("couldnt fetch tracks", err)
-		return
-	}
-	fmt.Printf("[fetchTrack] for %+v\n", trackID)
-	w.Write(fmt.Appendf(nil, "fetchTrack %#v", fetchTrack))
+	// trackID := "11dFghVXANMlKmJXsNCbNl"
+	// query := r.URL.Query().Get("id")
+	// if query != "" {
+	// 	trackID = query
+	// }
+	//
+	// fetchTrack, err := h.Cache.GetTrack(h.accessToken, trackID)
+	// if err != nil {
+	// 	fmt.Println("couldnt fetch tracks", err)
+	// 	return
+	// }
+	// fmt.Printf("[fetchTrack] for %+v\n", trackID)
+	// w.Write(fmt.Appendf(nil, "fetchTrack %#v", fetchTrack))
 }
 
 type GetSpotifyCacheAlbum struct {
@@ -55,24 +53,24 @@ func NewGetSpotifyCacheAlbum(accessToken string, c cache.SpotifyCache) *GetSpoti
 	return &GetSpotifyCacheAlbum{accessToken, c}
 }
 func (h *GetSpotifyCacheAlbum) ServeHttp(w http.ResponseWriter, r *http.Request) {
-	albumID := "4aawyAB9vmqN3uQ7FjRGTy"
-	query := r.URL.Query().Get("id")
-	if query != "" {
-		albumID = query
-	}
-
-	fetchAlbum, err := h.Cache.GetAlbum(h.accessToken, albumID)
-	if err != nil {
-		fmt.Println("couldnt fetch albums", err)
-		return
-	}
-	trackList, err := h.Cache.GetTracksFromAlbum(h.accessToken, albumID)
-	if err != nil {
-		fmt.Println("couldnt fetch tracks from albums: ", err)
-		return
-	}
-	fmt.Printf("[cacheAlbum] for %+v\n", albumID)
-	w.Write(fmt.Appendf(nil, "fetchAlbum %#v with tracks: %#v ", fetchAlbum, strings.Join(trackList, ", ")))
+	// albumID := "4aawyAB9vmqN3uQ7FjRGTy"
+	// query := r.URL.Query().Get("id")
+	// if query != "" {
+	// 	albumID = query
+	// }
+	//
+	// fetchAlbum, err := h.Cache.GetAlbum(h.accessToken, albumID)
+	// if err != nil {
+	// 	fmt.Println("couldnt fetch albums", err)
+	// 	return
+	// }
+	// trackList, err := h.Cache.GetTracksFromAlbum(h.accessToken, albumID)
+	// if err != nil {
+	// 	fmt.Println("couldnt fetch tracks from albums: ", err)
+	// 	return
+	// }
+	// fmt.Printf("[cacheAlbum] for %+v\n", albumID)
+	// w.Write(fmt.Appendf(nil, "fetchAlbum %#v with tracks: %#v ", fetchAlbum, strings.Join(trackList, ", ")))
 }
 
 type GetSpotifyCacheArtist struct {
@@ -84,22 +82,22 @@ func NewGetSpotifyCacheArtist(accessToken string, c cache.SpotifyCache) *GetSpot
 	return &GetSpotifyCacheArtist{accessToken, c}
 }
 func (h *GetSpotifyCacheArtist) ServeHttp(w http.ResponseWriter, r *http.Request) {
-	artistID := "0TnOYISbd1XYRBk9myaseg"
-	query := r.URL.Query().Get("id")
-	if query != "" {
-		artistID = query
-	}
-	fetchArtist, err := h.Cache.GetArtist(h.accessToken, artistID)
-	if err != nil {
-		fmt.Println("couldnt fetch artists", err)
-		return
-	}
-	albumList, err := h.Cache.GetAlbumsFromArtist(h.accessToken, artistID)
-	if err != nil {
-		fmt.Println("couldnt fetch tracks from albums: ", err)
-		return
-	}
-	w.Write(fmt.Appendf(nil, "fetchArtist %#v, it has albums: %#v", fetchArtist, strings.Join(albumList, ", ")))
+	// artistID := "0TnOYISbd1XYRBk9myaseg"
+	// query := r.URL.Query().Get("id")
+	// if query != "" {
+	// 	artistID = query
+	// }
+	// fetchArtist, err := h.Cache.GetArtist(h.accessToken, artistID)
+	// if err != nil {
+	// 	fmt.Println("couldnt fetch artists", err)
+	// 	return
+	// }
+	// albumList, err := h.Cache.GetAlbumsFromArtist(h.accessToken, artistID)
+	// if err != nil {
+	// 	fmt.Println("couldnt fetch tracks from albums: ", err)
+	// 	return
+	// }
+	// w.Write(fmt.Appendf(nil, "fetchArtist %#v, it has albums: %#v", fetchArtist, strings.Join(albumList, ", ")))
 }
 
 type GetSpotifyCachePlaylist struct {
@@ -111,22 +109,22 @@ func NewGetSpotifyCachePlaylist(accessToken string, c cache.SpotifyCache) *GetSp
 	return &GetSpotifyCachePlaylist{accessToken, c}
 }
 func (h *GetSpotifyCachePlaylist) ServeHttp(w http.ResponseWriter, r *http.Request) {
-	playlistID := "3cEYpjA9oz9GiPac4AsH4n"
-	query := r.URL.Query().Get("id")
-	if query != "" {
-		playlistID = query
-	}
-	fetchPlaylist, err := h.Cache.GetPlaylist(h.accessToken, playlistID)
-	if err != nil {
-		fmt.Println("couldnt fetch playlists", err)
-		return
-	}
-	trackList, err := h.Cache.GetTracksFromPlaylist(h.accessToken, playlistID)
-	if err != nil {
-		fmt.Println("couldnt fetch tracks from playlist: ", err)
-		return
-	}
-	w.Write(fmt.Appendf(nil, "fetchplaylist %#v, with tracks: %#v", fetchPlaylist, strings.Join(trackList, ", ")))
+	// playlistID := "3cEYpjA9oz9GiPac4AsH4n"
+	// query := r.URL.Query().Get("id")
+	// if query != "" {
+	// 	playlistID = query
+	// }
+	// fetchPlaylist, err := h.Cache.GetPlaylist(h.accessToken, playlistID)
+	// if err != nil {
+	// 	fmt.Println("couldnt fetch playlists", err)
+	// 	return
+	// }
+	// trackList, err := h.Cache.GetTracksFromPlaylist(h.accessToken, playlistID)
+	// if err != nil {
+	// 	fmt.Println("couldnt fetch tracks from playlist: ", err)
+	// 	return
+	// }
+	// w.Write(fmt.Appendf(nil, "fetchplaylist %#v, with tracks: %#v", fetchPlaylist, strings.Join(trackList, ", ")))
 }
 
 // /
@@ -139,18 +137,18 @@ func NewGetSpotifyCacheTrackName(accessToken string, c cache.SpotifyCache) *GetS
 	return &GetSpotifyCacheTrackName{accessToken, c}
 }
 func (h *GetSpotifyCacheTrackName) ServeHttp(w http.ResponseWriter, r *http.Request) {
-	trackName := "Re forro"
-	query := r.URL.Query().Get("name")
-	if query != "" {
-		trackName = query
-	}
-	trackList, err := h.Cache.SearchTracks(h.accessToken, trackName)
-	if err != nil {
-		fmt.Println("couldnt fetch tracks", err)
-		return
-	}
-	fmt.Printf("search tracks cache for:  %+v\n", trackName)
-	w.Write(fmt.Appendf(nil, "search track %#v", trackList))
+	// trackName := "Re forro"
+	// query := r.URL.Query().Get("name")
+	// if query != "" {
+	// 	trackName = query
+	// }
+	// trackList, err := h.Cache.SearchTracks(h.accessToken, trackName)
+	// if err != nil {
+	// 	fmt.Println("couldnt fetch tracks", err)
+	// 	return
+	// }
+	// fmt.Printf("search tracks cache for:  %+v\n", trackName)
+	// w.Write(fmt.Appendf(nil, "search track %#v", trackList))
 }
 
 type GetSpotifyCacheAlbumName struct {
@@ -162,18 +160,18 @@ func NewGetSpotifyCacheAlbumName(accessToken string, c cache.SpotifyCache) *GetS
 	return &GetSpotifyCacheAlbumName{accessToken, c}
 }
 func (h *GetSpotifyCacheAlbumName) ServeHttp(w http.ResponseWriter, r *http.Request) {
-	albumName := "Papota"
-	query := r.URL.Query().Get("name")
-	if query != "" {
-		albumName = query
-	}
-	albumList, err := h.Cache.SearchAlbums(h.accessToken, albumName)
-	if err != nil {
-		fmt.Println("couldnt fetch albums", err)
-		return
-	}
-	fmt.Printf("search albums cache for:  %+v\n", albumName)
-	w.Write(fmt.Appendf(nil, "search album %#v", albumList))
+	// albumName := "Papota"
+	// query := r.URL.Query().Get("name")
+	// if query != "" {
+	// 	albumName = query
+	// }
+	// albumList, err := h.Cache.SearchAlbums(h.accessToken, albumName)
+	// if err != nil {
+	// 	fmt.Println("couldnt fetch albums", err)
+	// 	return
+	// }
+	// fmt.Printf("search albums cache for:  %+v\n", albumName)
+	// w.Write(fmt.Appendf(nil, "search album %#v", albumList))
 }
 
 type GetSpotifyCacheArtistName struct {
@@ -185,18 +183,18 @@ func NewGetSpotifyCacheArtistName(accessToken string, c cache.SpotifyCache) *Get
 	return &GetSpotifyCacheArtistName{accessToken, c}
 }
 func (h *GetSpotifyCacheArtistName) ServeHttp(w http.ResponseWriter, r *http.Request) {
-	artistName := "Lady Gaga"
-	query := r.URL.Query().Get("name")
-	if query != "" {
-		artistName = query
-	}
-	artistList, err := h.Cache.SearchArtists(h.accessToken, artistName)
-	if err != nil {
-		fmt.Println("couldnt fetch artists", err)
-		return
-	}
-	fmt.Printf("search artists cache for:  %+v\n", artistName)
-	w.Write(fmt.Appendf(nil, "search artist %#v", artistList))
+	// artistName := "Lady Gaga"
+	// query := r.URL.Query().Get("name")
+	// if query != "" {
+	// 	artistName = query
+	// }
+	// artistList, err := h.Cache.SearchArtists(h.accessToken, artistName)
+	// if err != nil {
+	// 	fmt.Println("couldnt fetch artists", err)
+	// 	return
+	// }
+	// fmt.Printf("search artists cache for:  %+v\n", artistName)
+	// w.Write(fmt.Appendf(nil, "search artist %#v", artistList))
 }
 
 type GetSpotifyCachePlaylistName struct {
@@ -208,16 +206,16 @@ func NewGetSpotifyCachePlaylistName(accessToken string, c cache.SpotifyCache) *G
 	return &GetSpotifyCachePlaylistName{accessToken, c}
 }
 func (h *GetSpotifyCachePlaylistName) ServeHttp(w http.ResponseWriter, r *http.Request) {
-	playlistName := "Salsa"
-	query := r.URL.Query().Get("name")
-	if query != "" {
-		playlistName = query
-	}
-	playlistList, err := h.Cache.SearchPlaylists(h.accessToken, playlistName)
-	if err != nil {
-		fmt.Println("couldnt fetch playlists", err)
-		return
-	}
-	fmt.Printf("search playlists cache for:  %+v\n", playlistName)
-	w.Write(fmt.Appendf(nil, "search playlist %#v", playlistList))
+	// playlistName := "Salsa"
+	// query := r.URL.Query().Get("name")
+	// if query != "" {
+	// 	playlistName = query
+	// }
+	// playlistList, err := h.Cache.SearchPlaylists(h.accessToken, playlistName)
+	// if err != nil {
+	// 	fmt.Println("couldnt fetch playlists", err)
+	// 	return
+	// }
+	// fmt.Printf("search playlists cache for:  %+v\n", playlistName)
+	// w.Write(fmt.Appendf(nil, "search playlist %#v", playlistList))
 }

@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/FerNunez/NameThatSong/internal/services/game"
-	"github.com/FerNunez/NameThatSong/web/templates"
 )
 
 type PostPlayPause struct {
@@ -18,17 +17,17 @@ func NewPostPlayPause(gm *game.GameManager) *PostPlayPause {
 
 func (h *PostPlayPause) ServeHttp(w http.ResponseWriter, r *http.Request) {
 
-	game, err := h.gm.GetGame(r.Context())
+	_, err := h.gm.GetGame(r.Context())
 	if err != nil {
 		fmt.Printf("error getting game : %v", err)
 		return
 	}
 
-	err = game.SpotifyApi.PausePlayback(game.SpotifyToken.AccessToken)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error play game: %v", err), http.StatusInternalServerError)
-		return
-	}
+	// err = game.SpotifyApi.PausePlayback(game.SpotifyToken.AccessToken)
+	// if err != nil {
+	// 	http.Error(w, fmt.Sprintf("Error play game: %v", err), http.StatusInternalServerError)
+	// 	return
+	// }
 
 	w.Write([]byte("Playback started"))
 }
@@ -54,8 +53,8 @@ func (h *PostSkip) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	mp := templates.MusicPlayer(game)
-	mp.Render(r.Context(), w)
+	// mp := templates.MusicPlayer(game)
+	// mp.Render(r.Context(), w)
 }
 
 // /////////////////////////////////////

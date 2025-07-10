@@ -17,7 +17,7 @@ import (
 // GameService coordinates the song provider and music player
 type GameService struct {
 	MusicPlayer       *MusicPlayer
-	SpotifyApi        *spotify.SpotifySongProvider
+	SpotifyApi        *spotify.SpotifyService
 	AlbumSelection    map[string]bool
 	ArtistSelection   map[string]uint8
 	TracksToPlayId    map[string]*Song
@@ -32,12 +32,13 @@ type GameService struct {
 func NewGameService(clientID, clientSecret, redirectURI string, userId uuid.UUID, spotifyTokenStore repository.SpotifyTokenStore) (*GameService, error) {
 
 	// Generate a random state for OAuth
-	state, err := utils.GenerateState(16)
+	_, err := utils.GenerateState(16)
 	if err != nil {
 		return nil, fmt.Errorf("error generating state: %v", err)
 	}
 	// Create song provider
-	songProvider := spotify.NewSpotifySongProvider(clientID, clientSecret, redirectURI, state)
+	// TODO: implement this
+	songProvider, err := spotify.NewSpotifyService(nil, nil, nil)
 	// Create music service client
 	musicPlayer := NewMusicPlayer()
 	// Create game service
@@ -48,7 +49,6 @@ func NewGameService(clientID, clientSecret, redirectURI string, userId uuid.UUID
 		AlbumSelection:    make(map[string]bool),
 		ArtistSelection:   make(map[string]uint8),
 		TracksToPlayId:    make(map[string]*Song),
-		Cache:             cache.NewSpotifyCacheMap(),
 		GuessState:        guessState,
 		UserId:            userId,
 		SpotifyTokenStore: spotifyTokenStore,
@@ -160,23 +160,12 @@ func (s *GameService) StartGame(ctx context.Context) error {
 		s.MusicPlayer.Queue = append(s.MusicPlayer.Queue, *song)
 	}
 	s.MusicPlayer.Shuffle()
-	song := s.MusicPlayer.Queue[s.MusicPlayer.CurrentIndex]
+	//song := s.MusicPlayer.Queue[s.MusicPlayer.CurrentIndex]
 
-	track, ok := s.Cache.GetTrack(s.SpotifyToken.AccessToken, song.TrackId)
-	// track, ok := s.Cache.TrackMap[song.TrackId]
-	if ok != nil {
-		panic("Track should always exist in cache")
-	}
-	album, ok := s.Cache.GetAlbum(s.SpotifyToken.AccessToken, song.AlbumId)
-	// album, ok := s.Cache.AlbumMap[song.AlbumId]
-	if ok != nil {
-		panic("Track should always exist in cache")
-	}
-	artist, ok := s.Cache.GetArtist(s.SpotifyToken.AccessToken, song.ArtistId)
-	//artist, ok := s.Cache.ArtistMap[song.ArtistId]
-	if ok != nil {
-		panic("Track should always exist in cache")
-	}
+	// TODO: FIX THIS
+	track := m.TrackData{}
+	artist := m.ArtistData{}
+	album := m.AlbumData{}
 
 	// guessSong process:
 	s.GuessState.SetTitle(track.Name, artist.Name, album.ImagesURL)
@@ -187,7 +176,7 @@ func (s *GameService) StartGame(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("Couldnt not ensure refresh token")
 	}
-	s.SpotifyApi.PlaySong(s.SpotifyToken.AccessToken, song.TrackId)
+	//s.SpotifyApi.PlaySong(s.SpotifyToken.AccessToken, song.TrackId)
 
 	// Debug
 	println("track Name:", track.Name)
@@ -206,36 +195,40 @@ func (s *GameService) UserGuess(guess string) (bool, error) {
 // SkipSong skips to the next song
 func (s *GameService) SkipSong(ctx context.Context) error {
 
-	nextSong, err := s.MusicPlayer.NextInQueue()
-	if err != nil {
-		return err
-	}
-	track, ok := s.Cache.GetTrack(s.SpotifyToken.AccessToken, nextSong.TrackId)
-	// track, ok := s.Cache.TrackMap[nextSong.TrackId]
-	if ok != nil {
-		panic("Track should always exist in cache")
-	}
-	album, ok := s.Cache.GetAlbum(s.SpotifyToken.AccessToken, nextSong.AlbumId)
-	// album, ok := s.Cache.AlbumMap[nextSong.AlbumId]
-	if ok != nil {
-		panic("Track should always exist in cache")
-	}
-	artist, ok := s.Cache.GetArtist(s.SpotifyToken.AccessToken, nextSong.ArtistId)
-	//artist, ok := s.Cache.ArtistMap[nextSong.ArtistId]
-	if ok != nil {
-		panic("Track should always exist in cache")
-	}
+	// _, err := s.MusicPlayer.NextInQueue()
+	// if err != nil {
+	// 	return err
+	// }
+	// track, ok := s.Cache.GetTrack(s.SpotifyToken.AccessToken, nextSong.TrackId)
+	// // track, ok := s.Cache.TrackMap[nextSong.TrackId]
+	// if ok != nil {
+	// 	panic("Track should always exist in cache")
+	// }
+	// album, ok := s.Cache.GetAlbum(s.SpotifyToken.AccessToken, nextSong.AlbumId)
+	// // album, ok := s.Cache.AlbumMap[nextSong.AlbumId]
+	// if ok != nil {
+	// 	panic("Track should always exist in cache")
+	// }
+	// artist, ok := s.Cache.GetArtist(s.SpotifyToken.AccessToken, nextSong.ArtistId)
+	// //artist, ok := s.Cache.ArtistMap[nextSong.ArtistId]
+	// if ok != nil {
+	// 	panic("Track should always exist in cache")
+	// }
+	// TODO: FIX THIS
+	track := m.TrackData{}
+	artist := m.ArtistData{}
+	album := m.AlbumData{}
 
 	// guessSong process:
 	s.GuessState.SetTitle(track.Name, artist.Name, album.ImagesURL)
 	s.MusicPlayer.Timer = time.Now()
 	s.MusicPlayer.SongDuration = time.Duration(track.DurationMs) * time.Millisecond
 
-	err = s.EnsureAccessToken(ctx)
-	if err != nil {
-		return fmt.Errorf("Couldnt not ensure refresh token")
-	}
-	return s.SpotifyApi.PlaySong(s.SpotifyToken.AccessToken, nextSong.TrackId)
+	// err = s.EnsureAccessToken(ctx)
+	// if err != nil {
+	// 	return fmt.Errorf("Couldnt not ensure refresh token")
+	// }
+	return nil //, s.SpotifyApi.PlaySong(s.SpotifyToken.AccessToken, nextSong.TrackId)
 }
 
 // ClearQueue clears the current music queue
@@ -244,44 +237,45 @@ func (s *GameService) ClearQueue() error {
 	s.ArtistSelection = make(map[string]uint8)
 	s.GuessState = NewGameState()
 	s.MusicPlayer.ClearQueue()
-	s.SpotifyApi.PausePlayback(s.SpotifyToken.AccessToken)
+	//s.SpotifyApi.PausePlayback(s.SpotifyToken.AccessToken)
 	return nil
 }
 
 func (s *GameService) RequestUserAuthoritazion() (string, error) {
-	urlString, err := s.SpotifyApi.AuthRequestURL()
-	return urlString, err
+	urlString := "to Implement"
+	// urlString, err := s.SpotifyApi.AuthRequestURL()
+	return urlString, nil
 }
 
 func (s *GameService) ExchangeToken(ctx context.Context, state, code string) error {
 	fmt.Println("Hello!")
-	if code == "" || state == "" {
-		return fmt.Errorf("Error guetting code and state from spotify api")
-	}
-	err := s.SpotifyApi.ValidateState(state)
-	if err != nil {
-		return err
-	}
+	// if code == "" || state == "" {
+	// 	return fmt.Errorf("Error guetting code and state from spotify api")
+	// }
+	// err := s.SpotifyApi.ValidateState(state)
+	// if err != nil {
+	// 	return err
+	// }
+	//
+	// spotifyTokenReponse, err := s.SpotifyApi.TokenExchange(code)
+	// if err != nil {
+	// 	return err
+	// }
 
-	spotifyTokenReponse, err := s.SpotifyApi.TokenExchange(code)
-	if err != nil {
-		return err
-	}
-
-	expires_at := time.Now().Add(time.Duration(spotifyTokenReponse.ExpiresIn) * time.Second)
-	s.SpotifyToken = repository.SpotifyToken{
-		RefreshToken: spotifyTokenReponse.RefreshToken,
-		AccessToken:  spotifyTokenReponse.AccessToken,
-		TokenType:    spotifyTokenReponse.TokenType,
-		Scope:        spotifyTokenReponse.Scope,
-		ExpiresAt:    expires_at,
-	}
-
-	err = s.SpotifyTokenStore.Update(ctx, s.UserId, s.SpotifyToken.AccessToken, s.SpotifyToken.ExpiresAt)
-	if err != nil {
-		fmt.Println("Error updating accessToken in DB")
-		return err
-	}
+	// expires_at := time.Now().Add(time.Duration(spotifyTokenReponse.ExpiresIn) * time.Second)
+	// s.SpotifyToken = repository.SpotifyToken{
+	// 	RefreshToken: spotifyTokenReponse.RefreshToken,
+	// 	AccessToken:  spotifyTokenReponse.AccessToken,
+	// 	TokenType:    spotifyTokenReponse.TokenType,
+	// 	Scope:        spotifyTokenReponse.Scope,
+	// 	ExpiresAt:    expires_at,
+	// }
+	//
+	// err = s.SpotifyTokenStore.Update(ctx, s.UserId, s.SpotifyToken.AccessToken, s.SpotifyToken.ExpiresAt)
+	// if err != nil {
+	// 	fmt.Println("Error updating accessToken in DB")
+	// 	return err
+	// }
 	return nil
 }
 func (s *GameService) EnsureAccessToken(ctx context.Context) error {
@@ -305,25 +299,20 @@ func (s *GameService) EnsureAccessToken(ctx context.Context) error {
 			return fmt.Errorf("Refresh token is empty")
 		}
 
-		spotifyRefreshReponse, err := s.SpotifyApi.RegenerateToken()
-		if err != nil {
-			return err
-		}
-
-		expires_at := time.Now().Add(time.Duration(spotifyRefreshReponse.ExpiresIn) * time.Second)
-		s.SpotifyToken = repository.SpotifyToken{
-			RefreshToken: spotifyRefreshReponse.RefreshToken,
-			AccessToken:  spotifyRefreshReponse.AccessToken,
-			TokenType:    spotifyRefreshReponse.TokenType,
-			Scope:        spotifyRefreshReponse.Scope,
-			ExpiresAt:    expires_at,
-		}
+		// spotifyRefreshReponse :=
+		// spotifyRefreshReponse, err := s.SpotifyApi.RegenerateToken()
+		// if err != nil {
+		// 	return err
+		// }
+		//
+		// expires_at := time.Now().Add(time.Duration(spotifyRefreshReponse.ExpiresIn) * time.Second)
+		s.SpotifyToken = repository.SpotifyToken{}
 
 		// update token
-		err = s.SpotifyTokenStore.Update(ctx, s.UserId, s.SpotifyToken.AccessToken, s.SpotifyToken.ExpiresAt)
-		if err != nil {
-			return err
-		}
+		// err = s.SpotifyTokenStore.Update(ctx, s.UserId, s.SpotifyToken.AccessToken, s.SpotifyToken.ExpiresAt)
+		// if err != nil {
+		// 	return err
+		// }
 	}
 	return nil
 }

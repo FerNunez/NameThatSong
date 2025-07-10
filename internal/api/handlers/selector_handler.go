@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/FerNunez/NameThatSong/internal/services/game"
-	"github.com/FerNunez/NameThatSong/web/templates"
 )
 
 type PostSelectAlbum struct {
@@ -42,14 +41,14 @@ func (h *PostSelectAlbum) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("artistID", artistID)
 
 	// Toggle album selection
-	toggle := game.ToggleAlbumSelection(albumID, artistID)
+	_ = game.ToggleAlbumSelection(albumID, artistID)
 
-	album, err := game.Cache.GetAlbum(game.SpotifyToken.AccessToken, albumID)
-	if err != nil {
-		panic("album should be in cache")
-	}
-	component := templates.AlbumCard(album, toggle, artistID)
-	component.Render(r.Context(), w)
+	// // album, err := game.Cache.GetAlbum(game.SpotifyToken.AccessToken, albumID)
+	// if err != nil {
+	// 	panic("album should be in cache")
+	// }
+	// component := templates.AlbumCard(album, toggle, artistID)
+	// component.Render(r.Context(), w)
 }
 
 //////////////////
@@ -70,6 +69,6 @@ func (h *PostClearQueue) ServeHttp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	game.ClearQueue()
-	mp := templates.MusicPlayer(game)
-	mp.Render(r.Context(), w)
+	// mp := templates.MusicPlayer(game)
+	// mp.Render(r.Context(), w)
 }

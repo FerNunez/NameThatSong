@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/FerNunez/NameThatSong/internal/services/game"
-	"github.com/FerNunez/NameThatSong/web/templates"
 )
 
 type PostStartGame struct {
@@ -31,6 +30,6 @@ func (h *PostStartGame) ServeHttp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mp := templates.MusicPlayer(game)
-	mp.Render(r.Context(), w)
+	// mp := templates.MusicPlayer(game)
+	// mp.Render(r.Context(), w)
 }
