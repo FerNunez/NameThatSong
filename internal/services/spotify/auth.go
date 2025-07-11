@@ -43,8 +43,8 @@ func NewSpotifyAuthService(config *config.SpotifyConfig, tokenStore repository.S
 
 // AuthRequestURL generates the Spotify authorization URL with internally managed state
 func (s *SpotifyAuthService) AuthRequestURL(userID string) (string, error) {
-	// Generate a secure random state using existing utils function
-	state, err := utils.GenerateState(32) // 32 bytes = 256 bits of entropy
+	// Generate a secure random state
+	state, err := utils.GenerateState(16) // 16 bytes as example in spotify
 	if err != nil {
 		return "", fmt.Errorf("failed to generate OAuth state: %v", err)
 	}
@@ -77,6 +77,8 @@ func (s *SpotifyAuthService) TokenExchange(userID, code, receivedState string) (
 	}
 
 	if receivedState != storedState {
+
+		fmt.Printf("[TokenExchange]receved_state=%v != stored=%v\n", receivedState, storedState)
 		return TokenResponse{}, errors.New("OAuth state validation failed")
 	}
 
@@ -180,4 +182,3 @@ func (s *SpotifyAuthService) GetValidAccessToken(ctx context.Context, userID str
 
 	return newTokens.AccessToken, nil
 }
-

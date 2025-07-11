@@ -69,14 +69,11 @@ func main() {
 		fmt.Println("error while creating spotify config", err)
 	}
 
-	// TODO: implement this
+	// NOTE: This is here for testing locally while developing
 	ss, err := spotify.NewSpotifyService(spotifyConf, db, rdb)
 	if err != nil {
 		fmt.Println("error creating sptofy service:", err)
 	}
-
-	urll, err := ss.GetAuthService().AuthRequestURL("test")
-	fmt.Printf("url: %v", urll)
 
 	gm := game.NewGameManager()
 
