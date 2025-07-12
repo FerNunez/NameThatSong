@@ -112,7 +112,7 @@ func (s *SpotifyAuthService) TokenExchange(userID, code, receivedState string) (
 }
 
 // RefreshToken regenerates access token from refresh token
-func (s *SpotifyAuthService) RefreshToken(refreshToken string) (TokenResponse, error) {
+func (s *SpotifyAuthService) refreshToken(refreshToken string) (TokenResponse, error) {
 	data := url.Values{}
 	data.Set("grant_type", "refresh_token")
 	data.Set("refresh_token", refreshToken)
@@ -142,17 +142,6 @@ func (s *SpotifyAuthService) RefreshToken(refreshToken string) (TokenResponse, e
 	return tokenResponse, nil
 }
 
-// StoreTokens stores user tokens in the database
-func (s *SpotifyAuthService) StoreTokens(ctx context.Context, userID string, tokens TokenResponse) error {
-	userUUID, err := uuid.Parse(userID)
-	if err != nil {
-		return fmt.Errorf("invalid user ID: %v", err)
-	}
-
-	expiresAt := time.Now().Add(time.Duration(tokens.ExpiresIn) * time.Second)
-	return s.tokenStore.Create(ctx, userUUID, tokens.RefreshToken, tokens.AccessToken, "Bearer", "user-read-private user-read-email streaming user-modify-playback-state user-read-playback-state", expiresAt)
-}
-
 // GetValidToken retrieves a valid access token for the user (refreshing if necessary)
 func (s *SpotifyAuthService) GetValidToken(ctx context.Context, userID string) (string, error) {
 	// Get token from storage
@@ -167,7 +156,7 @@ func (s *SpotifyAuthService) GetValidToken(ctx context.Context, userID string) (
 	}
 
 	// Token is expired, refresh it
-	newTokens, err := s.RefreshToken(token.RefreshToken)
+	newTokens, err := s.refreshToken(token.RefreshToken)
 	if err != nil {
 		return "", fmt.Errorf("failed to refresh token: %v", err)
 	}

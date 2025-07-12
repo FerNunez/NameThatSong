@@ -109,7 +109,6 @@ func (s *SQLSpotifyTokenStore) Update(ctx context.Context, user_id uuid.UUID, ne
 	})
 }
 
-
 // Delete removes a token from storage
 func (s *SQLSpotifyTokenStore) Delete(ctx context.Context, user_id uuid.UUID) error {
 	return s.db.DeleteSpotifyToken(ctx, user_id)
