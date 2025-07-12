@@ -14,13 +14,10 @@ import (
 
 // SpotifyService provides a comprehensive Spotify API service
 type SpotifyService struct {
-	config         *config.SpotifyConfig
-	tokenStore     repository.SpotifyTokenStore
-	cache          cache.SpotifyCache
-	searchService  *SpotifySearchService
-	fetchService   *SpotifyFetchService
-	authService    *SpotifyAuthService
-	playerService  *SpotifyPlayerService
+	searchService *SpotifySearchService
+	fetchService  *SpotifyFetchService
+	authService   *SpotifyAuthService
+	playerService *SpotifyPlayerService
 }
 
 // NewSpotifyService creates a new comprehensive Spotify service
@@ -37,7 +34,7 @@ func NewSpotifyService(
 	if db == nil {
 		return nil, fmt.Errorf("database connection is required for token store")
 	}
-	
+
 	// Create database queries instance and encryptor
 	queries := database.New(db)
 	encryptor, err := utils.NewTokenEncryptor([]byte(config.EncryptionKey))
@@ -61,9 +58,6 @@ func NewSpotifyService(
 	playerService := NewSpotifyPlayerService(config, authService)
 
 	return &SpotifyService{
-		config:        config,
-		tokenStore:    tokenStore,
-		cache:         spotifyCache,
 		searchService: searchService,
 		fetchService:  fetchService,
 		authService:   authService,
@@ -90,14 +84,3 @@ func (s *SpotifyService) GetFetchService() *SpotifyFetchService {
 func (s *SpotifyService) GetPlayerService() *SpotifyPlayerService {
 	return s.playerService
 }
-
-// GetCache returns the cache service
-func (s *SpotifyService) GetCache() cache.SpotifyCache {
-	return s.cache
-}
-
-// GetConfig returns the Spotify configuration
-func (s *SpotifyService) GetConfig() *config.SpotifyConfig {
-	return s.config
-}
-
