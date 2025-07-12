@@ -282,7 +282,7 @@ func (s *GameService) EnsureAccessToken(ctx context.Context) error {
 	//Read from DB
 	if s.SpotifyToken.RefreshToken == "" {
 		fmt.Println("Empty Refresh token")
-		storeSpotifyToken, err := s.SpotifyTokenStore.Get(ctx, s.UserId)
+		storeSpotifyToken, err := s.SpotifyTokenStore.Get(ctx, s.UserId.String())
 		if err != nil {
 			fmt.Println("Failed reading exchange token from DB")
 			return err

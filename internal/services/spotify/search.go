@@ -1,6 +1,7 @@
 package spotify
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,23 +16,31 @@ import (
 
 // SpotifySearchService handles searching for Spotify content with caching
 type SpotifySearchService struct {
-	config *config.SpotifyConfig
-	cache  cache.SpotifyCache
+	config      *config.SpotifyConfig
+	cache       cache.SpotifyCache
+	authService *SpotifyAuthService
 }
 
 // NewSpotifySearchService creates a new Spotify search service
-func NewSpotifySearchService(config *config.SpotifyConfig, cache cache.SpotifyCache) *SpotifySearchService {
+func NewSpotifySearchService(config *config.SpotifyConfig, cache cache.SpotifyCache, authService *SpotifyAuthService) *SpotifySearchService {
 	return &SpotifySearchService{
-		config: config,
-		cache:  cache,
+		config:      config,
+		cache:       cache,
+		authService: authService,
 	}
 }
 
 // SearchTracks searches for tracks with caching
-func (s *SpotifySearchService) SearchTracks(accessToken, query string) ([]m.TrackSearch, error) {
+func (s *SpotifySearchService) SearchTracks(ctx context.Context, userID, query string) ([]m.TrackSearch, error) {
 	// Check cache first
 	if cachedTracks, found := s.cache.GetSearchTracks(query); found {
 		return cachedTracks, nil
+	}
+
+	// Get access token for user
+	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get access token: %v", err)
 	}
 
 	// Cache miss - search Spotify API
@@ -46,9 +55,15 @@ func (s *SpotifySearchService) SearchTracks(accessToken, query string) ([]m.Trac
 }
 
 // SearchAlbums searches for albums with caching
-func (s *SpotifySearchService) SearchAlbums(accessToken, query string) ([]m.AlbumSearch, error) {
+func (s *SpotifySearchService) SearchAlbums(ctx context.Context, userID, query string) ([]m.AlbumSearch, error) {
 	if cachedAlbums, found := s.cache.GetSearchAlbums(query); found {
 		return cachedAlbums, nil
+	}
+
+	// Get access token for user
+	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get access token: %v", err)
 	}
 
 	albums, err := s.searchAlbumsFromAPI(accessToken, query)
@@ -61,9 +76,15 @@ func (s *SpotifySearchService) SearchAlbums(accessToken, query string) ([]m.Albu
 }
 
 // SearchArtists searches for artists with caching
-func (s *SpotifySearchService) SearchArtists(accessToken, query string) ([]m.ArtistSearch, error) {
+func (s *SpotifySearchService) SearchArtists(ctx context.Context, userID, query string) ([]m.ArtistSearch, error) {
 	if cachedArtists, found := s.cache.GetSearchArtists(query); found {
 		return cachedArtists, nil
+	}
+
+	// Get access token for user
+	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get access token: %v", err)
 	}
 
 	artists, err := s.searchArtistsFromAPI(accessToken, query)
@@ -76,9 +97,15 @@ func (s *SpotifySearchService) SearchArtists(accessToken, query string) ([]m.Art
 }
 
 // SearchPlaylists searches for playlists with caching
-func (s *SpotifySearchService) SearchPlaylists(accessToken, query string) ([]m.PlaylistSearch, error) {
+func (s *SpotifySearchService) SearchPlaylists(ctx context.Context, userID, query string) ([]m.PlaylistSearch, error) {
 	if cachedPlaylists, found := s.cache.GetSearchPlaylists(query); found {
 		return cachedPlaylists, nil
+	}
+
+	// Get access token for user
+	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get access token: %v", err)
 	}
 
 	playlists, err := s.searchPlaylistsFromAPI(accessToken, query)

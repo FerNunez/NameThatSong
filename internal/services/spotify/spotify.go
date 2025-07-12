@@ -55,10 +55,10 @@ func NewSpotifyService(
 	}
 
 	// Initialize services
-	searchService := NewSpotifySearchService(config, spotifyCache)
-	fetchService := NewSpotifyFetchService(config, spotifyCache)
 	authService := NewSpotifyAuthService(config, tokenStore, spotifyCache)
-	playerService := NewSpotifyPlayerService(config)
+	searchService := NewSpotifySearchService(config, spotifyCache, authService)
+	fetchService := NewSpotifyFetchService(config, spotifyCache, authService)
+	playerService := NewSpotifyPlayerService(config, authService)
 
 	return &SpotifyService{
 		config:        config,

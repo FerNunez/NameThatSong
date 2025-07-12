@@ -2,6 +2,7 @@ package spotify
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,18 +12,25 @@ import (
 
 // SpotifyPlayerService handles playback controls
 type SpotifyPlayerService struct {
-	config *config.SpotifyConfig
+	config      *config.SpotifyConfig
+	authService *SpotifyAuthService
 }
 
 // NewSpotifyPlayerService creates a new Spotify player service
-func NewSpotifyPlayerService(config *config.SpotifyConfig) *SpotifyPlayerService {
+func NewSpotifyPlayerService(config *config.SpotifyConfig, authService *SpotifyAuthService) *SpotifyPlayerService {
 	return &SpotifyPlayerService{
-		config: config,
+		config:      config,
+		authService: authService,
 	}
 }
 
 // PlaySong starts playing a specific song on the user's active device
-func (s *SpotifyPlayerService) PlaySong(accessToken, songID string) error {
+func (s *SpotifyPlayerService) PlaySong(ctx context.Context, userID, songID string) error {
+	// Get access token for user
+	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to get access token: %v", err)
+	}
 	type PlaySongRequest struct {
 		Uris       []string `json:"uris"`
 		PositionMs int      `json:"position_ms"`
@@ -67,7 +75,12 @@ func (s *SpotifyPlayerService) PlaySong(accessToken, songID string) error {
 }
 
 // PausePlayback pauses the current playback on the user's active device
-func (s *SpotifyPlayerService) PausePlayback(accessToken string) error {
+func (s *SpotifyPlayerService) PausePlayback(ctx context.Context, userID string) error {
+	// Get access token for user
+	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to get access token: %v", err)
+	}
 	url := s.config.GetAPIBaseURL() + "/me/player/pause"
 	//if c.DeviceID != "" {
 	//	url = fmt.Sprintf("%s?device_id=%s", url, c.DeviceID)
@@ -95,7 +108,12 @@ func (s *SpotifyPlayerService) PausePlayback(accessToken string) error {
 }
 
 // ResumePlayback resumes the current playback on the user's active device
-func (s *SpotifyPlayerService) ResumePlayback(accessToken string) error {
+func (s *SpotifyPlayerService) ResumePlayback(ctx context.Context, userID string) error {
+	// Get access token for user
+	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to get access token: %v", err)
+	}
 	url := s.config.GetAPIBaseURL() + "/me/player/play"
 	// if c.DeviceID != "" {
 	// 	url = fmt.Sprintf("%s?device_id=%s", url, c.DeviceID)

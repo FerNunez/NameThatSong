@@ -1,6 +1,7 @@
 package spotify
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,23 +15,31 @@ import (
 
 // SpotifyFetchService handles fetching individual Spotify entities with caching
 type SpotifyFetchService struct {
-	config *config.SpotifyConfig
-	cache  cache.SpotifyCache
+	config      *config.SpotifyConfig
+	cache       cache.SpotifyCache
+	authService *SpotifyAuthService
 }
 
 // NewSpotifyFetchService creates a new Spotify fetch service
-func NewSpotifyFetchService(config *config.SpotifyConfig, cache cache.SpotifyCache) *SpotifyFetchService {
+func NewSpotifyFetchService(config *config.SpotifyConfig, cache cache.SpotifyCache, authService *SpotifyAuthService) *SpotifyFetchService {
 	return &SpotifyFetchService{
-		config: config,
-		cache:  cache,
+		config:      config,
+		cache:       cache,
+		authService: authService,
 	}
 }
 
 // FetchTrack fetches a track with caching
-func (s *SpotifyFetchService) FetchTrack(accessToken, trackId string) (m.TrackData, error) {
+func (s *SpotifyFetchService) FetchTrack(ctx context.Context, userID, trackId string) (m.TrackData, error) {
 	// Check cache first
 	if cachedTrack, found := s.cache.GetTrack(trackId); found {
 		return cachedTrack, nil
+	}
+
+	// Get access token for user
+	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	if err != nil {
+		return m.TrackData{}, fmt.Errorf("failed to get access token: %v", err)
 	}
 
 	// Cache miss - fetch from Spotify API
@@ -45,9 +54,15 @@ func (s *SpotifyFetchService) FetchTrack(accessToken, trackId string) (m.TrackDa
 }
 
 // FetchAlbum fetches an album with caching
-func (s *SpotifyFetchService) FetchAlbum(accessToken, albumId string) (m.AlbumData, error) {
+func (s *SpotifyFetchService) FetchAlbum(ctx context.Context, userID, albumId string) (m.AlbumData, error) {
 	if cachedAlbum, found := s.cache.GetAlbum(albumId); found {
 		return cachedAlbum, nil
+	}
+
+	// Get access token for user
+	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	if err != nil {
+		return m.AlbumData{}, fmt.Errorf("failed to get access token: %v", err)
 	}
 
 	album, err := s.fetchAlbumFromAPI(accessToken, albumId)
@@ -60,9 +75,15 @@ func (s *SpotifyFetchService) FetchAlbum(accessToken, albumId string) (m.AlbumDa
 }
 
 // FetchArtist fetches an artist with caching
-func (s *SpotifyFetchService) FetchArtist(accessToken, artistId string) (m.ArtistData, error) {
+func (s *SpotifyFetchService) FetchArtist(ctx context.Context, userID, artistId string) (m.ArtistData, error) {
 	if cachedArtist, found := s.cache.GetArtist(artistId); found {
 		return cachedArtist, nil
+	}
+
+	// Get access token for user
+	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	if err != nil {
+		return m.ArtistData{}, fmt.Errorf("failed to get access token: %v", err)
 	}
 
 	artist, err := s.fetchArtistFromAPI(accessToken, artistId)
@@ -75,9 +96,15 @@ func (s *SpotifyFetchService) FetchArtist(accessToken, artistId string) (m.Artis
 }
 
 // FetchPlaylist fetches a playlist with caching
-func (s *SpotifyFetchService) FetchPlaylist(accessToken, playlistId string) (m.PlaylistData, error) {
+func (s *SpotifyFetchService) FetchPlaylist(ctx context.Context, userID, playlistId string) (m.PlaylistData, error) {
 	if cachedPlaylist, found := s.cache.GetPlaylist(playlistId); found {
 		return cachedPlaylist, nil
+	}
+
+	// Get access token for user
+	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	if err != nil {
+		return m.PlaylistData{}, fmt.Errorf("failed to get access token: %v", err)
 	}
 
 	playlist, err := s.fetchPlaylistFromAPI(accessToken, playlistId)

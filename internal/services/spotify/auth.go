@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/FerNunez/NameThatSong/internal/config"
 	"github.com/FerNunez/NameThatSong/internal/pkg/utils"
@@ -77,8 +78,6 @@ func (s *SpotifyAuthService) TokenExchange(userID, code, receivedState string) (
 	}
 
 	if receivedState != storedState {
-
-		fmt.Printf("[TokenExchange]receved_state=%v != stored=%v\n", receivedState, storedState)
 		return TokenResponse{}, errors.New("OAuth state validation failed")
 	}
 
@@ -145,39 +144,44 @@ func (s *SpotifyAuthService) RefreshToken(refreshToken string) (TokenResponse, e
 
 // StoreTokens stores user tokens in the database
 func (s *SpotifyAuthService) StoreTokens(ctx context.Context, userID string, tokens TokenResponse) error {
-	return s.tokenStore.StoreTokens(ctx, userID, tokens.AccessToken, tokens.RefreshToken, tokens.ExpiresIn)
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		return fmt.Errorf("invalid user ID: %v", err)
+	}
+
+	expiresAt := time.Now().Add(time.Duration(tokens.ExpiresIn) * time.Second)
+	return s.tokenStore.Create(ctx, userUUID, tokens.RefreshToken, tokens.AccessToken, "Bearer", "user-read-private user-read-email streaming user-modify-playback-state user-read-playback-state", expiresAt)
 }
 
-// GetValidAccessToken retrieves a valid access token for the user (refreshing if necessary)
-func (s *SpotifyAuthService) GetValidAccessToken(ctx context.Context, userID string) (string, error) {
-	// Try to get valid token from store
-	accessToken, err := s.tokenStore.GetValidAccessToken(ctx, userID)
-	if err == nil {
-		return accessToken, nil
+// GetValidToken retrieves a valid access token for the user (refreshing if necessary)
+func (s *SpotifyAuthService) GetValidToken(ctx context.Context, userID string) (string, error) {
+	// Get token from storage
+	token, err := s.tokenStore.Get(ctx, userID)
+	if err != nil {
+		return "", fmt.Errorf("no token found for user %s: %v", userID, err)
 	}
 
-	// If token is expired, try to refresh it
-	userUUID, parseErr := uuid.Parse(userID)
-	if parseErr != nil {
-		return "", fmt.Errorf("invalid user ID: %v", parseErr)
+	// Check if token is still valid
+	if time.Now().Before(token.ExpiresAt) {
+		return token.AccessToken, nil
 	}
 
-	// Get the refresh token
-	token, getErr := s.tokenStore.Get(ctx, userUUID)
-	if getErr != nil {
-		return "", fmt.Errorf("failed to get refresh token: %v", getErr)
+	// Token is expired, refresh it
+	newTokens, err := s.RefreshToken(token.RefreshToken)
+	if err != nil {
+		return "", fmt.Errorf("failed to refresh token: %v", err)
 	}
 
-	// Use the existing refresh token logic
-	newTokens, refreshErr := s.RefreshToken(token.RefreshToken)
-	if refreshErr != nil {
-		return "", fmt.Errorf("failed to refresh token: %v", refreshErr)
+	// Update the token in storage
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		return "", fmt.Errorf("invalid user ID: %v", err)
 	}
 
-	// Store the new tokens
-	storeErr := s.StoreTokens(ctx, userID, newTokens)
-	if storeErr != nil {
-		return "", fmt.Errorf("failed to store refreshed tokens: %v", storeErr)
+	expiresAt := time.Now().Add(time.Duration(newTokens.ExpiresIn) * time.Second)
+	err = s.tokenStore.Update(ctx, userUUID, newTokens.AccessToken, expiresAt)
+	if err != nil {
+		return "", fmt.Errorf("failed to update token: %v", err)
 	}
 
 	return newTokens.AccessToken, nil
