@@ -118,7 +118,7 @@ func (s *SpotifyAuthService) TokenExchange(userID, code, receivedState string) (
 	}
 	err = s.tokenStore.Create(context.Background(), userID, token)
 	if err != nil {
-		return TokenResponse{}, fmt.Errorf("could not create token in db: %v\n", err)
+		return TokenResponse{}, fmt.Errorf("could not create token in db: %v", err)
 	}
 	return tokenResponse, nil
 }

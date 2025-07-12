@@ -3,7 +3,6 @@ package spotify
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -135,7 +134,7 @@ func (s *SpotifyFetchService) fetchTrackFromAPI(accessToken, trackId string) (m.
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return m.TrackData{}, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
+		return m.TrackData{}, fmt.Errorf("unexpected status code: %v", resp.StatusCode)
 	}
 
 	type FetchTrackResponse struct {
@@ -232,7 +231,7 @@ func (s *SpotifyFetchService) fetchAlbumFromAPI(accessToken, albumId string) (m.
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return m.AlbumData{}, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
+		return m.AlbumData{}, fmt.Errorf("unexpected status code: %v", resp.StatusCode)
 	}
 
 	type FetchAlbumResponse struct {
@@ -346,7 +345,7 @@ func (s *SpotifyFetchService) fetchArtistFromAPI(accessToken, artistId string) (
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return m.ArtistData{}, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
+		return m.ArtistData{}, fmt.Errorf("unexpected status code: %v", resp.StatusCode)
 
 	}
 
@@ -413,7 +412,7 @@ func (s *SpotifyFetchService) fetchPlaylistFromAPI(accessToken, playlistId strin
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return m.PlaylistData{}, errors.New(fmt.Sprintf("bad status code:%v", resp.StatusCode))
+		return m.PlaylistData{}, fmt.Errorf("unexpected status code: %v", resp.StatusCode)
 	}
 
 	type FetchPlaylistResponse struct {
@@ -525,7 +524,7 @@ func (s *SpotifyFetchService) FetchAlbumsFromArtist(ctx context.Context, userID,
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return []string{}, errors.New(fmt.Sprintf("bad status code: %v", resp.StatusCode))
+		return []string{}, fmt.Errorf("unexpected status code: %v", resp.StatusCode)
 	}
 
 	type AlbumsFromArtistResponse struct {
@@ -602,7 +601,7 @@ func (s *SpotifyFetchService) FetchTracksFromAlbum(ctx context.Context, userID, 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return []string{}, errors.New(fmt.Sprintf("bad status code: %v", resp.StatusCode))
+		return []string{}, fmt.Errorf("unexpected status code: %v", resp.StatusCode)
 	}
 
 	type TracksFromAlbumResponse struct {
@@ -690,7 +689,7 @@ func (s *SpotifyFetchService) FetchTracksFromPlaylist(ctx context.Context, userI
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return []string{}, errors.New(fmt.Sprintf("bad status code: %v", resp.StatusCode))
+		return []string{}, fmt.Errorf("unexpected status code: %v", resp.StatusCode)
 	}
 
 	type TracksFromPlaylistResponse struct {
