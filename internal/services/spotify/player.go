@@ -14,13 +14,15 @@ import (
 type SpotifyPlayerService struct {
 	config      *config.SpotifyConfig
 	authService *SpotifyAuthService
+	httpClient  *http.Client
 }
 
 // NewSpotifyPlayerService creates a new Spotify player service
-func NewSpotifyPlayerService(config *config.SpotifyConfig, authService *SpotifyAuthService) *SpotifyPlayerService {
+func NewSpotifyPlayerService(config *config.SpotifyConfig, authService *SpotifyAuthService, httpClient *http.Client) *SpotifyPlayerService {
 	return &SpotifyPlayerService{
 		config:      config,
 		authService: authService,
+		httpClient:  httpClient,
 	}
 }
 
@@ -60,8 +62,7 @@ func (s *SpotifyPlayerService) PlaySong(ctx context.Context, userID, songID stri
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 	req.Header.Set("Content-Type", "application/json")
 
-	client := http.Client{}
-	resp, err := client.Do(req)
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("could not execute request: %v", err)
 	}
@@ -93,8 +94,7 @@ func (s *SpotifyPlayerService) PausePlayback(ctx context.Context, userID string)
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 
-	client := http.Client{}
-	resp, err := client.Do(req)
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("could not execute request: %v", err)
 	}
@@ -126,8 +126,7 @@ func (s *SpotifyPlayerService) ResumePlayback(ctx context.Context, userID string
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 
-	client := http.Client{}
-	resp, err := client.Do(req)
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("could not execute request: %v", err)
 	}

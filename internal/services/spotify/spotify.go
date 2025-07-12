@@ -3,6 +3,8 @@ package spotify
 import (
 	"database/sql"
 	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/FerNunez/NameThatSong/internal/config"
 	"github.com/FerNunez/NameThatSong/internal/pkg/utils"
@@ -51,11 +53,17 @@ func NewSpotifyService(
 		return nil, fmt.Errorf("Redis client is required for caching")
 	}
 
-	// Initialize services
-	authService := NewSpotifyAuthService(config, tokenStore, spotifyCache)
-	searchService := NewSpotifySearchService(config, spotifyCache, authService)
-	fetchService := NewSpotifyFetchService(config, spotifyCache, authService)
-	playerService := NewSpotifyPlayerService(config, authService)
+	//TODO: add better client config?
+	// Create shared HTTP client with reasonable defaults
+	httpClient := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	// Initialize services with shared HTTP client
+	authService := NewSpotifyAuthService(config, tokenStore, spotifyCache, httpClient)
+	searchService := NewSpotifySearchService(config, spotifyCache, authService, httpClient)
+	fetchService := NewSpotifyFetchService(config, spotifyCache, authService, httpClient)
+	playerService := NewSpotifyPlayerService(config, authService, httpClient)
 
 	return &SpotifyService{
 		searchService: searchService,

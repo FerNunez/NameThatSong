@@ -18,14 +18,16 @@ type SpotifyFetchService struct {
 	config      *config.SpotifyConfig
 	cache       cache.SpotifyCache
 	authService *SpotifyAuthService
+	httpClient  *http.Client
 }
 
 // NewSpotifyFetchService creates a new Spotify fetch service
-func NewSpotifyFetchService(config *config.SpotifyConfig, cache cache.SpotifyCache, authService *SpotifyAuthService) *SpotifyFetchService {
+func NewSpotifyFetchService(config *config.SpotifyConfig, cache cache.SpotifyCache, authService *SpotifyAuthService, httpClient *http.Client) *SpotifyFetchService {
 	return &SpotifyFetchService{
 		config:      config,
 		cache:       cache,
 		authService: authService,
+		httpClient:  httpClient,
 	}
 }
 
@@ -126,8 +128,7 @@ func (s *SpotifyFetchService) fetchTrackFromAPI(accessToken, trackId string) (m.
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 
-	client := http.Client{}
-	resp, err := client.Do(req)
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return m.TrackData{}, err
 	}
@@ -224,8 +225,7 @@ func (s *SpotifyFetchService) fetchAlbumFromAPI(accessToken, albumId string) (m.
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 
-	client := http.Client{}
-	resp, err := client.Do(req)
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return m.AlbumData{}, err
 	}
@@ -339,8 +339,7 @@ func (s *SpotifyFetchService) fetchArtistFromAPI(accessToken, artistId string) (
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 
-	client := http.Client{}
-	resp, err := client.Do(req)
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return m.ArtistData{}, err
 	}
@@ -407,8 +406,7 @@ func (s *SpotifyFetchService) fetchPlaylistFromAPI(accessToken, playlistId strin
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 
-	client := http.Client{}
-	resp, err := client.Do(req)
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return m.PlaylistData{}, err
 	}
@@ -502,7 +500,7 @@ func (s *SpotifyFetchService) fetchPlaylistFromAPI(accessToken, playlistId strin
 	}, nil
 }
 
-func FetchAlbumsFromArtist(accessToken, artistId string) ([]string, error) {
+func FetchAlbumsFromArtist(httpClient *http.Client, accessToken, artistId string) ([]string, error) {
 	limit := 50
 	include_groups := "album"
 
@@ -513,8 +511,7 @@ func FetchAlbumsFromArtist(accessToken, artistId string) ([]string, error) {
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 
-	client := http.Client{}
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return []string{}, err
 	}
@@ -575,7 +572,7 @@ func FetchAlbumsFromArtist(accessToken, artistId string) ([]string, error) {
 	return albumIds, nil
 }
 
-func FetchTracksFromAlbum(accessToken, albumId string) ([]string, error) {
+func FetchTracksFromAlbum(httpClient *http.Client, accessToken, albumId string) ([]string, error) {
 	limit := 50
 	requestURL := fmt.Sprintf("https://api.spotify.com/v1/albums/%v/tracks?&limit=%v", albumId, limit)
 	req, err := http.NewRequest("GET", requestURL, nil)
@@ -584,8 +581,7 @@ func FetchTracksFromAlbum(accessToken, albumId string) ([]string, error) {
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 
-	client := http.Client{}
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return []string{}, err
 	}
@@ -656,7 +652,7 @@ func FetchTracksFromAlbum(accessToken, albumId string) ([]string, error) {
 	return trackIds, nil
 }
 
-func FetchTracksFromPlaylist(accessToken, playlistId string) ([]string, error) {
+func FetchTracksFromPlaylist(httpClient *http.Client, accessToken, playlistId string) ([]string, error) {
 	limit := 50
 	fields := "items(track(id))"
 	requestURL := fmt.Sprintf("https://api.spotify.com/v1/playlists/%v/tracks?&fields=%v&limit=%v", playlistId, fields, limit)
@@ -666,8 +662,7 @@ func FetchTracksFromPlaylist(accessToken, playlistId string) ([]string, error) {
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 
-	client := http.Client{}
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return []string{}, err
 	}

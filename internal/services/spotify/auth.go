@@ -30,14 +30,16 @@ type SpotifyAuthService struct {
 	config     *config.SpotifyConfig
 	tokenStore repository.SpotifyTokenStore
 	cache      cache.SpotifyCache
+	httpClient *http.Client
 }
 
 // NewSpotifyAuthService creates a new Spotify auth service
-func NewSpotifyAuthService(config *config.SpotifyConfig, tokenStore repository.SpotifyTokenStore, cache cache.SpotifyCache) *SpotifyAuthService {
+func NewSpotifyAuthService(config *config.SpotifyConfig, tokenStore repository.SpotifyTokenStore, cache cache.SpotifyCache, httpClient *http.Client) *SpotifyAuthService {
 	return &SpotifyAuthService{
 		config:     config,
 		tokenStore: tokenStore,
 		cache:      cache,
+		httpClient: httpClient,
 	}
 }
 
@@ -95,8 +97,7 @@ func (s *SpotifyAuthService) TokenExchange(userID, code, receivedState string) (
 	auth := base64.StdEncoding.EncodeToString([]byte(s.config.ClientID + ":" + s.config.ClientSecret))
 	req.Header.Set("Authorization", "Basic "+auth)
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return TokenResponse{}, fmt.Errorf("error getting token: %v", err)
 	}
@@ -138,8 +139,7 @@ func (s *SpotifyAuthService) refreshToken(refreshToken string) (TokenResponse, e
 	auth := base64.StdEncoding.EncodeToString([]byte(s.config.ClientID + ":" + s.config.ClientSecret))
 	req.Header.Set("Authorization", "Basic "+auth)
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return TokenResponse{}, fmt.Errorf("error refreshing token: %v", err)
 	}

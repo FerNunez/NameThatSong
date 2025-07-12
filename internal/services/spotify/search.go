@@ -19,14 +19,16 @@ type SpotifySearchService struct {
 	config      *config.SpotifyConfig
 	cache       cache.SpotifyCache
 	authService *SpotifyAuthService
+	httpClient  *http.Client
 }
 
 // NewSpotifySearchService creates a new Spotify search service
-func NewSpotifySearchService(config *config.SpotifyConfig, cache cache.SpotifyCache, authService *SpotifyAuthService) *SpotifySearchService {
+func NewSpotifySearchService(config *config.SpotifyConfig, cache cache.SpotifyCache, authService *SpotifyAuthService, httpClient *http.Client) *SpotifySearchService {
 	return &SpotifySearchService{
 		config:      config,
 		cache:       cache,
 		authService: authService,
+		httpClient:  httpClient,
 	}
 }
 
@@ -136,8 +138,7 @@ func (s *SpotifySearchService) search(accessToken, limit, atype, query string) (
 		return nil, err
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
