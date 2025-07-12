@@ -71,7 +71,7 @@ func (s *SpotifyAuthService) AuthRequestURL(userID string) (string, error) {
 }
 
 // TokenExchange exchanges authorization code for access tokens with state validation
-func (s *SpotifyAuthService) TokenExchange(userID, code, receivedState string) (TokenResponse, error) {
+func (s *SpotifyAuthService) TokenExchange(ctx context.Context, userID, code, receivedState string) (TokenResponse, error) {
 	// Validate OAuth state first
 	storedState, found := s.cache.GetOAuthState(userID)
 	if !found {
@@ -88,7 +88,7 @@ func (s *SpotifyAuthService) TokenExchange(userID, code, receivedState string) (
 	data.Set("code", code)
 	data.Set("redirect_uri", s.config.RedirectURI)
 
-	req, err := http.NewRequest("POST", s.config.GetTokenURL(), strings.NewReader(data.Encode()))
+	req, err := http.NewRequestWithContext(ctx, "POST", s.config.GetTokenURL(), strings.NewReader(data.Encode()))
 	if err != nil {
 		return TokenResponse{}, fmt.Errorf("error creating request: %v", err)
 	}
@@ -124,13 +124,13 @@ func (s *SpotifyAuthService) TokenExchange(userID, code, receivedState string) (
 }
 
 // RefreshToken regenerates access token from refresh token
-func (s *SpotifyAuthService) refreshToken(refreshToken string) (TokenResponse, error) {
+func (s *SpotifyAuthService) refreshToken(ctx context.Context, refreshToken string) (TokenResponse, error) {
 	data := url.Values{}
 	data.Set("grant_type", "refresh_token")
 	data.Set("refresh_token", refreshToken)
 	data.Set("client_id", s.config.ClientID)
 
-	req, err := http.NewRequest("POST", s.config.GetTokenURL(), strings.NewReader(data.Encode()))
+	req, err := http.NewRequestWithContext(ctx, "POST", s.config.GetTokenURL(), strings.NewReader(data.Encode()))
 	if err != nil {
 		return TokenResponse{}, fmt.Errorf("error creating request: %v", err)
 	}
@@ -167,7 +167,7 @@ func (s *SpotifyAuthService) GetValidToken(ctx context.Context, userID string) (
 	}
 
 	// Token is expired, refresh it
-	newTokens, err := s.refreshToken(token.RefreshToken)
+	newTokens, err := s.refreshToken(ctx, token.RefreshToken)
 	if err != nil {
 		return "", fmt.Errorf("failed to refresh token: %v", err)
 	}

@@ -3,27 +3,27 @@ package models
 // / Spotify Search
 type TrackSearch struct {
 	Name       string
-	Id         string
+	ID         string
 	Popularity int
 	ArtistList []string
 }
 
 type AlbumSearch struct {
 	Name       string
-	Id         string
+	ID         string
 	ImageUrl   string
 	ArtistList []string
 }
 type ArtistSearch struct {
 	Name       string
-	Id         string
+	ID         string
 	ImageUrl   string
 	Popularity int
 }
 
 type PlaylistSearch struct {
 	Name     string
-	Id       string
+	ID       string
 	ImageUrl string
 }
 
@@ -48,7 +48,7 @@ type AlbumData struct {
 }
 
 type ArtistData struct {
-	Id         string
+	ID         string
 	Name       string
 	ImageUrl   string
 	Popularity int

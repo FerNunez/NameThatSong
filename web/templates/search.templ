@@ -333,8 +333,8 @@ templ SearchResults(results []m.ArtistData) {
 		for _, result := range results {
 			<div
 				class="search-result-item inline-flex w-full px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-				onclick={ templ.JSFuncCall("setSearchValue", result.Name, result.Id) }
-				data-id={ result.Id }
+				onclick={ templ.JSFuncCall("setSearchValue", result.Name, result.ID) }
+				data-id={ result.ID }
 			>
 				{ result.Name }
 			</div>
@@ -343,14 +343,14 @@ templ SearchResults(results []m.ArtistData) {
 }
 
 // AlbumDropdown is the new dropdown component for albums
-templ AlbumDropdown(albums []m.AlbumData, selectedAlbums map[string]bool, artistId string) {
+templ AlbumDropdown(albums []m.AlbumData, selectedAlbums map[string]bool, artistID string) {
 	<div class="relative">
 		<div class="album-dropdown-inner overflow-hidden bg-gray-900 p-4 rounded-lg shadow-lg">
 			<h2 class="text-white text-lg font-bold mb-3">Select albums</h2>
 			<div id="album-scroll-wrapper" class="album-scroll-wrapper flex justify-start overflow-x-auto pb-4 pt-2 px-2" style="scroll-behavior: smooth; -webkit-overflow-scrolling: touch;">
 				<div id="albums-container" class="flex flex-row items-start pl-4">
 					if len(albums) > 0 {
-						@AlbumBatch(albums, 0, len(albums), selectedAlbums, artistId)
+						@AlbumBatch(albums, 0, len(albums), selectedAlbums, artistID)
 					} else {
 						<div class="text-white text-center w-full py-4">No albums found</div>
 					}
@@ -398,7 +398,7 @@ templ AlbumDropdown(albums []m.AlbumData, selectedAlbums map[string]bool, artist
 			const scrollWrapper = document.getElementById('album-scroll-wrapper');
 			const scrollLeftBtn = document.getElementById('scroll-left-btn');
 			const scrollRightBtn = document.getElementById('scroll-right-btn');
-			const artistId = document.querySelector('input[name="artist-id"]')?.value;
+			const artistID = document.querySelector('input[name="artist-id"]')?.value;
 
 			if (scrollWrapper && scrollLeftBtn && scrollRightBtn) {
 				// Add scrollbar styling
@@ -418,8 +418,8 @@ templ AlbumDropdown(albums []m.AlbumData, selectedAlbums map[string]bool, artist
 				scrollWrapper.addEventListener('scroll', function() {
 					if (isNearEnd(scrollWrapper)) {
 						// Request more albums when near the end of scrolling
-						if (artistId) {
-							fetchMoreAlbums(artistId);
+						if (artistID) {
+							fetchMoreAlbums(artistID);
 						}
 					}
 				});
@@ -453,7 +453,7 @@ templ AlbumDropdown(albums []m.AlbumData, selectedAlbums map[string]bool, artist
 		let allAlbumsLoaded = false;
 
 		// Function to fetch more albums
-		function fetchMoreAlbums(artistId) {
+		function fetchMoreAlbums(artistID) {
 			if (isLoading || allAlbumsLoaded) return;
 
 			isLoading = true;
@@ -469,7 +469,7 @@ templ AlbumDropdown(albums []m.AlbumData, selectedAlbums map[string]bool, artist
 			albumsContainer.appendChild(loadingIndicator);
 
 			// Fetch more albums with offset
-			fetch(`/get-albums?artist-id=${artistId}&offset=${offset}`)
+			fetch(`/get-albums?artist-id=${artistID}&offset=${offset}`)
 				.then(response => response.text())
 				.then(html => {
 					// Remove the loading indicator
@@ -520,14 +520,14 @@ templ AlbumDropdown(albums []m.AlbumData, selectedAlbums map[string]bool, artist
 }
 
 // AlbumBatch renders a batch of albums
-templ AlbumBatch(albums []m.AlbumData, start, end int, selectedAlbums map[string]bool, artistId string) {
+templ AlbumBatch(albums []m.AlbumData, start, end int, selectedAlbums map[string]bool, artistID string) {
 	for _, album := range albums {
 		{{ _, selected := selectedAlbums[album.ID] }}
-		@AlbumCard(album, selected, artistId)
+		@AlbumCard(album, selected, artistID)
 	}
 }
 
-templ AlbumCard(album m.AlbumData, selected bool, artistId string) {
+templ AlbumCard(album m.AlbumData, selected bool, artistID string) {
 	{{ class_selected := "album-card block bg-white border border-gray-200 rounded-lg shadow-md hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 flex-shrink-0 mx-3 my-2 transition-all duration-200 transform hover:scale-105" }}
 	if selected {
 		{{ class_selected = "album-card block bg-white border-2 border-green-500 rounded-lg shadow-md hover:bg-gray-100 dark:bg-gray-700 dark:border-green-500 dark:hover:bg-gray-700 flex-shrink-0 mx-3 my-2 transition-all duration-200 transform hover:scale-105" }}
@@ -538,7 +538,7 @@ templ AlbumCard(album m.AlbumData, selected bool, artistId string) {
 		style="width: 200px;"
 		hx-trigger="click"
 		hx-post="/api/select-album"
-		hx-vals={ `{"albumID": "` + album.ID + `", "artistID": "` + artistId + `"}` }
+		hx-vals={ `{"albumID": "` + album.ID + `", "artistID": "` + artistID + `"}` }
 		value={ album.ID }
 		hx-swap="outerHTML"
 	>

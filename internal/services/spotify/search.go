@@ -46,7 +46,7 @@ func (s *SpotifySearchService) SearchTracks(ctx context.Context, userID, query s
 	}
 
 	// Cache miss - search Spotify API
-	tracks, err := s.searchTracksFromAPI(accessToken, query)
+	tracks, err := s.searchTracksFromAPI(ctx, accessToken, query)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (s *SpotifySearchService) SearchAlbums(ctx context.Context, userID, query s
 		return nil, fmt.Errorf("failed to get access token: %v", err)
 	}
 
-	albums, err := s.searchAlbumsFromAPI(accessToken, query)
+	albums, err := s.searchAlbumsFromAPI(ctx, accessToken, query)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func (s *SpotifySearchService) SearchArtists(ctx context.Context, userID, query 
 		return nil, fmt.Errorf("failed to get access token: %v", err)
 	}
 
-	artists, err := s.searchArtistsFromAPI(accessToken, query)
+	artists, err := s.searchArtistsFromAPI(ctx, accessToken, query)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (s *SpotifySearchService) SearchPlaylists(ctx context.Context, userID, quer
 		return nil, fmt.Errorf("failed to get access token: %v", err)
 	}
 
-	playlists, err := s.searchPlaylistsFromAPI(accessToken, query)
+	playlists, err := s.searchPlaylistsFromAPI(ctx, accessToken, query)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func (s *SpotifySearchService) SearchPlaylists(ctx context.Context, userID, quer
 }
 
 // Private helper methods
-func (s *SpotifySearchService) search(accessToken, limit, atype, query string) ([]byte, error) {
+func (s *SpotifySearchService) search(ctx context.Context, accessToken, limit, atype, query string) ([]byte, error) {
 	trackQuery := atype + ":" + strings.ToLower(query)
 
 	apiURL, err := url.Parse(s.config.GetAPIBaseURL() + "/search")
@@ -133,7 +133,7 @@ func (s *SpotifySearchService) search(accessToken, limit, atype, query string) (
 	q.Set("limit", limit)
 	apiURL.RawQuery = q.Encode()
 
-	req, err := http.NewRequest("GET", apiURL.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", apiURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -155,36 +155,36 @@ func (s *SpotifySearchService) search(accessToken, limit, atype, query string) (
 	return data, nil
 }
 
-func (s *SpotifySearchService) searchTracksFromAPI(accessToken, name string) ([]m.TrackSearch, error) {
+func (s *SpotifySearchService) searchTracksFromAPI(ctx context.Context, accessToken, name string) ([]m.TrackSearch, error) {
 	limit := "50"
-	data, err := s.search(accessToken, limit, "track", name)
+	data, err := s.search(ctx, accessToken, limit, "track", name)
 	if err != nil {
 		return nil, err
 	}
 	return s.parseTrackSearchResponse(data)
 }
 
-func (s *SpotifySearchService) searchAlbumsFromAPI(accessToken, name string) ([]m.AlbumSearch, error) {
+func (s *SpotifySearchService) searchAlbumsFromAPI(ctx context.Context, accessToken, name string) ([]m.AlbumSearch, error) {
 	limit := "50"
-	data, err := s.search(accessToken, limit, "album", name)
+	data, err := s.search(ctx, accessToken, limit, "album", name)
 	if err != nil {
 		return nil, err
 	}
 	return s.parseAlbumSearchResponse(data)
 }
 
-func (s *SpotifySearchService) searchArtistsFromAPI(accessToken, name string) ([]m.ArtistSearch, error) {
+func (s *SpotifySearchService) searchArtistsFromAPI(ctx context.Context, accessToken, name string) ([]m.ArtistSearch, error) {
 	limit := "50"
-	data, err := s.search(accessToken, limit, "artist", name)
+	data, err := s.search(ctx, accessToken, limit, "artist", name)
 	if err != nil {
 		return nil, err
 	}
 	return s.parseArtistSearchResponse(data)
 }
 
-func (s *SpotifySearchService) searchPlaylistsFromAPI(accessToken, name string) ([]m.PlaylistSearch, error) {
+func (s *SpotifySearchService) searchPlaylistsFromAPI(ctx context.Context, accessToken, name string) ([]m.PlaylistSearch, error) {
 	limit := "50"
-	data, err := s.search(accessToken, limit, "playlist", name)
+	data, err := s.search(ctx, accessToken, limit, "playlist", name)
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +282,7 @@ func (s *SpotifySearchService) parseTrackSearchResponse(data []byte) ([]m.TrackS
 		}
 
 		trackInfo := m.TrackSearch{
-			Id:         t.ID,
+			ID:         t.ID,
 			Name:       t.Name,
 			Popularity: t.Popularity,
 			ArtistList: artists,
@@ -353,7 +353,7 @@ func (s *SpotifySearchService) parseAlbumSearchResponse(data []byte) ([]m.AlbumS
 		}
 
 		albums[idx] = m.AlbumSearch{
-			Id:         alb.ID,
+			ID:         alb.ID,
 			ImageUrl:   imageUrl,
 			Name:       alb.Name,
 			ArtistList: artists,
@@ -393,7 +393,7 @@ func (s *SpotifySearchService) parseArtistSearchResponse(data []byte) ([]m.Artis
 			imageUrl = a.Images[0].URL
 		}
 		artistInfo := m.ArtistSearch{
-			Id:         a.ID,
+			ID:         a.ID,
 			Name:       a.Name,
 			ImageUrl:   imageUrl,
 			Popularity: a.Popularity,
@@ -468,7 +468,7 @@ func (s *SpotifySearchService) parsePlaylistSearchResponse(data []byte) ([]m.Pla
 		}
 
 		playlists = append(playlists, m.PlaylistSearch{
-			Id:       p.ID,
+			ID:       p.ID,
 			ImageUrl: imageUrl,
 			Name:     p.Name,
 		})
