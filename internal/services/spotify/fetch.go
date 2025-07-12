@@ -500,18 +500,25 @@ func (s *SpotifyFetchService) fetchPlaylistFromAPI(accessToken, playlistId strin
 	}, nil
 }
 
-func FetchAlbumsFromArtist(httpClient *http.Client, accessToken, artistId string) ([]string, error) {
+// FetchAlbumsFromArtist fetches album IDs from an artist
+func (s *SpotifyFetchService) FetchAlbumsFromArtist(ctx context.Context, userID, artistId string) ([]string, error) {
+	// Get access token for user
+	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	if err != nil {
+		return []string{}, fmt.Errorf("failed to get access token: %v", err)
+	}
+
 	limit := 50
 	include_groups := "album"
 
-	requestURL := fmt.Sprintf("https://api.spotify.com/v1/artists/%v/albums?include_groups=%v&limit=%v", artistId, include_groups, limit)
+	requestURL := fmt.Sprintf("%s/artists/%v/albums?include_groups=%v&limit=%v", s.config.GetAPIBaseURL(), artistId, include_groups, limit)
 	req, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
 		return []string{}, err
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 
-	resp, err := httpClient.Do(req)
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return []string{}, err
 	}
@@ -572,16 +579,23 @@ func FetchAlbumsFromArtist(httpClient *http.Client, accessToken, artistId string
 	return albumIds, nil
 }
 
-func FetchTracksFromAlbum(httpClient *http.Client, accessToken, albumId string) ([]string, error) {
+// FetchTracksFromAlbum fetches track IDs from an album
+func (s *SpotifyFetchService) FetchTracksFromAlbum(ctx context.Context, userID, albumId string) ([]string, error) {
+	// Get access token for user
+	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	if err != nil {
+		return []string{}, fmt.Errorf("failed to get access token: %v", err)
+	}
+
 	limit := 50
-	requestURL := fmt.Sprintf("https://api.spotify.com/v1/albums/%v/tracks?&limit=%v", albumId, limit)
+	requestURL := fmt.Sprintf("%s/albums/%v/tracks?&limit=%v", s.config.GetAPIBaseURL(), albumId, limit)
 	req, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
 		return []string{}, err
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 
-	resp, err := httpClient.Do(req)
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return []string{}, err
 	}
@@ -652,17 +666,24 @@ func FetchTracksFromAlbum(httpClient *http.Client, accessToken, albumId string) 
 	return trackIds, nil
 }
 
-func FetchTracksFromPlaylist(httpClient *http.Client, accessToken, playlistId string) ([]string, error) {
+// FetchTracksFromPlaylist fetches track IDs from a playlist
+func (s *SpotifyFetchService) FetchTracksFromPlaylist(ctx context.Context, userID, playlistId string) ([]string, error) {
+	// Get access token for user
+	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	if err != nil {
+		return []string{}, fmt.Errorf("failed to get access token: %v", err)
+	}
+
 	limit := 50
 	fields := "items(track(id))"
-	requestURL := fmt.Sprintf("https://api.spotify.com/v1/playlists/%v/tracks?&fields=%v&limit=%v", playlistId, fields, limit)
+	requestURL := fmt.Sprintf("%s/playlists/%v/tracks?&fields=%v&limit=%v", s.config.GetAPIBaseURL(), playlistId, fields, limit)
 	req, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
 		return []string{}, err
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 
-	resp, err := httpClient.Do(req)
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return []string{}, err
 	}
