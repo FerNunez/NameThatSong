@@ -20,9 +20,9 @@ type SpotifyToken struct {
 type SpotifyTokenStore interface {
 	// Core token operations
 	Get(ctx context.Context, user_id string) (SpotifyToken, error)
-	Create(ctx context.Context, user_id uuid.UUID, refresh_token, access_token, token_type, scope string, expires_at time.Time) error
-	Update(ctx context.Context, user_id uuid.UUID, new_access_token string, expires_at time.Time) error
-	Delete(ctx context.Context, user_id uuid.UUID) error
+	Create(ctx context.Context, user_id string, refresh_token, access_token, token_type, scope string, expires_at time.Time) error
+	Update(ctx context.Context, user_id string, new_access_token string, expires_at time.Time) error
+	Delete(ctx context.Context, user_id string) error
 }
 
 // ////////////////////////////////////////////
@@ -35,7 +35,11 @@ func NewSQLSpotifyTokenStore(db *database.Queries, encryptor *utils.TokenEncrypt
 	return &SQLSpotifyTokenStore{db, encryptor}
 }
 
-func (s *SQLSpotifyTokenStore) Create(ctx context.Context, user_id uuid.UUID, refresh_token, access_token, token_type, scope string, expires_at time.Time) error {
+func (s *SQLSpotifyTokenStore) Create(ctx context.Context, user_id string, refresh_token, access_token, token_type, scope string, expires_at time.Time) error {
+	userUUID, err := uuid.Parse(user_id)
+	if err != nil {
+		return err
+	}
 
 	// Encrypt tokens!
 	refresh_token_crypted, err := s.encryptor.Encrypt(refresh_token)
@@ -56,7 +60,7 @@ func (s *SQLSpotifyTokenStore) Create(ctx context.Context, user_id uuid.UUID, re
 		TokenType:    token_type,
 		Scope:        scope,
 		ExpiresAt:    expires_at,
-		UserID:       user_id,
+		UserID:       userUUID,
 	})
 
 	return err
@@ -94,7 +98,12 @@ func (s *SQLSpotifyTokenStore) Get(ctx context.Context, userId string) (SpotifyT
 
 }
 
-func (s *SQLSpotifyTokenStore) Update(ctx context.Context, user_id uuid.UUID, new_access_token string, expires_at time.Time) error {
+func (s *SQLSpotifyTokenStore) Update(ctx context.Context, user_id string, new_access_token string, expires_at time.Time) error {
+	userUUID, err := uuid.Parse(user_id)
+	if err != nil {
+		return err
+	}
+
 	// TODO: Add proper structured logging for token updates
 	access_token_crypted, err := s.encryptor.Encrypt(new_access_token)
 	if err != nil {
@@ -105,11 +114,15 @@ func (s *SQLSpotifyTokenStore) Update(ctx context.Context, user_id uuid.UUID, ne
 	return s.db.UpdateSpotifyAccessToken(ctx, database.UpdateSpotifyAccessTokenParams{
 		AccessToken: access_token_crypted,
 		ExpiresAt:   expires_at,
-		UserID:      user_id,
+		UserID:      userUUID,
 	})
 }
 
 // Delete removes a token from storage
-func (s *SQLSpotifyTokenStore) Delete(ctx context.Context, user_id uuid.UUID) error {
-	return s.db.DeleteSpotifyToken(ctx, user_id)
+func (s *SQLSpotifyTokenStore) Delete(ctx context.Context, user_id string) error {
+	userUUID, err := uuid.Parse(user_id)
+	if err != nil {
+		return err
+	}
+	return s.db.DeleteSpotifyToken(ctx, userUUID)
 }

@@ -15,7 +15,6 @@ import (
 	"github.com/FerNunez/NameThatSong/internal/pkg/utils"
 	"github.com/FerNunez/NameThatSong/internal/repository"
 	"github.com/FerNunez/NameThatSong/internal/services/cache"
-	"github.com/google/uuid"
 )
 
 type TokenResponse struct {
@@ -162,13 +161,8 @@ func (s *SpotifyAuthService) GetValidToken(ctx context.Context, userID string) (
 	}
 
 	// Update the token in storage
-	userUUID, err := uuid.Parse(userID)
-	if err != nil {
-		return "", fmt.Errorf("invalid user ID: %v", err)
-	}
-
 	expiresAt := time.Now().Add(time.Duration(newTokens.ExpiresIn) * time.Second)
-	err = s.tokenStore.Update(ctx, userUUID, newTokens.AccessToken, expiresAt)
+	err = s.tokenStore.Update(ctx, userID, newTokens.AccessToken, expiresAt)
 	if err != nil {
 		return "", fmt.Errorf("failed to update token: %v", err)
 	}
