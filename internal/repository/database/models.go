@@ -9,15 +9,39 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sqlc-dev/pqtype"
 )
 
-type Session struct {
-	ID        string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+type EmailVerificationToken struct {
+	ID        uuid.UUID
 	UserID    uuid.UUID
+	Token     string
 	ExpiresAt time.Time
-	RevokedAt sql.NullTime
+	UsedAt    sql.NullTime
+	CreatedAt time.Time
+}
+
+type GameSession struct {
+	ID              uuid.UUID
+	UserID          uuid.UUID
+	GameMode        string
+	TotalQuestions  int32
+	CorrectAnswers  int32
+	TotalScore      int32
+	DurationSeconds int32
+	TracksPlayed    []string
+	CompletedAt     sql.NullTime
+}
+
+type PasswordResetToken struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	Token     string
+	IpAddress pqtype.Inet
+	UserAgent sql.NullString
+	ExpiresAt time.Time
+	UsedAt    sql.NullTime
+	CreatedAt time.Time
 }
 
 type SpotifyToken struct {
@@ -33,8 +57,21 @@ type SpotifyToken struct {
 
 type User struct {
 	ID             uuid.UUID
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
 	Email          string
 	HashedPassword string
+	EmailVerified  sql.NullBool
+	DisplayName    string
+	AvatarUrl      sql.NullString
+	LastLoginAt    sql.NullTime
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+type UserSession struct {
+	ID        string
+	UserID    uuid.UUID
+	ExpiresAt time.Time
+	RevokedAt sql.NullTime
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }

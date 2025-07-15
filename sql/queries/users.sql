@@ -72,7 +72,7 @@ SELECT * FROM password_reset_tokens WHERE token = $1;
 -- name: GetPasswordResetTokensByUserID :one
 SELECT * FROM password_reset_tokens WHERE user_id = $1;
 
--- name: UpdatePasswordResetTokensUsedAtByToken :exec
+-- name: UpdatePasswordResetTokensUsedAtByToken :one
 UPDATE password_reset_tokens
 SET used_at = NOW()
 WHERE token = $1
