@@ -85,7 +85,7 @@ DELETE FROM password_reset_tokens WHERE id = $1;
 DELETE FROM password_reset_tokens WHERE expires_at < NOW();
 
 -- User Sessions
--- name: CreateSession :one
+-- name: CreateUserSession :one
 INSERT INTO user_sessions (id,  user_id, expires_at, revoked_at, created_at, updated_at)
 VALUES (
   $1,
@@ -97,20 +97,29 @@ VALUES (
 )
 RETURNING *;
 
--- name: GetSession :one
+-- name: GetUserSession :one
 SELECT * FROM user_sessions WHERE id = $1;
 
--- name: UpdateSession :exec
+-- name: UpdateUserSession :exec
 UPDATE user_sessions
 SET revoked_at = $1,
     updated_at = $2
 WHERE id = $3;
+
+-- name: Revoke :exec
+UPDATE user_sessions
+SET revoked_at = NOW(),
+    updated_at = NOW()
+WHERE id = $1;
 
 -- name: RevokeUserSessionsByUserID :exec
 UPDATE user_sessions 
 SET revoked_at = NOW(), updated_at = NOW()
 WHERE user_id = $1
 RETURNING *;
+
+-- name: DeleteUserSessions :exec
+DELETE FROM user_sessions WHERE id = $1;
 
 -- name: CleanupExpiredSessions :exec
 DELETE FROM user_sessions WHERE expires_at < NOW();

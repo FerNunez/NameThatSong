@@ -113,40 +113,6 @@ func (q *Queries) CreatePasswordResetTokens(ctx context.Context, arg CreatePassw
 	return i, err
 }
 
-const createSession = `-- name: CreateSession :one
-INSERT INTO user_sessions (id,  user_id, expires_at, revoked_at, created_at, updated_at)
-VALUES (
-  $1,
-  $2,
-  $3,
-  NULL,
-  NOW(),
-  NOW()
-)
-RETURNING id, user_id, expires_at, revoked_at, created_at, updated_at
-`
-
-type CreateSessionParams struct {
-	ID        string
-	UserID    uuid.UUID
-	ExpiresAt time.Time
-}
-
-// User Sessions
-func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (UserSession, error) {
-	row := q.db.QueryRowContext(ctx, createSession, arg.ID, arg.UserID, arg.ExpiresAt)
-	var i UserSession
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.ExpiresAt,
-		&i.RevokedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (id, email, hashed_password, email_verified, display_name, avatar_url, last_login_at, created_at, updated_at)
 VALUES ( $1, $2, $3, $4, $5, $6, NULL, NOW(), NOW())
@@ -187,6 +153,40 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
+const createUserSession = `-- name: CreateUserSession :one
+INSERT INTO user_sessions (id,  user_id, expires_at, revoked_at, created_at, updated_at)
+VALUES (
+  $1,
+  $2,
+  $3,
+  NULL,
+  NOW(),
+  NOW()
+)
+RETURNING id, user_id, expires_at, revoked_at, created_at, updated_at
+`
+
+type CreateUserSessionParams struct {
+	ID        string
+	UserID    uuid.UUID
+	ExpiresAt time.Time
+}
+
+// User Sessions
+func (q *Queries) CreateUserSession(ctx context.Context, arg CreateUserSessionParams) (UserSession, error) {
+	row := q.db.QueryRowContext(ctx, createUserSession, arg.ID, arg.UserID, arg.ExpiresAt)
+	var i UserSession
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.ExpiresAt,
+		&i.RevokedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const deletePasswordResetTokens = `-- name: DeletePasswordResetTokens :exec
 DELETE FROM password_reset_tokens WHERE id = $1
 `
@@ -202,6 +202,15 @@ DELETE FROM users WHERE id = $1
 
 func (q *Queries) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, deleteUser, id)
+	return err
+}
+
+const deleteUserSessions = `-- name: DeleteUserSessions :exec
+DELETE FROM user_sessions WHERE id = $1
+`
+
+func (q *Queries) DeleteUserSessions(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, deleteUserSessions, id)
 	return err
 }
 
@@ -281,24 +290,6 @@ func (q *Queries) GetPasswordResetTokensByUserID(ctx context.Context, userID uui
 	return i, err
 }
 
-const getSession = `-- name: GetSession :one
-SELECT id, user_id, expires_at, revoked_at, created_at, updated_at FROM user_sessions WHERE id = $1
-`
-
-func (q *Queries) GetSession(ctx context.Context, id string) (UserSession, error) {
-	row := q.db.QueryRowContext(ctx, getSession, id)
-	var i UserSession
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.ExpiresAt,
-		&i.RevokedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, email, hashed_password, email_verified, display_name, avatar_url, last_login_at, created_at, updated_at FROM users WHERE email = $1
 `
@@ -341,12 +332,42 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 	return i, err
 }
 
+const getUserSession = `-- name: GetUserSession :one
+SELECT id, user_id, expires_at, revoked_at, created_at, updated_at FROM user_sessions WHERE id = $1
+`
+
+func (q *Queries) GetUserSession(ctx context.Context, id string) (UserSession, error) {
+	row := q.db.QueryRowContext(ctx, getUserSession, id)
+	var i UserSession
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.ExpiresAt,
+		&i.RevokedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const resetUsers = `-- name: ResetUsers :exec
 TRUNCATE TABLE users RESTART IDENTITY CASCADE
 `
 
 func (q *Queries) ResetUsers(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, resetUsers)
+	return err
+}
+
+const revoke = `-- name: Revoke :exec
+UPDATE user_sessions
+SET revoked_at = NOW(),
+    updated_at = NOW()
+WHERE id = $1
+`
+
+func (q *Queries) Revoke(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, revoke, id)
 	return err
 }
 
@@ -424,24 +445,6 @@ func (q *Queries) UpdatePasswordResetTokensUsedAtByToken(ctx context.Context, to
 	return i, err
 }
 
-const updateSession = `-- name: UpdateSession :exec
-UPDATE user_sessions
-SET revoked_at = $1,
-    updated_at = $2
-WHERE id = $3
-`
-
-type UpdateSessionParams struct {
-	RevokedAt sql.NullTime
-	UpdatedAt time.Time
-	ID        string
-}
-
-func (q *Queries) UpdateSession(ctx context.Context, arg UpdateSessionParams) error {
-	_, err := q.db.ExecContext(ctx, updateSession, arg.RevokedAt, arg.UpdatedAt, arg.ID)
-	return err
-}
-
 const updateUserPassword = `-- name: UpdateUserPassword :exec
 UPDATE users
 SET hashed_password = $2, updated_at = NOW()
@@ -479,6 +482,24 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		arg.AvatarUrl,
 		arg.UpdatedAt,
 	)
+	return err
+}
+
+const updateUserSession = `-- name: UpdateUserSession :exec
+UPDATE user_sessions
+SET revoked_at = $1,
+    updated_at = $2
+WHERE id = $3
+`
+
+type UpdateUserSessionParams struct {
+	RevokedAt sql.NullTime
+	UpdatedAt time.Time
+	ID        string
+}
+
+func (q *Queries) UpdateUserSession(ctx context.Context, arg UpdateUserSessionParams) error {
+	_, err := q.db.ExecContext(ctx, updateUserSession, arg.RevokedAt, arg.UpdatedAt, arg.ID)
 	return err
 }
 

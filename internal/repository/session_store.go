@@ -5,23 +5,17 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/FerNunez/NameThatSong/internal/models"
 	"github.com/FerNunez/NameThatSong/internal/repository/database"
 	"github.com/google/uuid"
 )
 
-type Session struct {
-	ID        string
-	UserID    uuid.UUID
-	CreatedAt time.Time
-	ExpiresAt time.Time
-	RevokedAt *time.Time
-}
-
 type SessionStore interface {
-	Create(ctx context.Context, userID uuid.UUID, ttl time.Duration) (Session, error)
-	Get(ctx context.Context, id string) (Session, error)
+	Create(ctx context.Context, userID uuid.UUID, ttl time.Duration) (*models.UserSession, error)
+	Get(ctx context.Context, id string) (*models.UserSession, error)
+	RevokeAllSessions(ctx context.Context, userID uuid.UUID) error
 	Revoke(ctx context.Context, id string) error
-	IsValid(ctx context.Context, id string) (bool, error)
+	Delete(ctx context.Context, id string) error
 }
 
 type SQLSessionStore struct {
@@ -34,7 +28,11 @@ func NewSQLSessionStore(db *database.Queries) SessionStore {
 	}
 }
 
-func (s *SQLSessionStore) Create(ctx context.Context, userID uuid.UUID, ttl time.Duration) (Session, error) {
+func (s *SQLSessionStore) Delete(ctx context.Context, id string) error {
+	return s.db.DeleteUserSessions(ctx, id)
+}
+
+func (s *SQLSessionStore) Create(ctx context.Context, userID uuid.UUID, ttl time.Duration) (*models.UserSession, error) {
 	id := generateSessionID()
 	expiresAt := time.Now().Add(ttl)
 
@@ -44,10 +42,10 @@ func (s *SQLSessionStore) Create(ctx context.Context, userID uuid.UUID, ttl time
 		ExpiresAt: expiresAt,
 	})
 	if err != nil {
-		return Session{}, err
+		return &models.UserSession{}, err
 	}
 
-	return Session{
+	return &models.UserSession{
 		ID:        dbSession.ID,
 		UserID:    dbSession.UserID,
 		CreatedAt: dbSession.CreatedAt,
@@ -56,13 +54,13 @@ func (s *SQLSessionStore) Create(ctx context.Context, userID uuid.UUID, ttl time
 	}, nil
 }
 
-func (s *SQLSessionStore) Get(ctx context.Context, id string) (Session, error) {
+func (s *SQLSessionStore) Get(ctx context.Context, id string) (*models.UserSession, error) {
 	dbSession, err := s.db.GetSession(ctx, id)
 	if err != nil {
-		return Session{}, err
+		return nil, err
 	}
 
-	return Session{
+	return &models.UserSession{
 		ID:        dbSession.ID,
 		UserID:    dbSession.UserID,
 		CreatedAt: dbSession.CreatedAt,
@@ -72,31 +70,10 @@ func (s *SQLSessionStore) Get(ctx context.Context, id string) (Session, error) {
 }
 
 func (s *SQLSessionStore) Revoke(ctx context.Context, id string) error {
-	now := time.Now()
-	return s.db.UpdateSession(ctx, database.UpdateSessionParams{
-		RevokedAt: sql.NullTime{Time: now, Valid: true},
-		UpdatedAt: now,
-		ID:        id,
-	})
+	return s.db.Revoke(ctx, id)
 }
-
-func (s *SQLSessionStore) IsValid(ctx context.Context, id string) (bool, error) {
-	session, err := s.Get(ctx, id)
-	if err != nil {
-		return false, err
-	}
-
-	now := time.Now()
-	if now.After(session.ExpiresAt) {
-		return false, nil
-	}
-
-	// Check if session is revoked
-	if session.RevokedAt != nil && now.After(*session.RevokedAt) {
-		return false, nil
-	}
-
-	return true, nil
+func (s *SQLSessionStore) RevokeAllSessions(ctx context.Context, userID uuid.UUID) error {
+	return s.db.RevokeUserSessionsByUserID(ctx, userID)
 }
 
 func nullTimeToPointer(nt sql.NullTime) *time.Time {
