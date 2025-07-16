@@ -52,7 +52,7 @@ func (h PostRegisterHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	email := r.FormValue("email")
 	password := r.FormValue("password")
 	// hash password
-	hashedPass, err := jwt.HashPassword(password)
+	hashedPass, err := utils.HashPassword(password)
 	if err != nil {
 		fmt.Println("[PostRegisterHandler] ServeHttp: could not hash password,", err)
 		c := templates.RegisterError()
