@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type SessionStore interface {
+type UserSessionStore interface {
 	Create(ctx context.Context, userID uuid.UUID, ttl time.Duration) (*models.UserSession, error)
 	Get(ctx context.Context, id string) (*models.UserSession, error)
 	RevokeAllSessions(ctx context.Context, userID uuid.UUID) error
@@ -18,21 +18,21 @@ type SessionStore interface {
 	Delete(ctx context.Context, id string) error
 }
 
-type SQLSessionStore struct {
+type SQLUserSessionStore struct {
 	db *database.Queries
 }
 
-func NewSQLSessionStore(db *database.Queries) SessionStore {
-	return &SQLSessionStore{
+func NewSQLSessionStore(db *database.Queries) UserSessionStore {
+	return &SQLUserSessionStore{
 		db: db,
 	}
 }
 
-func (s *SQLSessionStore) Delete(ctx context.Context, id string) error {
+func (s *SQLUserSessionStore) Delete(ctx context.Context, id string) error {
 	return s.db.DeleteUserSessions(ctx, id)
 }
 
-func (s *SQLSessionStore) Create(ctx context.Context, userID uuid.UUID, ttl time.Duration) (*models.UserSession, error) {
+func (s *SQLUserSessionStore) Create(ctx context.Context, userID uuid.UUID, ttl time.Duration) (*models.UserSession, error) {
 	id := generateSessionID()
 	expiresAt := time.Now().Add(ttl)
 
@@ -54,7 +54,7 @@ func (s *SQLSessionStore) Create(ctx context.Context, userID uuid.UUID, ttl time
 	}, nil
 }
 
-func (s *SQLSessionStore) Get(ctx context.Context, id string) (*models.UserSession, error) {
+func (s *SQLUserSessionStore) Get(ctx context.Context, id string) (*models.UserSession, error) {
 	dbSession, err := s.db.GetSession(ctx, id)
 	if err != nil {
 		return nil, err
@@ -69,10 +69,10 @@ func (s *SQLSessionStore) Get(ctx context.Context, id string) (*models.UserSessi
 	}, nil
 }
 
-func (s *SQLSessionStore) Revoke(ctx context.Context, id string) error {
+func (s *SQLUserSessionStore) Revoke(ctx context.Context, id string) error {
 	return s.db.Revoke(ctx, id)
 }
-func (s *SQLSessionStore) RevokeAllSessions(ctx context.Context, userID uuid.UUID) error {
+func (s *SQLUserSessionStore) RevokeAllSessions(ctx context.Context, userID uuid.UUID) error {
 	return s.db.RevokeUserSessionsByUserID(ctx, userID)
 }
 
