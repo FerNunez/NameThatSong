@@ -30,7 +30,7 @@ func (h GetLoginHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 
 type PostLoginHandler struct {
 	UserStore         repository.UserStore
-	SessionStore      repository.SessionStore
+	SessionStore      repository.UserSessionStore
 	SpotifyTokenStore repository.SpotifyTokenStore
 	SessionName       string
 	GameManager       *game.GameManager

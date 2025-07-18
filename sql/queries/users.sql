@@ -62,8 +62,8 @@ DELETE FROM email_verification_tokens WHERE expires_at < NOW();
 
 -- Password Reset Tokens
 -- name: CreatePasswordResetTokens :one
-INSERT INTO password_reset_tokens (id, user_id, token, ip_address, user_agent, expires_at, used_at, created_at)
-VALUES ( $1, $2, $3, $4, $5, $6, NULL, NOW())
+INSERT INTO password_reset_tokens (id, user_id, token, expires_at, used_at, created_at)
+VALUES ( $1, $2, $3, $4, NULL, NOW())
 RETURNING *;
 
 -- name: GetPasswordResetTokensByToken :one

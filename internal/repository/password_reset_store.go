@@ -2,9 +2,7 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
-	"net"
 	"time"
 
 	"github.com/FerNunez/NameThatSong/internal/models"
@@ -13,7 +11,7 @@ import (
 )
 
 type PasswordResetStore interface {
-	Create(ctx context.Context, userID uuid.UUID, token string, expire_at time.Time, ipAddress net.IP, userAgent string) (*models.PasswordResetToken, error)
+	Create(ctx context.Context, userID uuid.UUID, token string, expire_at time.Time) (*models.PasswordResetToken, error)
 	GetByToken(ctx context.Context, token string) (*models.PasswordResetToken, error)
 	GetByUserID(ctx context.Context, userID uuid.UUID) (*models.PasswordResetToken, error)
 	DeleteByID(ctx context.Context, id uuid.UUID) error
@@ -29,22 +27,11 @@ func NewSQLPasswordResetStore(db *database.Queries) PasswordResetStore {
 	return &SQLPasswordResetStore{db: db}
 }
 
-func (s *SQLPasswordResetStore) Create(ctx context.Context, userID uuid.UUID, token string, expire_at time.Time, ipAddress net.IP, userAgent string) (*models.PasswordResetToken, error) {
-	// Convert userAgent to nullSqu
-	var nullstring sql.NullString
-	if userAgent == "" {
-		nullstring.Valid = false
-	} else {
-		nullstring.Valid = true
-		nullstring.String = userAgent
-	}
-
+func (s *SQLPasswordResetStore) Create(ctx context.Context, userID uuid.UUID, token string, expire_at time.Time) (*models.PasswordResetToken, error) {
 	dbPRT, err := s.db.CreatePasswordResetTokens(ctx, database.CreatePasswordResetTokensParams{
 		ID:        uuid.New(),
 		UserID:    userID,
 		Token:     token,
-		IpAddress: ipAddress,
-		UserAgent: nullstring,
 		ExpiresAt: expire_at,
 	})
 	if err != nil {
@@ -90,15 +77,7 @@ func fromDbPRT(dbPrt *database.PasswordResetToken) *models.PasswordResetToken {
 		Token:     dbPrt.Token,
 		ExpiresAt: dbPrt.ExpiresAt,
 		UsedAt:    timeFromNullTime(dbPrt.UsedAt),
-		IPAddress: dbPrt.IpAddress.String(),
-		UserAgent: stringFromNullString(dbPrt.UserAgent),
 		CreatedAt: dbPrt.CreatedAt,
 	}
 }
 
-func stringFromNullString(ns sql.NullString) string {
-	if ns.Valid {
-		return ns.String
-	}
-	return "unknown"
-}

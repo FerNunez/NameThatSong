@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/sqlc-dev/pqtype"
 )
 
 type EmailVerificationToken struct {
@@ -37,8 +36,6 @@ type PasswordResetToken struct {
 	ID        uuid.UUID
 	UserID    uuid.UUID
 	Token     string
-	IpAddress pqtype.Inet
-	UserAgent sql.NullString
 	ExpiresAt time.Time
 	UsedAt    sql.NullTime
 	CreatedAt time.Time

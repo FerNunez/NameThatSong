@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/sqlc-dev/pqtype"
 )
 
 const cleanupExpiredEmailVerificationTokens = `-- name: CleanupExpiredEmailVerificationTokens :exec
@@ -75,17 +74,15 @@ func (q *Queries) CreateEmailVerificationTokens(ctx context.Context, arg CreateE
 }
 
 const createPasswordResetTokens = `-- name: CreatePasswordResetTokens :one
-INSERT INTO password_reset_tokens (id, user_id, token, ip_address, user_agent, expires_at, used_at, created_at)
-VALUES ( $1, $2, $3, $4, $5, $6, NULL, NOW())
-RETURNING id, user_id, token, ip_address, user_agent, expires_at, used_at, created_at
+INSERT INTO password_reset_tokens (id, user_id, token, expires_at, used_at, created_at)
+VALUES ( $1, $2, $3, $4, NULL, NOW())
+RETURNING id, user_id, token, expires_at, used_at, created_at
 `
 
 type CreatePasswordResetTokensParams struct {
 	ID        uuid.UUID
 	UserID    uuid.UUID
 	Token     string
-	IpAddress pqtype.Inet
-	UserAgent sql.NullString
 	ExpiresAt time.Time
 }
 
@@ -95,8 +92,6 @@ func (q *Queries) CreatePasswordResetTokens(ctx context.Context, arg CreatePassw
 		arg.ID,
 		arg.UserID,
 		arg.Token,
-		arg.IpAddress,
-		arg.UserAgent,
 		arg.ExpiresAt,
 	)
 	var i PasswordResetToken
@@ -104,8 +99,6 @@ func (q *Queries) CreatePasswordResetTokens(ctx context.Context, arg CreatePassw
 		&i.ID,
 		&i.UserID,
 		&i.Token,
-		&i.IpAddress,
-		&i.UserAgent,
 		&i.ExpiresAt,
 		&i.UsedAt,
 		&i.CreatedAt,
@@ -251,7 +244,7 @@ func (q *Queries) GetEmailVerificationTokensByUserID(ctx context.Context, userID
 }
 
 const getPasswordResetTokensByToken = `-- name: GetPasswordResetTokensByToken :one
-SELECT id, user_id, token, ip_address, user_agent, expires_at, used_at, created_at FROM password_reset_tokens WHERE token = $1
+SELECT id, user_id, token, expires_at, used_at, created_at FROM password_reset_tokens WHERE token = $1
 `
 
 func (q *Queries) GetPasswordResetTokensByToken(ctx context.Context, token string) (PasswordResetToken, error) {
@@ -261,8 +254,6 @@ func (q *Queries) GetPasswordResetTokensByToken(ctx context.Context, token strin
 		&i.ID,
 		&i.UserID,
 		&i.Token,
-		&i.IpAddress,
-		&i.UserAgent,
 		&i.ExpiresAt,
 		&i.UsedAt,
 		&i.CreatedAt,
@@ -271,7 +262,7 @@ func (q *Queries) GetPasswordResetTokensByToken(ctx context.Context, token strin
 }
 
 const getPasswordResetTokensByUserID = `-- name: GetPasswordResetTokensByUserID :one
-SELECT id, user_id, token, ip_address, user_agent, expires_at, used_at, created_at FROM password_reset_tokens WHERE user_id = $1
+SELECT id, user_id, token, expires_at, used_at, created_at FROM password_reset_tokens WHERE user_id = $1
 `
 
 func (q *Queries) GetPasswordResetTokensByUserID(ctx context.Context, userID uuid.UUID) (PasswordResetToken, error) {
@@ -281,8 +272,6 @@ func (q *Queries) GetPasswordResetTokensByUserID(ctx context.Context, userID uui
 		&i.ID,
 		&i.UserID,
 		&i.Token,
-		&i.IpAddress,
-		&i.UserAgent,
 		&i.ExpiresAt,
 		&i.UsedAt,
 		&i.CreatedAt,
@@ -426,7 +415,7 @@ const updatePasswordResetTokensUsedAtByToken = `-- name: UpdatePasswordResetToke
 UPDATE password_reset_tokens
 SET used_at = NOW()
 WHERE token = $1
-RETURNING id, user_id, token, ip_address, user_agent, expires_at, used_at, created_at
+RETURNING id, user_id, token, expires_at, used_at, created_at
 `
 
 func (q *Queries) UpdatePasswordResetTokensUsedAtByToken(ctx context.Context, token string) (PasswordResetToken, error) {
@@ -436,8 +425,6 @@ func (q *Queries) UpdatePasswordResetTokensUsedAtByToken(ctx context.Context, to
 		&i.ID,
 		&i.UserID,
 		&i.Token,
-		&i.IpAddress,
-		&i.UserAgent,
 		&i.ExpiresAt,
 		&i.UsedAt,
 		&i.CreatedAt,

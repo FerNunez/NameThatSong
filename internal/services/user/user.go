@@ -3,7 +3,6 @@ package user
 import (
 	"context"
 	"fmt"
-	"net"
 	"time"
 
 	"github.com/FerNunez/NameThatSong/internal/models"
@@ -191,11 +190,7 @@ func (u *User) InitiatePasswordReset(ctx context.Context, email string) error {
 	// Store token
 	expiresAt := time.Now().Add(10 * time.Minute)
 
-	// For now, use dummy IP and user agent - in real app, these would come from request context
-	dummyIP := net.ParseIP("127.0.0.1")
-	userAgent := "unknown"
-
-	_, err = u.passwordResetStore.Create(ctx, dbUser.ID, token, expiresAt, dummyIP, userAgent)
+	_, err = u.passwordResetStore.Create(ctx, dbUser.ID, token, expiresAt)
 	if err != nil {
 		return fmt.Errorf("failed to create password reset token: %w", err)
 	}

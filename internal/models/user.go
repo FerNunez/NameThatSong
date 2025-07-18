@@ -36,8 +36,6 @@ type PasswordResetToken struct {
 	Token     string     `json:"token"`
 	ExpiresAt time.Time  `json:"expires_at"`
 	UsedAt    *time.Time `json:"used_at"`
-	IPAddress string     `json:"ip_address"`
-	UserAgent string     `json:"user_agent"`
 	CreatedAt time.Time  `json:"created_at"`
 }
 

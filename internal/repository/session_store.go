@@ -36,7 +36,7 @@ func (s *SQLUserSessionStore) Create(ctx context.Context, userID uuid.UUID, ttl 
 	id := generateSessionID()
 	expiresAt := time.Now().Add(ttl)
 
-	dbSession, err := s.db.CreateSession(ctx, database.CreateSessionParams{
+	dbSession, err := s.db.CreateUserSession(ctx, database.CreateUserSessionParams{
 		ID:        id,
 		UserID:    userID,
 		ExpiresAt: expiresAt,
@@ -55,7 +55,7 @@ func (s *SQLUserSessionStore) Create(ctx context.Context, userID uuid.UUID, ttl 
 }
 
 func (s *SQLUserSessionStore) Get(ctx context.Context, id string) (*models.UserSession, error) {
-	dbSession, err := s.db.GetSession(ctx, id)
+	dbSession, err := s.db.GetUserSession(ctx, id)
 	if err != nil {
 		return nil, err
 	}
