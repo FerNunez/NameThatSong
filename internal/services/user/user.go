@@ -7,6 +7,7 @@ import (
 
 	"github.com/FerNunez/NameThatSong/internal/models"
 	"github.com/FerNunez/NameThatSong/internal/pkg/utils"
+	"github.com/FerNunez/NameThatSong/internal/pkg/validation"
 	"github.com/FerNunez/NameThatSong/internal/repository"
 	"github.com/google/uuid"
 )
@@ -37,6 +38,11 @@ func NewUserService(
 
 // Authentication
 func (u *User) Register(ctx context.Context, req models.RegisterRequest) (*models.User, error) {
+	// Validate registration request
+	if err := u.validateRegisterRequest(req); err != nil {
+		return nil, fmt.Errorf("validation error: %w", err)
+	}
+	
 	// Hash password
 	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
@@ -50,6 +56,11 @@ func (u *User) Register(ctx context.Context, req models.RegisterRequest) (*model
 	return dbUser, nil
 }
 func (u *User) Login(ctx context.Context, req models.LoginRequest) (*models.LoginResponse, error) {
+	// Validate login request
+	if err := u.validateLoginRequest(req); err != nil {
+		return nil, fmt.Errorf("validation error: %w", err)
+	}
+	
 	// Get user
 	dbUser, err := u.userStore.GetByEmail(ctx, req.Email)
 	if err != nil {
@@ -99,6 +110,11 @@ func (u *User) SendEmailVerification(ctx context.Context, userID uuid.UUID) erro
 	return u.emailService.SendVerificationEmail(ctx, dbUser.Email, evt.Token, dbUser.DisplayName)
 }
 func (u *User) VerifyEmail(ctx context.Context, token string) error {
+	// Validate token
+	if err := validation.ValidateToken(token); err != nil {
+		return fmt.Errorf("validation error: %w", err)
+	}
+	
 	// Get verification token
 	evt, err := u.emailVerificationStore.GetByToken(ctx, token)
 	if err != nil {
@@ -141,6 +157,11 @@ func (u *User) VerifyEmail(ctx context.Context, token string) error {
 	return nil
 }
 func (u *User) ResendVerification(ctx context.Context, email string) error {
+	// Validate email
+	if err := validation.ValidateEmail(email); err != nil {
+		return fmt.Errorf("validation error: %w", err)
+	}
+	
 	// Get user
 	dbUser, err := u.userStore.GetByEmail(ctx, email)
 	if err != nil {
@@ -174,6 +195,11 @@ func (u *User) ResendVerification(ctx context.Context, email string) error {
 
 // Password Reset
 func (u *User) InitiatePasswordReset(ctx context.Context, email string) error {
+	// Validate email
+	if err := validation.ValidateEmail(email); err != nil {
+		return fmt.Errorf("validation error: %w", err)
+	}
+	
 	// Get user by email
 	dbUser, err := u.userStore.GetByEmail(ctx, email)
 	if err != nil {
@@ -203,6 +229,14 @@ func (u *User) InitiatePasswordReset(ctx context.Context, email string) error {
 	return nil
 }
 func (u *User) ResetPassword(ctx context.Context, token string, newPassword string) error {
+	// Validate inputs
+	if err := validation.ValidateToken(token); err != nil {
+		return fmt.Errorf("validation error: %w", err)
+	}
+	if err := validation.ValidatePassword(newPassword); err != nil {
+		return fmt.Errorf("validation error: %w", err)
+	}
+	
 	// Get password reset token
 	prt, err := u.passwordResetStore.GetByToken(ctx, token)
 	if err != nil {
@@ -263,6 +297,11 @@ func (u *User) GetUser(ctx context.Context, userID uuid.UUID) (*models.User, err
 	return dbUser, nil
 }
 func (u *User) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+	// Validate email
+	if err := validation.ValidateEmail(email); err != nil {
+		return nil, fmt.Errorf("validation error: %w", err)
+	}
+	
 	dbUser, err := u.userStore.GetByEmail(ctx, email)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
@@ -270,6 +309,11 @@ func (u *User) GetUserByEmail(ctx context.Context, email string) (*models.User, 
 	return dbUser, nil
 }
 func (u *User) UpdateProfile(ctx context.Context, userID uuid.UUID, req models.UpdateProfileRequest) (*models.User, error) {
+	// Validate profile update request
+	if err := u.validateUpdateProfileRequest(req); err != nil {
+		return nil, fmt.Errorf("validation error: %w", err)
+	}
+	
 	// Get current user to verify they exist
 	dbUser, err := u.userStore.GetByID(ctx, userID)
 	if err != nil {
@@ -301,6 +345,11 @@ func (u *User) UpdateProfile(ctx context.Context, userID uuid.UUID, req models.U
 	return updatedUser, nil
 }
 func (u *User) ChangePassword(ctx context.Context, userID uuid.UUID, req models.ChangePasswordRequest) error {
+	// Validate password change request
+	if err := u.validateChangePasswordRequest(req); err != nil {
+		return fmt.Errorf("validation error: %w", err)
+	}
+	
 	// Get current user
 	dbUser, err := u.userStore.GetByID(ctx, userID)
 	if err != nil {
@@ -371,4 +420,48 @@ func (u *User) ValidateSession(ctx context.Context, sessionID string) (*models.U
 	}
 
 	return dbUser, nil
+}
+
+// Validation helper methods
+func (u *User) validateRegisterRequest(req models.RegisterRequest) error {
+	if err := validation.ValidateEmail(req.Email); err != nil {
+		return err
+	}
+	if err := validation.ValidatePassword(req.Password); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (u *User) validateLoginRequest(req models.LoginRequest) error {
+	if err := validation.ValidateEmail(req.Email); err != nil {
+		return err
+	}
+	if req.Password == "" {
+		return fmt.Errorf("password is required")
+	}
+	return nil
+}
+
+func (u *User) validateUpdateProfileRequest(req models.UpdateProfileRequest) error {
+	if err := validation.ValidateDisplayName(req.DisplayName); err != nil {
+		return err
+	}
+	if err := validation.ValidateAvatarURL(req.AvatarURL); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (u *User) validateChangePasswordRequest(req models.ChangePasswordRequest) error {
+	if req.CurrentPassword == "" {
+		return fmt.Errorf("current password is required")
+	}
+	if err := validation.ValidatePassword(req.NewPassword); err != nil {
+		return err
+	}
+	if req.CurrentPassword == req.NewPassword {
+		return fmt.Errorf("new password must be different from current password")
+	}
+	return nil
 }
