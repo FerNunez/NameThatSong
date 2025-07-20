@@ -6,8 +6,8 @@ import (
 	m "github.com/FerNunez/NameThatSong/internal/models"
 )
 
-// SpotifyServiceInterface defines the contract for Spotify service operations
-type SpotifyServiceInterface interface {
+// SpotifyService defines the contract for Spotify service operations
+type SpotifyService interface {
 	// Authentication operations
 	AuthRequestURL(userID string) (string, error)
 	TokenExchange(ctx context.Context, userID, code, receivedState string) (TokenResponse, error)
@@ -33,3 +33,4 @@ type SpotifyServiceInterface interface {
 	PausePlayback(ctx context.Context, userID string) error
 	ResumePlayback(ctx context.Context, userID string) error
 }
+

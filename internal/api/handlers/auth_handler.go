@@ -33,10 +33,10 @@ func (h *GetAuthHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 
 // //////////////////////////////////////
 type GetAuthCallbackHandler struct {
-	ss *spotify.SpotifyService
+	spotifyService *spotify.Spotify
 }
 
-func NewGetAuthCallbackHandler(ss *spotify.SpotifyService) *GetAuthCallbackHandler {
+func NewGetAuthCallbackHandler(ss *spotify.Spotify) *GetAuthCallbackHandler {
 	return &GetAuthCallbackHandler{ss}
 
 }
@@ -50,8 +50,7 @@ func (h *GetAuthCallbackHandler) ServeHttp(w http.ResponseWriter, r *http.Reques
 
 	state := r.URL.Query().Get("state")
 	code := r.URL.Query().Get("code")
-	as := h.ss.GetAuthService()
-	tr, err := as.TokenExchange(r.Context(), "test", code, state)
+	tr, err := h.spotifyService.TokenExchange(r.Context(), "test", code, state)
 	if err != nil {
 		fmt.Printf("error exchanging token: %v\n", err)
 		http.Error(w, "error exchanging spotify token", http.StatusBadRequest)

@@ -3,13 +3,10 @@ package handlers
 import (
 	"fmt"
 	"net/http"
-	// "time"
 
-	"github.com/FerNunez/NameThatSong/internal/pkg/jwt"
-	"github.com/FerNunez/NameThatSong/internal/pkg/utils"
-	"github.com/FerNunez/NameThatSong/internal/repository"
-	"github.com/FerNunez/NameThatSong/internal/repository/database"
-	"github.com/FerNunez/NameThatSong/internal/services/game"
+	"github.com/FerNunez/NameThatSong/internal/models"
+	"github.com/FerNunez/NameThatSong/internal/services/spotify"
+	"github.com/FerNunez/NameThatSong/internal/services/user"
 	"github.com/FerNunez/NameThatSong/web/templates"
 )
 
@@ -30,20 +27,16 @@ func (h GetRegisterHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 }
 
 type PostRegisterHandler struct {
-	UserStore         repository.UserStore
-	SpotifyTokenStore repository.SpotifyTokenStore
-	//dbQuery *database.Queries
-	// sessionStore      store.SessionStore
-	// passwordhash      hash.PasswordHash
-	// sessionCookieName string
-	GameManager *game.GameManager
+	UserService    user.UserService
+	SpotifyService spotify.Spotify
+	// GameManager    *game.GameManager
 }
 
-func NewPostRegisterHandler(dbQuery *database.Queries, tokenEncryptor *utils.TokenEncryptor, gm *game.GameManager) *PostRegisterHandler {
+func NewPostRegisterHandler(userService user.UserService, spotifyService spotify.Spotify) *PostRegisterHandler {
 	return &PostRegisterHandler{
-		UserStore:         repository.NewSQLUserStore(dbQuery),
-		SpotifyTokenStore: repository.NewSQLSpotifyTokenStore(dbQuery, tokenEncryptor),
-		GameManager:       gm,
+		UserService:    userService,
+		SpotifyService: spotifyService,
+		// GameManager:    gm,
 	}
 }
 
@@ -51,44 +44,35 @@ func (h PostRegisterHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 
 	email := r.FormValue("email")
 	password := r.FormValue("password")
-	// hash password
-	hashedPass, err := utils.HashPassword(password)
-	if err != nil {
-		fmt.Println("[PostRegisterHandler] ServeHttp: could not hash password,", err)
-		c := templates.RegisterError()
-		c.Render(r.Context(), w)
-		return
+	displayName := r.FormValue("display_name")
+
+	// Create registration request
+	registerReq := models.RegisterRequest{
+		Email:       email,
+		Password:    password,
+		DisplayName: displayName,
 	}
 
-	// add user to DB
-	dbUser, err := h.UserStore.Create(r.Context(), email, hashedPass)
+	// Register user through service
+	dbUser, err := h.UserService.Register(r.Context(), registerReq)
 	if err != nil {
-		fmt.Println("error creating user err:", err)
+		fmt.Println("error registering user:", err)
 		w.WriteHeader(http.StatusBadRequest)
 		c := templates.RegisterError()
 		c.Render(r.Context(), w)
 		return
 	}
 
-	err = h.GameManager.CreateGame(dbUser.ID, h.SpotifyTokenStore)
-	if err != nil {
-		fmt.Println("could not create game", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		c := templates.RegisterError()
-		c.Render(r.Context(), w)
-		return
-	}
-
-	// add a empty spotify token for user
-	// err = h.SpotifyTokenStore.Create(r.Context(), dbUser.ID, "", "", "", "", time.Now())
+	// TODO: Game integration will be added later
+	// Create game for user
+	// err = h.GameManager.CreateGame(dbUser.ID, h.SpotifyService.GetTokenStore())
 	// if err != nil {
-	// 	fmt.Println("Could not create Empty Spotify Token: ", err)
+	// 	fmt.Println("could not create game", err)
 	// 	w.WriteHeader(http.StatusInternalServerError)
 	// 	c := templates.RegisterError()
 	// 	c.Render(r.Context(), w)
 	// 	return
 	// }
-	// fmt.Println("Token Created for", dbUser.ID.String())
 
 	c := templates.RegisterSuccess()
 	err = c.Render(r.Context(), w)

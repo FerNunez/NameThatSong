@@ -1,12 +1,13 @@
 package handlers
 
 import (
+	"encoding/base64"
+	"fmt"
 	"net/http"
 
-	"github.com/FerNunez/NameThatSong/internal/pkg/utils"
-	"github.com/FerNunez/NameThatSong/internal/repository"
-	"github.com/FerNunez/NameThatSong/internal/repository/database"
-	"github.com/FerNunez/NameThatSong/internal/services/game"
+	"github.com/FerNunez/NameThatSong/internal/models"
+	"github.com/FerNunez/NameThatSong/internal/services/spotify"
+	"github.com/FerNunez/NameThatSong/internal/services/user"
 	"github.com/FerNunez/NameThatSong/web/templates"
 )
 
@@ -29,94 +30,73 @@ func (h GetLoginHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 }
 
 type PostLoginHandler struct {
-	UserStore         repository.UserStore
-	SessionStore      repository.UserSessionStore
-	SpotifyTokenStore repository.SpotifyTokenStore
-	SessionName       string
-	GameManager       *game.GameManager
-
-	//dbQuery   *database.Queries
-	// sessionStore      repository.SessionStore
-	// passwordhash      hash.PasswordHash
-	// sessionCookieName string
+	UserService    user.UserService
+	SpotifyService spotify.Spotify
+	SessionName    string
+	// GameManager       *game.GameManager
 }
 
-func NewPostLoginHandler(dbQuery *database.Queries, tokenEncryptor *utils.TokenEncryptor, sessionName string, gm *game.GameManager) *PostLoginHandler {
+func NewPostLoginHandler(userService user.UserService, spotifyService spotify.Spotify, sessionName string) *PostLoginHandler {
 	return &PostLoginHandler{
-		UserStore:         repository.NewSQLUserStore(dbQuery),
-		SessionStore:      repository.NewSQLSessionStore(dbQuery),
-		SpotifyTokenStore: repository.NewSQLSpotifyTokenStore(dbQuery, tokenEncryptor),
-		SessionName:       sessionName,
-		GameManager:       gm,
+		UserService:    userService,
+		SpotifyService: spotifyService,
+		SessionName:    sessionName,
+		// GameManager:       gm,
 	}
 }
 
 func (h PostLoginHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 
-	// email := r.FormValue("email")
-	// password := r.FormValue("password")
-	//
-	// dbUser, err := h.UserStore.GetByEmail(r.Context(), email)
-	// if err != nil {
-	// 	w.WriteHeader(http.StatusUnauthorized)
-	// 	c := templates.LoginError()
-	// 	c.Render(r.Context(), w)
-	// 	return
-	// }
-	//
-	// // Check Password
-	// if err := jwt.CheckPasswordHash(password, dbUser.HashedPassword); err != nil {
-	// 	w.WriteHeader(http.StatusUnauthorized)
-	// 	c := templates.LoginError()
-	// 	c.Render(r.Context(), w)
-	// 	return
-	// }
-	//
-	// // Login without game
+	email := r.FormValue("email")
+	password := r.FormValue("password")
+
+	// Create login request
+	loginReq := models.LoginRequest{
+		Email:    email,
+		Password: password,
+	}
+
+	// Login user through service
+	loginResp, err := h.UserService.Login(r.Context(), loginReq)
+	if err != nil {
+		fmt.Println("login failed:", err)
+		w.WriteHeader(http.StatusUnauthorized)
+		c := templates.LoginError()
+		c.Render(r.Context(), w)
+		return
+	}
+
+	// TODO: Game integration will be added later
+	// Create/recreate game for user if needed
 	// if _, err := h.GameManager.GetGame(r.Context()); err != nil {
-	// 	fmt.Println("[PostLoginHandler] ServeHttp: Recreating game for user", dbUser.ID.String())
-	// 	// TODO: FIX THIS FOR TH ELOVE OF G
-	// 	dbSpotifyToken, err := h.SpotifyTokenStore.Get(r.Context(), dbUser.ID)
-	// 	if err != nil {
-	// 		fmt.Println("[PostLoginHandler] ServeHttp: Spotify token not found for", dbUser.ID.String())
-	// 		h.GameManager.CreateGame(dbUser.ID, h.SpotifyTokenStore)
+	// 	fmt.Println("[PostLoginHandler] ServeHttp: Recreating game for user", loginResp.User.ID.String())
 	//
-	// 	} else {
-	// 		fmt.Println("[PostLoginHandler] ServeHttp: Spotify token found for", dbUser.ID.String())
-	// 		h.GameManager.CreateGame(dbUser.ID, h.SpotifyTokenStore)
-	// 		g, ok := h.GameManager.Games[string(dbUser.ID.String())]
-	// 		if ok {
-	// 			fmt.Println("[PostLoginHandler] ServeHttp: retrieved access token from db for user", dbUser.ID.String())
-	// 			g.SpotifyApi.AccessToken = dbSpotifyToken.AccessToken
-	// 			g.SpotifyApi.RefreshToken = dbSpotifyToken.RefreshToken
-	// 			// TODO: FIX THIS
-	// 		}
+	// 	// Check for existing Spotify token using SpotifyService
+	// 	_, err := h.SpotifyService.GetValidToken(r.Context(), loginResp.User.ID.String())
+	// 	if err != nil {
+	// 		fmt.Println("[PostLoginHandler] ServeHttp: Spotify token not found for", loginResp.User.ID.String())
 	// 	}
 	//
+	// 	// Create game with SpotifyService
+	// 	err = h.GameManager.CreateGame(loginResp.User.ID, h.SpotifyService.GetTokenStore())
+	// 	if err != nil {
+	// 		fmt.Println("could not create game:", err)
+	// 	}
 	// }
-	//
-	// ttl := time.Duration(24 * time.Hour)
-	// dbSession, err := h.SessionStore.Create(r.Context(), dbUser.ID, ttl)
-	// if err != nil {
-	// 	fmt.Printf("error creating session!: %v", err)
-	// 	w.WriteHeader(http.StatusInternalServerError)
-	// 	c := templates.LoginError()
-	// 	c.Render(r.Context(), w)
-	// 	return
-	// }
-	//
-	// cookieValue := b64.StdEncoding.EncodeToString(fmt.Appendf(nil, "%s:%s", dbSession.ID, dbSession.UserID.String()))
-	// cookie := http.Cookie{
-	// 	Name:     h.SessionName,
-	// 	Value:    cookieValue,
-	// 	Expires:  dbSession.ExpiresAt,
-	// 	Path:     "/",
-	// 	HttpOnly: true,
-	// 	SameSite: http.SameSiteNoneMode,
-	// 	Secure:   true,
-	// }
-	// http.SetCookie(w, &cookie)
-	//
-	// w.Header().Set("HX-Redirect", "/")
-	// w.WriteHeader(http.StatusOK)
+
+	// Set session cookie
+	cookieValue := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", loginResp.SessionID, loginResp.User.ID.String())))
+	cookie := http.Cookie{
+		Name:     h.SessionName,
+		Value:    cookieValue,
+		Expires:  loginResp.ExpiresAt,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteNoneMode,
+		Secure:   true,
+	}
+	http.SetCookie(w, &cookie)
+
+	w.Header().Set("HX-Redirect", "/")
+	w.WriteHeader(http.StatusOK)
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/FerNunez/NameThatSong/internal/api/handlers"
 	"github.com/FerNunez/NameThatSong/internal/services/game"
 	"github.com/FerNunez/NameThatSong/internal/services/spotify"
+	"github.com/FerNunez/NameThatSong/internal/services/user"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/joho/godotenv"
@@ -36,21 +37,6 @@ func main() {
 		DB:       0,                // use default DB
 	})
 
-	//encription key
-	// encryptionKey := os.Getenv("SPOTIFY_TOKEN_ENCRYPTION_KEY")
-	// if encryptionKey == "" {
-	// 	log.Fatalf("SPOTIFY_TOKEN_ENCRYPTION_KEY empty ")
-	// }
-	// key, err := base64.StdEncoding.DecodeString(encryptionKey)
-	// if err != nil {
-	// 	log.Fatalf("SPOTIFY_TOKEN_ENCRYPTION_KEY error %v", err)
-	// }
-	//
-	// tokenEncryptor, err := utils.NewTokenEncryptor(key)
-	// if err != nil {
-	// 	log.Fatalf("Error creating token encrypto: %v", err)
-	// }
-
 	dbURL := os.Getenv("DB_URL")
 	if dbURL == "" {
 		fmt.Println("**Please define the DB_RUL in environtment.")
@@ -60,29 +46,48 @@ func main() {
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatalf("Error opening db: %v", err)
+		return
 	}
+	// Db and Stores
 	dbQueries := database.New(db)
 	userStore := repository.NewSQLUserStore(dbQueries)
+	emailVerificationStore := repository.NewSQLEmailVerificationStore(dbQueries)
+	passwordResetStore := repository.NewSQLPasswordResetStore(dbQueries)
+	sessionStore := repository.NewSQLSessionStore(dbQueries)
+
 	// Email configuration and service
 	emailConfig, err := config.NewEmailConfig()
 	if err != nil {
 		log.Fatalf("Failed to load email config: %v", err)
 	}
-
 	emailService, err := user.NewEmailService(emailConfig)
 	if err != nil {
 		log.Fatalf("Failed to initialize email service: %v", err)
 	}
+
+	// User service with all dependencies
+	userService := user.NewUserService(
+		userStore,
+		emailVerificationStore,
+		passwordResetStore,
+		sessionStore,
+		emailService,
+	)
+
 	spotifyConf, err := config.NewSpotifyConfig()
 	if err != nil {
 		fmt.Println("error while creating spotify config", err)
+		return
 	}
 
 	// NOTE: This is here for testing locally while developing
-	ss, err := spotify.NewSpotifyService(spotifyConf, db, rdb)
+	spotifyService, err := spotify.NewSpotifyService(spotifyConf, db, rdb)
 	if err != nil {
-		fmt.Println("error creating sptofy service:", err)
+		fmt.Println("error creating spotify service:", err)
+		return
 	}
+
+	// SpotifyService now handles token management internally
 
 	gm := game.NewGameManager()
 
@@ -91,6 +96,9 @@ func main() {
 
 	cookieName := "CookieName"
 	authMiddleware := m.NewAuthMiddleware(userStore, cookieName)
+
+	// TODO: Update middleware to use userService instead of userStore directly
+	// This will be done in the next step when we refactor the middleware
 	r.Group(func(r chi.Router) {
 		r.Use(
 			authMiddleware.AddUserToCtxt,
@@ -100,16 +108,17 @@ func main() {
 		fileServer := http.FileServer(http.Dir("./static"))
 		r.Handle("/static/*", http.StripPrefix("/static/", fileServer))
 
-		// r.Get("/register", handlers.NewGetRegisterHandler().ServeHttp)
-		// r.Post("/register", handlers.NewPostRegisterHandler(dbQueries, tokenEncryptor, gm).ServeHttp)
-		// // login Routes
-		// r.Get("/login", handlers.NewGetLoginHandler().ServeHttp)
-		// r.Post("/login", handlers.NewPostLoginHandler(dbQueries, tokenEncryptor, cookieName, gm).ServeHttp)
-		// r.Post("/logout", handlers.NewPostLogoutHandler(cookieName).ServeHTTP)
+		// Authentication routes
+		r.Get("/register", handlers.NewGetRegisterHandler().ServeHttp)
+		r.Post("/register", handlers.NewPostRegisterHandler(userService, *spotifyService).ServeHttp)
+		// Login Routes
+		r.Get("/login", handlers.NewGetLoginHandler().ServeHttp)
+		r.Post("/login", handlers.NewPostLoginHandler(userService, *spotifyService, cookieName).ServeHttp)
+		r.Post("/logout", handlers.NewPostLogoutHandler(userService, cookieName).ServeHTTP)
 
 		// Auth
 		r.Get("/spotify-auth", handlers.NewGetAuthHandler(gm).ServeHttp)
-		r.Get("/auth/callback", handlers.NewGetAuthCallbackHandler(ss).ServeHttp)
+		r.Get("/auth/callback", handlers.NewGetAuthCallbackHandler(spotifyService).ServeHttp)
 
 		// Search
 		r.Get("/search-helper", handlers.NewGetSearchArtists(gm).ServeHttp)
