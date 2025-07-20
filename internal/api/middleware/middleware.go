@@ -8,107 +8,70 @@ import (
 
 	b64 "encoding/base64"
 
-	"github.com/FerNunez/NameThatSong/internal/repository"
+	"github.com/FerNunez/NameThatSong/internal/models"
+	"github.com/FerNunez/NameThatSong/internal/services/user"
 )
 
 type AuthMiddleware struct {
-	userStore         repository.UserStore
+	userService       user.UserService
 	sessionCookieName string
-	count             int
 }
 
-func NewAuthMiddleware(userStore repository.UserStore, sessionCookieName string) *AuthMiddleware {
+func NewAuthMiddleware(userService user.UserService, sessionCookieName string) *AuthMiddleware {
 	return &AuthMiddleware{
-		userStore:         userStore,
+		userService:       userService,
 		sessionCookieName: sessionCookieName,
-		count:             0,
 	}
 }
 
 var UserKey string = "user"
 
-// Gets Cookie -> Gets user from Cookie
+// Gets Cookie -> Validates session and gets user from UserService
 func (m *AuthMiddleware) AddUserToCtxt(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		sessionCookie, err := r.Cookie(m.sessionCookieName)
 		if err != nil {
-			fmt.Println("[middl][AddUserToCtxt] Could not retrieve session from cookie")
+			fmt.Println("[middleware][AddUserToCtxt] Could not retrieve session from cookie")
 			next.ServeHTTP(w, r)
 			return
 		}
 
 		decodedValue, err := b64.StdEncoding.DecodeString(sessionCookie.Value)
 		if err != nil {
-			fmt.Println("[middl][AddUserToCtxt] Could not  session cookie value")
+			fmt.Println("[middleware][AddUserToCtxt] Could not decode session cookie value")
 			next.ServeHTTP(w, r)
 			return
 		}
+		
 		splitValue := strings.Split(string(decodedValue), ":")
 		if len(splitValue) != 2 {
-			fmt.Println("[middl][AddUserToCtxt] Retrieved not decide session cookie value")
+			fmt.Println("[middleware][AddUserToCtxt] Invalid session cookie format")
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		//sessionID := splitValue[0]
-		userID := splitValue[1]
-		user, err := m.userStore.GetById(r.Context(), userID)
+		sessionID := splitValue[0]
+		
+		// Use UserService to validate session and get user
+		user, err := m.userService.ValidateSession(r.Context(), sessionID)
 		if err != nil {
+			fmt.Println("[middleware][AddUserToCtxt] Session validation failed:", err)
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		fmt.Println("[middleware] User added into context for user_id:", userID)
+		fmt.Println("[middleware] User added to context for user_id:", user.ID.String())
 		ctx := context.WithValue(r.Context(), UserKey, user)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-func GetUser(ctx context.Context) (repository.User, bool) {
+func GetUser(ctx context.Context) (*models.User, bool) {
 	user := ctx.Value(UserKey)
 	if user == nil {
-		return repository.User{}, false
+		return nil, false
 	}
-	return user.(repository.User), true
+	return user.(*models.User), true
 }
-
-// // TEMPORAL STUF
-//
-// func (m *AuthMiddleware) CreateTempUser(next http.Handler) http.Handler {
-//
-// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-//
-// 		// get session from Cookie
-// 		_, err := r.Cookie(m.sessionCookieName)
-// 		if err == http.ErrNoCookie {
-// 			// create a cookie session for "new user"
-//
-// 			fmt.Println("No cookie detected :O")
-// 			userName := fmt.Sprintf("User%v", m.count)
-//
-// 			s := store.Session{
-// 				ID:        m.count,
-// 				SessionID: "",
-// 				UserName:  userName,
-// 			}
-// 			sessWithId, _ := m.userStore.CreateSession(&s)
-// 			m.count += 1
-//
-// 			cookieValue := b64.StdEncoding.EncodeToString(fmt.Appendf(nil, "%s:%s", sessWithId.SessionID, sessWithId.UserName))
-//
-// 			expiration := time.Now().Add(365 * 24 * time.Hour)
-// 			cookie := http.Cookie{
-// 				Name:     m.sessionCookieName,
-// 				Value:    cookieValue,
-// 				Expires:  expiration,
-// 				Path:     "/",
-// 				HttpOnly: true,
-// 				SameSite: http.SameSiteStrictMode,
-// 			}
-// 			http.SetCookie(w, &cookie)
-// 		}
-// 		next.ServeHTTP(w, r)
-// 	})
-// }

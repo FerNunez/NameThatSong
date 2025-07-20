@@ -95,10 +95,7 @@ func main() {
 	r := chi.NewRouter()
 
 	cookieName := "CookieName"
-	authMiddleware := m.NewAuthMiddleware(userStore, cookieName)
-
-	// TODO: Update middleware to use userService instead of userStore directly
-	// This will be done in the next step when we refactor the middleware
+	authMiddleware := m.NewAuthMiddleware(userService, cookieName)
 	r.Group(func(r chi.Router) {
 		r.Use(
 			authMiddleware.AddUserToCtxt,
