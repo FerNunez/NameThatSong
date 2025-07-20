@@ -63,7 +63,16 @@ func main() {
 	}
 	dbQueries := database.New(db)
 	userStore := repository.NewSQLUserStore(dbQueries)
+	// Email configuration and service
+	emailConfig, err := config.NewEmailConfig()
+	if err != nil {
+		log.Fatalf("Failed to load email config: %v", err)
+	}
 
+	emailService, err := user.NewEmailService(emailConfig)
+	if err != nil {
+		log.Fatalf("Failed to initialize email service: %v", err)
+	}
 	spotifyConf, err := config.NewSpotifyConfig()
 	if err != nil {
 		fmt.Println("error while creating spotify config", err)
