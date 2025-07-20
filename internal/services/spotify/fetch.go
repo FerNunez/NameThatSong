@@ -7,38 +7,22 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/FerNunez/NameThatSong/internal/config"
 	m "github.com/FerNunez/NameThatSong/internal/models"
-	"github.com/FerNunez/NameThatSong/internal/services/cache"
 )
 
-// SpotifyFetchService handles fetching individual Spotify entities with caching
-type SpotifyFetchService struct {
-	config      *config.SpotifyConfig
-	cache       cache.SpotifyCache
-	authService *SpotifyAuthService
-	httpClient  *http.Client
-}
-
-// NewSpotifyFetchService creates a new Spotify fetch service
-func NewSpotifyFetchService(config *config.SpotifyConfig, cache cache.SpotifyCache, authService *SpotifyAuthService, httpClient *http.Client) *SpotifyFetchService {
-	return &SpotifyFetchService{
-		config:      config,
-		cache:       cache,
-		authService: authService,
-		httpClient:  httpClient,
-	}
-}
+// =============================================================================
+// FETCH METHODS
+// =============================================================================
 
 // FetchTrack fetches a track with caching
-func (s *SpotifyFetchService) FetchTrack(ctx context.Context, userID, trackID string) (m.TrackData, error) {
+func (s *Spotify) FetchTrack(ctx context.Context, userID, trackID string) (m.TrackData, error) {
 	// Check cache first
 	if cachedTrack, found := s.cache.GetTrack(trackID); found {
 		return cachedTrack, nil
 	}
 
 	// Get access token for user
-	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
 		return m.TrackData{}, fmt.Errorf("failed to get access token: %v", err)
 	}
@@ -55,13 +39,13 @@ func (s *SpotifyFetchService) FetchTrack(ctx context.Context, userID, trackID st
 }
 
 // FetchAlbum fetches an album with caching
-func (s *SpotifyFetchService) FetchAlbum(ctx context.Context, userID, albumID string) (m.AlbumData, error) {
+func (s *Spotify) FetchAlbum(ctx context.Context, userID, albumID string) (m.AlbumData, error) {
 	if cachedAlbum, found := s.cache.GetAlbum(albumID); found {
 		return cachedAlbum, nil
 	}
 
 	// Get access token for user
-	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
 		return m.AlbumData{}, fmt.Errorf("failed to get access token: %v", err)
 	}
@@ -76,13 +60,13 @@ func (s *SpotifyFetchService) FetchAlbum(ctx context.Context, userID, albumID st
 }
 
 // FetchArtist fetches an artist with caching
-func (s *SpotifyFetchService) FetchArtist(ctx context.Context, userID, artistID string) (m.ArtistData, error) {
+func (s *Spotify) FetchArtist(ctx context.Context, userID, artistID string) (m.ArtistData, error) {
 	if cachedArtist, found := s.cache.GetArtist(artistID); found {
 		return cachedArtist, nil
 	}
 
 	// Get access token for user
-	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
 		return m.ArtistData{}, fmt.Errorf("failed to get access token: %v", err)
 	}
@@ -97,13 +81,13 @@ func (s *SpotifyFetchService) FetchArtist(ctx context.Context, userID, artistID 
 }
 
 // FetchPlaylist fetches a playlist with caching
-func (s *SpotifyFetchService) FetchPlaylist(ctx context.Context, userID, playlistID string) (m.PlaylistData, error) {
+func (s *Spotify) FetchPlaylist(ctx context.Context, userID, playlistID string) (m.PlaylistData, error) {
 	if cachedPlaylist, found := s.cache.GetPlaylist(playlistID); found {
 		return cachedPlaylist, nil
 	}
 
 	// Get access token for user
-	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
 		return m.PlaylistData{}, fmt.Errorf("failed to get access token: %v", err)
 	}
@@ -118,7 +102,7 @@ func (s *SpotifyFetchService) FetchPlaylist(ctx context.Context, userID, playlis
 }
 
 // Private API fetch methods
-func (s *SpotifyFetchService) fetchTrackFromAPI(ctx context.Context, accessToken, trackID string) (m.TrackData, error) {
+func (s *Spotify) fetchTrackFromAPI(ctx context.Context, accessToken, trackID string) (m.TrackData, error) {
 	fmt.Println("[SpotifyFetchService] FetchTrack: trackID:", trackID)
 	requestURL := fmt.Sprintf("%s/tracks/%s", s.config.GetAPIBaseURL(), trackID)
 	req, err := http.NewRequestWithContext(ctx, "GET", requestURL, nil)
@@ -216,7 +200,7 @@ func (s *SpotifyFetchService) fetchTrackFromAPI(ctx context.Context, accessToken
 }
 
 // Fetch album by ID: retireves all tracks of the album too
-func (s *SpotifyFetchService) fetchAlbumFromAPI(ctx context.Context, accessToken, albumID string) (m.AlbumData, error) {
+func (s *Spotify) fetchAlbumFromAPI(ctx context.Context, accessToken, albumID string) (m.AlbumData, error) {
 	requestURL := fmt.Sprintf("%s/albums/%s", s.config.GetAPIBaseURL(), albumID)
 	req, err := http.NewRequestWithContext(ctx, "GET", requestURL, nil)
 	if err != nil {
@@ -330,7 +314,7 @@ func (s *SpotifyFetchService) fetchAlbumFromAPI(ctx context.Context, accessToken
 	}, nil
 }
 
-func (s *SpotifyFetchService) fetchArtistFromAPI(ctx context.Context, accessToken, artistID string) (m.ArtistData, error) {
+func (s *Spotify) fetchArtistFromAPI(ctx context.Context, accessToken, artistID string) (m.ArtistData, error) {
 	requestURL := fmt.Sprintf("%s/artists/%s", s.config.GetAPIBaseURL(), artistID)
 	req, err := http.NewRequestWithContext(ctx, "GET", requestURL, nil)
 	if err != nil {
@@ -389,7 +373,7 @@ func (s *SpotifyFetchService) fetchArtistFromAPI(ctx context.Context, accessToke
 	}, nil
 }
 
-func (s *SpotifyFetchService) fetchPlaylistFromAPI(ctx context.Context, accessToken, playlistID string) (m.PlaylistData, error) {
+func (s *Spotify) fetchPlaylistFromAPI(ctx context.Context, accessToken, playlistID string) (m.PlaylistData, error) {
 	baseURL := s.config.GetAPIBaseURL() + "/playlists/" + playlistID
 	u, err := url.Parse(baseURL)
 	if err != nil {
@@ -500,9 +484,9 @@ func (s *SpotifyFetchService) fetchPlaylistFromAPI(ctx context.Context, accessTo
 }
 
 // FetchAlbumsFromArtist fetches album IDs from an artist
-func (s *SpotifyFetchService) FetchAlbumsFromArtist(ctx context.Context, userID, artistID string) ([]string, error) {
+func (s *Spotify) FetchAlbumsFromArtist(ctx context.Context, userID, artistID string) ([]string, error) {
 	// Get access token for user
-	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
 		return []string{}, fmt.Errorf("failed to get access token: %v", err)
 	}
@@ -579,9 +563,9 @@ func (s *SpotifyFetchService) FetchAlbumsFromArtist(ctx context.Context, userID,
 }
 
 // FetchTracksFromAlbum fetches track IDs from an album
-func (s *SpotifyFetchService) FetchTracksFromAlbum(ctx context.Context, userID, albumID string) ([]string, error) {
+func (s *Spotify) FetchTracksFromAlbum(ctx context.Context, userID, albumID string) ([]string, error) {
 	// Get access token for user
-	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
 		return []string{}, fmt.Errorf("failed to get access token: %v", err)
 	}
@@ -666,9 +650,9 @@ func (s *SpotifyFetchService) FetchTracksFromAlbum(ctx context.Context, userID, 
 }
 
 // FetchTracksFromPlaylist fetches track IDs from a playlist
-func (s *SpotifyFetchService) FetchTracksFromPlaylist(ctx context.Context, userID, playlistID string) ([]string, error) {
+func (s *Spotify) FetchTracksFromPlaylist(ctx context.Context, userID, playlistID string) ([]string, error) {
 	// Get access token for user
-	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
 		return []string{}, fmt.Errorf("failed to get access token: %v", err)
 	}

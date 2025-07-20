@@ -11,10 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/FerNunez/NameThatSong/internal/config"
 	"github.com/FerNunez/NameThatSong/internal/pkg/utils"
 	"github.com/FerNunez/NameThatSong/internal/repository"
-	"github.com/FerNunez/NameThatSong/internal/services/cache"
 )
 
 type TokenResponse struct {
@@ -25,26 +23,12 @@ type TokenResponse struct {
 	Scope        string `json:"scope"`
 }
 
-// SpotifyAuthService handles OAuth authentication with Spotify
-type SpotifyAuthService struct {
-	config     *config.SpotifyConfig
-	tokenStore repository.SpotifyTokenStore
-	cache      cache.SpotifyCache
-	httpClient *http.Client
-}
-
-// NewSpotifyAuthService creates a new Spotify auth service
-func NewSpotifyAuthService(config *config.SpotifyConfig, tokenStore repository.SpotifyTokenStore, cache cache.SpotifyCache, httpClient *http.Client) *SpotifyAuthService {
-	return &SpotifyAuthService{
-		config:     config,
-		tokenStore: tokenStore,
-		cache:      cache,
-		httpClient: httpClient,
-	}
-}
+// =============================================================================
+// AUTHENTICATION METHODS
+// =============================================================================
 
 // AuthRequestURL generates the Spotify authorization URL with internally managed state
-func (s *SpotifyAuthService) AuthRequestURL(userID string) (string, error) {
+func (s *Spotify) AuthRequestURL(userID string) (string, error) {
 	// Generate a secure random state
 	state, err := utils.GenerateState(16) // 16 bytes as example in spotify
 	if err != nil {
@@ -71,7 +55,7 @@ func (s *SpotifyAuthService) AuthRequestURL(userID string) (string, error) {
 }
 
 // TokenExchange exchanges authorization code for access tokens with state validation
-func (s *SpotifyAuthService) TokenExchange(ctx context.Context, userID, code, receivedState string) (TokenResponse, error) {
+func (s *Spotify) TokenExchange(ctx context.Context, userID, code, receivedState string) (TokenResponse, error) {
 	// Validate OAuth state first
 	storedState, found := s.cache.GetOAuthState(userID)
 	if !found {
@@ -124,7 +108,7 @@ func (s *SpotifyAuthService) TokenExchange(ctx context.Context, userID, code, re
 }
 
 // RefreshToken regenerates access token from refresh token
-func (s *SpotifyAuthService) refreshToken(ctx context.Context, refreshToken string) (TokenResponse, error) {
+func (s *Spotify) refreshToken(ctx context.Context, refreshToken string) (TokenResponse, error) {
 	data := url.Values{}
 	data.Set("grant_type", "refresh_token")
 	data.Set("refresh_token", refreshToken)
@@ -154,7 +138,7 @@ func (s *SpotifyAuthService) refreshToken(ctx context.Context, refreshToken stri
 }
 
 // GetValidToken retrieves a valid access token for the user (refreshing if necessary)
-func (s *SpotifyAuthService) GetValidToken(ctx context.Context, userID string) (string, error) {
+func (s *Spotify) GetValidToken(ctx context.Context, userID string) (string, error) {
 	// Get token from storage
 	token, err := s.tokenStore.Get(ctx, userID)
 	if err != nil {

@@ -14,12 +14,12 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// SpotifyService provides a comprehensive Spotify API service
-type SpotifyService struct {
-	searchService *SpotifySearchService
-	fetchService  *SpotifyFetchService
-	authService   *SpotifyAuthService
-	playerService *SpotifyPlayerService
+// Spotify provides a comprehensive Spotify API service
+type Spotify struct {
+	config     *config.SpotifyConfig
+	tokenStore repository.SpotifyTokenStore
+	cache      cache.SpotifyCache
+	httpClient *http.Client
 }
 
 // NewSpotifyService creates a new comprehensive Spotify service
@@ -27,7 +27,7 @@ func NewSpotifyService(
 	config *config.SpotifyConfig,
 	db *sql.DB,
 	redisClient *redis.Client,
-) (*SpotifyService, error) {
+) (*Spotify, error) {
 	if config == nil {
 		return nil, fmt.Errorf("spotify config is required")
 	}
@@ -59,36 +59,10 @@ func NewSpotifyService(
 		Timeout: 30 * time.Second,
 	}
 
-	// Initialize services with shared HTTP client
-	authService := NewSpotifyAuthService(config, tokenStore, spotifyCache, httpClient)
-	searchService := NewSpotifySearchService(config, spotifyCache, authService, httpClient)
-	fetchService := NewSpotifyFetchService(config, spotifyCache, authService, httpClient)
-	playerService := NewSpotifyPlayerService(config, authService, httpClient)
-
-	return &SpotifyService{
-		searchService: searchService,
-		fetchService:  fetchService,
-		authService:   authService,
-		playerService: playerService,
+	return &Spotify{
+		config:     config,
+		tokenStore: tokenStore,
+		cache:      spotifyCache,
+		httpClient: httpClient,
 	}, nil
-}
-
-// GetAuthService returns the authentication service
-func (s *SpotifyService) GetAuthService() *SpotifyAuthService {
-	return s.authService
-}
-
-// GetSearchService returns the search service
-func (s *SpotifyService) GetSearchService() *SpotifySearchService {
-	return s.searchService
-}
-
-// GetFetchService returns the fetch service
-func (s *SpotifyService) GetFetchService() *SpotifyFetchService {
-	return s.fetchService
-}
-
-// GetPlayerService returns the player service
-func (s *SpotifyService) GetPlayerService() *SpotifyPlayerService {
-	return s.playerService
 }

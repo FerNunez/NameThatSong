@@ -6,30 +6,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-
-	"github.com/FerNunez/NameThatSong/internal/config"
 )
 
-// SpotifyPlayerService handles playback controls
-type SpotifyPlayerService struct {
-	config      *config.SpotifyConfig
-	authService *SpotifyAuthService
-	httpClient  *http.Client
-}
-
-// NewSpotifyPlayerService creates a new Spotify player service
-func NewSpotifyPlayerService(config *config.SpotifyConfig, authService *SpotifyAuthService, httpClient *http.Client) *SpotifyPlayerService {
-	return &SpotifyPlayerService{
-		config:      config,
-		authService: authService,
-		httpClient:  httpClient,
-	}
-}
+// =============================================================================
+// PLAYER METHODS
+// =============================================================================
 
 // PlaySong starts playing a specific song on the user's active device
-func (s *SpotifyPlayerService) PlaySong(ctx context.Context, userID, songID string) error {
+func (s *Spotify) PlaySong(ctx context.Context, userID, songID string) error {
 	// Get access token for user
-	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to get access token: %v", err)
 	}
@@ -76,9 +62,9 @@ func (s *SpotifyPlayerService) PlaySong(ctx context.Context, userID, songID stri
 }
 
 // PausePlayback pauses the current playback on the user's active device
-func (s *SpotifyPlayerService) PausePlayback(ctx context.Context, userID string) error {
+func (s *Spotify) PausePlayback(ctx context.Context, userID string) error {
 	// Get access token for user
-	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to get access token: %v", err)
 	}
@@ -108,9 +94,9 @@ func (s *SpotifyPlayerService) PausePlayback(ctx context.Context, userID string)
 }
 
 // ResumePlayback resumes the current playback on the user's active device
-func (s *SpotifyPlayerService) ResumePlayback(ctx context.Context, userID string) error {
+func (s *Spotify) ResumePlayback(ctx context.Context, userID string) error {
 	// Get access token for user
-	accessToken, err := s.authService.GetValidToken(ctx, userID)
+	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to get access token: %v", err)
 	}
