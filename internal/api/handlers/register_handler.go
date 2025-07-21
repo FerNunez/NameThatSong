@@ -28,11 +28,11 @@ func (h GetRegisterHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 
 type PostRegisterHandler struct {
 	UserService    user.UserService
-	SpotifyService spotify.Spotify
+	SpotifyService spotify.SpotifyService
 	// GameManager    *game.GameManager
 }
 
-func NewPostRegisterHandler(userService user.UserService, spotifyService spotify.Spotify) *PostRegisterHandler {
+func NewPostRegisterHandler(userService user.UserService, spotifyService spotify.SpotifyService) *PostRegisterHandler {
 	return &PostRegisterHandler{
 		UserService:    userService,
 		SpotifyService: spotifyService,
@@ -62,17 +62,7 @@ func (h PostRegisterHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 		c.Render(r.Context(), w)
 		return
 	}
-
-	// TODO: Game integration will be added later
-	// Create game for user
-	// err = h.GameManager.CreateGame(dbUser.ID, h.SpotifyService.GetTokenStore())
-	// if err != nil {
-	// 	fmt.Println("could not create game", err)
-	// 	w.WriteHeader(http.StatusInternalServerError)
-	// 	c := templates.RegisterError()
-	// 	c.Render(r.Context(), w)
-	// 	return
-	// }
+	fmt.Println("User has been registered w mail: %v", dbUser.Email)
 
 	c := templates.RegisterSuccess()
 	err = c.Render(r.Context(), w)

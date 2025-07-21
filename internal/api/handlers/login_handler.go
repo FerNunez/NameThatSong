@@ -31,12 +31,12 @@ func (h GetLoginHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 
 type PostLoginHandler struct {
 	UserService    user.UserService
-	SpotifyService spotify.Spotify
+	SpotifyService spotify.SpotifyService
 	SessionName    string
 	// GameManager       *game.GameManager
 }
 
-func NewPostLoginHandler(userService user.UserService, spotifyService spotify.Spotify, sessionName string) *PostLoginHandler {
+func NewPostLoginHandler(userService user.UserService, spotifyService spotify.SpotifyService, sessionName string) *PostLoginHandler {
 	return &PostLoginHandler{
 		UserService:    userService,
 		SpotifyService: spotifyService,

@@ -12,7 +12,6 @@ import (
 	"github.com/FerNunez/NameThatSong/internal/repository/database"
 
 	"github.com/FerNunez/NameThatSong/internal/api/handlers"
-	"github.com/FerNunez/NameThatSong/internal/services/game"
 	"github.com/FerNunez/NameThatSong/internal/services/spotify"
 	"github.com/FerNunez/NameThatSong/internal/services/user"
 	"github.com/redis/go-redis/v9"
@@ -89,8 +88,6 @@ func main() {
 
 	// SpotifyService now handles token management internally
 
-	gm := game.NewGameManager()
-
 	// Create new router
 	r := chi.NewRouter()
 
@@ -100,40 +97,35 @@ func main() {
 		r.Use(
 			authMiddleware.AddUserToCtxt,
 		)
-		r.Get("/", handlers.NewGetIndexHandler(gm).ServeHttp)
+		r.Get("/", handlers.NewGetIndexHandler().ServeHttp)
 		// Set up static file server
 		fileServer := http.FileServer(http.Dir("./static"))
 		r.Handle("/static/*", http.StripPrefix("/static/", fileServer))
 
-		// Authentication routes
+		// User: register, Login & Auth
 		r.Get("/register", handlers.NewGetRegisterHandler().ServeHttp)
-		r.Post("/register", handlers.NewPostRegisterHandler(userService, *spotifyService).ServeHttp)
-		// Login Routes
+		r.Post("/register", handlers.NewPostRegisterHandler(userService, spotifyService).ServeHttp)
 		r.Get("/login", handlers.NewGetLoginHandler().ServeHttp)
-		r.Post("/login", handlers.NewPostLoginHandler(userService, *spotifyService, cookieName).ServeHttp)
+		r.Post("/login", handlers.NewPostLoginHandler(userService, spotifyService, cookieName).ServeHttp)
 		r.Post("/logout", handlers.NewPostLogoutHandler(userService, cookieName).ServeHTTP)
-
-		// Auth
-		r.Get("/spotify-auth", handlers.NewGetAuthHandler(gm).ServeHttp)
+		r.Get("/spotify-auth", handlers.NewGetAuthHandler(spotifyService).ServeHttp)
 		r.Get("/auth/callback", handlers.NewGetAuthCallbackHandler(spotifyService).ServeHttp)
 
 		// Search
-		r.Get("/search-helper", handlers.NewGetSearchArtists(gm).ServeHttp)
-		r.Get("/search-albums", handlers.NewGetArtistAlbums(gm).ServeHttp)
+		// r.Get("/search-helper", handlers.NewGetSearchArtists().ServeHttp)
+		// r.Get("/search-albums", handlers.NewGetArtistAlbums().ServeHttp)
 
 		// Select
-		r.Post("/api/select-album", handlers.NewPostSelectAlbum(gm).ServeHttp)
-		r.Post("/start-game", handlers.NewPostStartGame(gm).ServeHttp)
+		// r.Post("/api/select-album", handlers.NewPostSelectAlbum().ServeHttp)
+		// r.Post("/start-game", handlers.NewPostStartGame().ServeHttp)
 
 		// Guess
-		r.Post("/guess-track", handlers.NewPostGuessTrack(gm).ServeHttp)
+		// r.Post("/guess-track", handlers.NewPostGuessTrack().ServeHttp)
 
 		// Player
-		r.Post("/play-pause", handlers.NewPostPlayPause(gm).ServeHttp)
-		r.Post("/skip", handlers.NewPostSkip(gm).ServeHttp)
-		r.Post("/clear-queue", handlers.NewPostClearQueue(gm).ServeHttp)
-
-		r.Post("/clear-queue", handlers.NewPostClearQueue(gm).ServeHttp)
+		// r.Post("/play-pause", handlers.NewPostPlayPause().ServeHttp)
+		// r.Post("/skip", handlers.NewPostSkip().ServeHttp)
+		// r.Post("/clear-queue", handlers.NewPostClearQueue().ServeHttp)
 		//r.Get("/song-time", handlers.NewGetSongTime(gm).ServeHttp)
 	})
 

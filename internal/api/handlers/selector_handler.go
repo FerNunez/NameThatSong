@@ -3,25 +3,17 @@ package handlers
 import (
 	"fmt"
 	"net/http"
-
-	"github.com/FerNunez/NameThatSong/internal/services/game"
 )
 
 type PostSelectAlbum struct {
-	gm *game.GameManager
+	//TODO:
 }
 
-func NewPostSelectAlbum(gm *game.GameManager) *PostSelectAlbum {
-	return &PostSelectAlbum{gm}
+func NewPostSelectAlbum() *PostSelectAlbum {
+	return &PostSelectAlbum{}
 }
 
 func (h *PostSelectAlbum) ServeHttp(w http.ResponseWriter, r *http.Request) {
-
-	game, err := h.gm.GetGame(r.Context())
-	if err != nil {
-		fmt.Printf("error getting game : %v", err)
-		return
-	}
 
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Failed to parse form", http.StatusBadRequest)
@@ -40,35 +32,16 @@ func (h *PostSelectAlbum) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println("artistID", artistID)
 
-	// Toggle album selection
-	_ = game.ToggleAlbumSelection(albumID, artistID)
-
-	// // album, err := game.Cache.GetAlbum(game.SpotifyToken.AccessToken, albumID)
-	// if err != nil {
-	// 	panic("album should be in cache")
-	// }
-	// component := templates.AlbumCard(album, toggle, artistID)
-	// component.Render(r.Context(), w)
 }
-
-//////////////////
 
 type PostClearQueue struct {
-	gm *game.GameManager
 }
 
-func NewPostClearQueue(gm *game.GameManager) *PostClearQueue {
-	return &PostClearQueue{gm}
+func NewPostClearQueue() *PostClearQueue {
+	return &PostClearQueue{}
 }
 
 func (h *PostClearQueue) ServeHttp(w http.ResponseWriter, r *http.Request) {
 
-	game, err := h.gm.GetGame(r.Context())
-	if err != nil {
-		fmt.Printf("error getting game : %v", err)
-		return
-	}
-	game.ClearQueue()
-	// mp := templates.MusicPlayer(game)
-	// mp.Render(r.Context(), w)
+	// TODO
 }

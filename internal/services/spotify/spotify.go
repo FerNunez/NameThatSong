@@ -27,7 +27,7 @@ func NewSpotifyService(
 	config *config.SpotifyConfig,
 	db *sql.DB,
 	redisClient *redis.Client,
-) (*Spotify, error) {
+) (SpotifyService, error) {
 	if config == nil {
 		return nil, fmt.Errorf("spotify config is required")
 	}
