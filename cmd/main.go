@@ -12,6 +12,7 @@ import (
 	"github.com/FerNunez/NameThatSong/internal/repository/database"
 
 	"github.com/FerNunez/NameThatSong/internal/api/handlers"
+	"github.com/FerNunez/NameThatSong/internal/services/playlist"
 	"github.com/FerNunez/NameThatSong/internal/services/spotify"
 	"github.com/FerNunez/NameThatSong/internal/services/user"
 	"github.com/redis/go-redis/v9"
@@ -53,6 +54,7 @@ func main() {
 	emailVerificationStore := repository.NewSQLEmailVerificationStore(dbQueries)
 	passwordResetStore := repository.NewSQLPasswordResetStore(dbQueries)
 	sessionStore := repository.NewSQLSessionStore(dbQueries)
+	playlistStore := repository.NewSQLPlaylistStore(dbQueries)
 
 	// Email configuration and service
 	emailConfig, err := config.NewEmailConfig()
@@ -88,6 +90,9 @@ func main() {
 
 	// SpotifyService now handles token management internally
 
+	// Playlist service
+	playlistService := playlist.NewPlaylistService(playlistStore, spotifyService)
+
 	// Create new router
 	r := chi.NewRouter()
 
@@ -110,6 +115,20 @@ func main() {
 		r.Post("/logout", handlers.NewPostLogoutHandler(userService, cookieName).ServeHTTP)
 		r.Get("/spotify-auth", handlers.NewGetAuthHandler(spotifyService).ServeHttp)
 		r.Get("/auth/callback", handlers.NewGetAuthCallbackHandler(spotifyService).ServeHttp)
+
+		// Playlist API endpoints
+		playlistHandler := handlers.NewPlaylistHandler(playlistService)
+		r.Get("/playlists", playlistHandler.GetUserPlaylists)
+		r.Post("/playlists", playlistHandler.CreatePlaylist)
+		r.Get("/playlists/{id}", playlistHandler.GetPlaylist)
+		r.Put("/playlists/{id}", playlistHandler.UpdatePlaylist)
+		r.Delete("/playlists/{id}", playlistHandler.DeletePlaylist)
+		r.Post("/playlists/{id}/songs", playlistHandler.AddSongToPlaylist)
+		r.Delete("/playlists/{id}/songs/{songId}", playlistHandler.RemoveSongFromPlaylist)
+		r.Put("/playlists/{id}/songs/reorder", playlistHandler.ReorderPlaylistSongs)
+		r.Post("/playlists/import", playlistHandler.ImportFromSpotify)
+		r.Post("/playlists/{id}/export", playlistHandler.ExportToSpotify)
+		r.Post("/playlists/{id}/sync", playlistHandler.SyncWithSpotify)
 
 		// Search
 		// r.Get("/search-helper", handlers.NewGetSearchArtists().ServeHttp)

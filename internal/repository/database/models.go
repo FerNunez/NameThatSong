@@ -41,6 +41,31 @@ type PasswordResetToken struct {
 	CreatedAt time.Time
 }
 
+type Playlist struct {
+	ID                uuid.UUID
+	UserID            uuid.UUID
+	Name              string
+	Description       sql.NullString
+	SpotifyPlaylistID sql.NullString
+	IsPublic          bool
+	SyncWithSpotify   bool
+	LastSyncedAt      sql.NullTime
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+type PlaylistSong struct {
+	ID             uuid.UUID
+	PlaylistID     uuid.UUID
+	SpotifyTrackID string
+	Position       int32
+	TrackName      string
+	ArtistName     string
+	AlbumName      sql.NullString
+	DurationMs     sql.NullInt32
+	AddedAt        time.Time
+}
+
 type SpotifyToken struct {
 	UserID       uuid.UUID
 	RefreshToken string

@@ -32,5 +32,11 @@ type SpotifyService interface {
 	PlaySong(ctx context.Context, userID, songID string) error
 	PausePlayback(ctx context.Context, userID string) error
 	ResumePlayback(ctx context.Context, userID string) error
+
+	// Playlist operations
+	GetUserPlaylists(ctx context.Context, userID string) ([]m.PlaylistData, error)
+	CreatePlaylist(ctx context.Context, userID, name, description string, isPublic bool) (m.PlaylistData, error)
+	AddTracksToPlaylist(ctx context.Context, userID, playlistID string, trackIDs []string) error
+	RemoveTracksFromPlaylist(ctx context.Context, userID, playlistID string, trackIDs []string) error
 }
 

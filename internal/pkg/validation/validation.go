@@ -166,3 +166,75 @@ func ValidateToken(token string) error {
 	return nil
 }
 
+// Playlist name validation
+func ValidatePlaylistName(name string) error {
+	// Trim whitespace
+	name = strings.TrimSpace(name)
+
+	// Check if empty after trimming
+	if name == "" {
+		return fmt.Errorf("playlist name is required")
+	}
+
+	// Check length after trimming
+	if len(name) > 100 {
+		return fmt.Errorf("playlist name is too long (max 100 characters)")
+	}
+
+	// Check for valid characters (alphanumeric, spaces, basic punctuation)
+	validName := regexp.MustCompile(`^[a-zA-Z0-9\s\-_\.\(\)\[\]\{\}]+$`)
+	if !validName.MatchString(name) {
+		return fmt.Errorf("playlist name contains invalid characters")
+	}
+
+	return nil
+}
+
+// Playlist description validation
+func ValidatePlaylistDescription(description string) error {
+	// Description is optional, so empty is valid
+	if description == "" {
+		return nil
+	}
+
+	// Trim whitespace
+	description = strings.TrimSpace(description)
+
+	// Check length after trimming
+	if len(description) > 500 {
+		return fmt.Errorf("playlist description is too long (max 500 characters)")
+	}
+
+	// Allow more flexible characters for descriptions
+	validDescription := regexp.MustCompile(`^[a-zA-Z0-9\s\-_\.\(\)\[\]\{\}!@#$%^&*+=:;",\?]+$`)
+	if !validDescription.MatchString(description) {
+		return fmt.Errorf("playlist description contains invalid characters")
+	}
+
+	return nil
+}
+
+// Spotify ID validation (for playlists and tracks)
+func ValidateSpotifyID(spotifyID string) error {
+	// Trim whitespace
+	spotifyID = strings.TrimSpace(spotifyID)
+
+	// Check if empty after trimming
+	if spotifyID == "" {
+		return fmt.Errorf("spotify ID is required")
+	}
+
+	// Spotify IDs are base64-like strings, typically 22 characters
+	if len(spotifyID) < 15 || len(spotifyID) > 30 {
+		return fmt.Errorf("invalid spotify ID length")
+	}
+
+	// Check for valid Spotify ID characters (base64 characters)
+	validSpotifyID := regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+	if !validSpotifyID.MatchString(spotifyID) {
+		return fmt.Errorf("invalid spotify ID format")
+	}
+
+	return nil
+}
+
