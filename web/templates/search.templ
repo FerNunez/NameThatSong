@@ -130,7 +130,7 @@ templ TrackItem(t m.TrackSearch) {
 	<div class="flex items-center space-x-3 p-4 hover:bg-slate-700 transition-colors group cursor-pointer first:rounded-t-lg last:rounded-b-lg">
 		<div class="flex-1 min-w-0">
 			<p class="text-white font-medium truncate">{ t.Name }</p>
-			<p class="text-gray-400 text-sm truncate">{ TruncateAndJoin(100, t.ArtistList) }</p>
+			<p class="text-gray-400 text-sm truncate">{ TruncateAndJoin(100, t.ArtistNames) }</p>
 		</div>
 		// FIX: fix this end point
 		<button
@@ -158,13 +158,13 @@ templ TrackItem(t m.TrackSearch) {
 templ AlbumItem(a m.AlbumSearch) {
 	<div class="flex items-center space-x-3 p-4 hover:bg-slate-700 transition-colors group cursor-pointer first:rounded-t-lg last:rounded-b-lg border-b border-slate-600 last:border-b-0">
 		<img
-			src={ a.ImageUrl }
+			src={ a.ImageURL }
 			alt={ a.Name }
 			class="w-12 h-12 rounded object-cover flex-shrink-0"
 		/>
 		<div class="flex-1 min-w-0">
 			<p class="text-white font-medium truncate">{ a.Name }</p>
-			<p class="text-gray-400 text-sm truncate">{ TruncateAndJoin(100, a.ArtistList) }</p>
+			<p class="text-gray-400 text-sm truncate">{ TruncateAndJoin(100, a.ArtistNames) }</p>
 		</div>
 		<button
 			class="text-gray-400 hover:text-green-400 hover:scale-110 transition-all duration-200 p-1"
@@ -190,7 +190,7 @@ templ AlbumItem(a m.AlbumSearch) {
 templ ArtistItem(a m.ArtistSearch) {
 	<div class="flex items-center space-x-3 p-4 hover:bg-slate-700 transition-colors group cursor-pointer first:rounded-t-lg last:rounded-b-lg border-b border-slate-600 last:border-b-0">
 		<img
-			src={ a.ImageUrl }
+			src={ a.ImageURL }
 			alt={ a.Name }
 			class="w-12 h-12 rounded object-cover flex-shrink-0"
 		/>
@@ -545,7 +545,7 @@ templ AlbumCard(album m.AlbumData, selected bool, artistID string) {
 		<div class="flex flex-col items-center p-3 text-center">
 			<div class="album-image-container mb-4">
 				<img
-					src={ album.ImagesURL }
+					src={ album.ImageURL }
 					alt="Album Cover"
 					class="w-36 h-36 rounded-md shadow-sm object-cover"
 				/>

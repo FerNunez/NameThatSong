@@ -119,13 +119,16 @@ func (s *Spotify) getUserPlaylistsFromAPI(ctx context.Context, accessToken strin
 		}
 
 		playlists[i] = m.PlaylistData{
-			Description:    item.Description,
-			FollowersTotal: item.Followers.Total,
-			ID:             item.ID,
-			ImageUrl:       imageUrl,
-			Name:           item.Name,
-			Public:         item.Public,
-			TotalTracks:    item.Tracks.Total,
+			ID:               item.ID,
+			Name:             item.Name,
+			Description:      item.Description,
+			OwnerID:          "", // Not available in this response
+			OwnerDisplayName: "", // Not available in this response
+			Public:           item.Public,
+			Collaborative:    false, // Not available in this response
+			FollowersTotal:   item.Followers.Total,
+			TotalTracks:      item.Tracks.Total,
+			ImageURL:         imageUrl,
 		}
 	}
 
@@ -195,13 +198,16 @@ func (s *Spotify) createPlaylistOnSpotify(ctx context.Context, accessToken, user
 	}
 
 	return m.PlaylistData{
-		Description:    response.Description,
-		FollowersTotal: response.Followers.Total,
-		ID:             response.ID,
-		ImageUrl:       imageUrl,
-		Name:           response.Name,
-		Public:         response.Public,
-		TotalTracks:    response.Tracks.Total,
+		ID:               response.ID,
+		Name:             response.Name,
+		Description:      response.Description,
+		OwnerID:          "", // Not available in this response
+		OwnerDisplayName: "", // Not available in this response
+		Public:           response.Public,
+		Collaborative:    false, // Not available in this response
+		FollowersTotal:   response.Followers.Total,
+		TotalTracks:      response.Tracks.Total,
+		ImageURL:         imageUrl,
 	}, nil
 }
 

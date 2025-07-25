@@ -66,6 +66,51 @@ type PlaylistSong struct {
 	AddedAt        time.Time
 }
 
+type SpotifyAlbum struct {
+	ID                   string
+	Name                 string
+	AlbumType            string
+	ReleaseDate          sql.NullTime
+	ReleaseDatePrecision sql.NullString
+	TotalTracks          sql.NullInt32
+	ImageUrl             sql.NullString
+	Label                sql.NullString
+	Popularity           sql.NullInt32
+	CachedAt             time.Time
+	UpdatedAt            time.Time
+}
+
+type SpotifyAlbumArtist struct {
+	AlbumID  string
+	ArtistID string
+}
+
+type SpotifyArtist struct {
+	ID             string
+	Name           string
+	ImageUrl       sql.NullString
+	Popularity     sql.NullInt32
+	FollowersTotal sql.NullInt32
+	Genres         []string
+	CachedAt       time.Time
+	UpdatedAt      time.Time
+}
+
+type SpotifyPlaylistsCache struct {
+	ID               string
+	Name             string
+	Description      sql.NullString
+	OwnerID          string
+	OwnerDisplayName sql.NullString
+	Public           sql.NullBool
+	Collaborative    sql.NullBool
+	FollowersTotal   sql.NullInt32
+	TotalTracks      sql.NullInt32
+	ImageUrl         sql.NullString
+	CachedAt         time.Time
+	UpdatedAt        time.Time
+}
+
 type SpotifyToken struct {
 	UserID       uuid.UUID
 	RefreshToken string
@@ -75,6 +120,27 @@ type SpotifyToken struct {
 	TokenType    string
 	Scope        string
 	ExpiresAt    time.Time
+}
+
+type SpotifyTrack struct {
+	ID          string
+	Name        string
+	AlbumID     sql.NullString
+	DurationMs  int32
+	DiscNumber  sql.NullInt32
+	TrackNumber sql.NullInt32
+	Popularity  sql.NullInt32
+	Explicit    sql.NullBool
+	PreviewUrl  sql.NullString
+	IsLocal     sql.NullBool
+	CachedAt    time.Time
+	UpdatedAt   time.Time
+}
+
+type SpotifyTrackArtist struct {
+	TrackID   string
+	ArtistID  string
+	IsPrimary sql.NullBool
 }
 
 type User struct {

@@ -115,15 +115,15 @@ func (p *Playlist) AddSongToPlaylist(ctx context.Context, playlistID, userID uui
 		return fmt.Errorf("failed to get max position: %w", err)
 	}
 
-	// Create playlist song
+	// Create playlist song with real artist and album data
 	song := &models.PlaylistSong{
 		ID:             uuid.New(),
 		PlaylistID:     playlistID,
 		SpotifyTrackID: req.SpotifyTrackID,
 		Position:       maxPos + 1,
 		TrackName:      trackData.Name,
-		ArtistName:     "Unknown Artist", // TODO: Get from track data
-		AlbumName:      "Unknown Album",  // TODO: Get from track data
+		ArtistName:     trackData.GetPrimaryArtistName(), // Real artist name from normalized data
+		AlbumName:      trackData.GetAlbumName(),         // Real album name from normalized data
 		DurationMs:     trackData.DurationMs,
 		AddedAt:        time.Now(),
 	}
@@ -221,7 +221,8 @@ func (p *Playlist) ImportFromSpotify(ctx context.Context, userID uuid.UUID, req 
 		return nil, fmt.Errorf("failed to fetch tracks from playlist: %w", err)
 	}
 
-	// Add songs to playlist
+	// Add songs to playlist (batch process for better performance)
+	songs := make([]*models.PlaylistSong, 0, len(trackIDs))
 	for i, trackID := range trackIDs {
 		trackData, err := p.spotifyService.FetchTrack(ctx, userID.String(), trackID)
 		if err != nil {
@@ -234,12 +235,16 @@ func (p *Playlist) ImportFromSpotify(ctx context.Context, userID uuid.UUID, req 
 			SpotifyTrackID: trackID,
 			Position:       i + 1,
 			TrackName:      trackData.Name,
-			ArtistName:     "Unknown Artist", // TODO: Get from track data
-			AlbumName:      "Unknown Album",  // TODO: Get from track data
+			ArtistName:     trackData.GetPrimaryArtistName(), // Real artist name from normalized data
+			AlbumName:      trackData.GetAlbumName(),         // Real album name from normalized data
 			DurationMs:     trackData.DurationMs,
 			AddedAt:        time.Now(),
 		}
+		songs = append(songs, song)
+	}
 
+	// Batch insert all songs
+	for _, song := range songs {
 		if err := p.playlistStore.AddSongToPlaylist(ctx, song); err != nil {
 			// Continue with other songs if one fails
 			continue
@@ -318,7 +323,8 @@ func (p *Playlist) SyncWithSpotify(ctx context.Context, playlistID, userID uuid.
 		return fmt.Errorf("failed to clear playlist songs: %w", err)
 	}
 
-	// Add updated songs
+	// Add updated songs (batch process for better performance)
+	songs := make([]*models.PlaylistSong, 0, len(trackIDs))
 	for i, trackID := range trackIDs {
 		trackData, err := p.spotifyService.FetchTrack(ctx, userID.String(), trackID)
 		if err != nil {
@@ -331,12 +337,16 @@ func (p *Playlist) SyncWithSpotify(ctx context.Context, playlistID, userID uuid.
 			SpotifyTrackID: trackID,
 			Position:       i + 1,
 			TrackName:      trackData.Name,
-			ArtistName:     "Unknown Artist", // TODO: Get from track data
-			AlbumName:      "Unknown Album",  // TODO: Get from track data
+			ArtistName:     trackData.GetPrimaryArtistName(), // Real artist name from normalized data
+			AlbumName:      trackData.GetAlbumName(),         // Real album name from normalized data
 			DurationMs:     trackData.DurationMs,
 			AddedAt:        time.Now(),
 		}
+		songs = append(songs, song)
+	}
 
+	// Batch insert all songs
+	for _, song := range songs {
 		if err := p.playlistStore.AddSongToPlaylist(ctx, song); err != nil {
 			continue
 		}

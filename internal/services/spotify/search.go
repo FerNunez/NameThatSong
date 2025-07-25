@@ -264,11 +264,31 @@ func (s *Spotify) parseTrackSearchResponse(data []byte) ([]m.TrackSearch, error)
 			artists[idx] = a.Name
 		}
 
+		// Get album info
+		albumsName := ""
+		albumsImageURL := ""
+		if len(t.Album.Images) > 0 {
+			albumsImageURL = t.Album.Images[0].URL
+		}
+		if t.Album.Name != "" {
+			albumsName = t.Album.Name
+		}
+
 		trackInfo := m.TrackSearch{
-			ID:         t.ID,
-			Name:       t.Name,
-			Popularity: t.Popularity,
-			ArtistList: artists,
+			ID:            t.ID,
+			Name:          t.Name,
+			Popularity:    t.Popularity,
+			DurationMs:    t.DurationMs,
+			Explicit:      t.Explicit,
+			PreviewURL:    func() string {
+				if url, ok := t.PreviewURL.(string); ok {
+					return url
+				}
+				return ""
+			}(),
+			ArtistNames:   artists,
+			AlbumName:     albumsName,
+			AlbumImageURL: albumsImageURL,
 		}
 		tracks = append(tracks, trackInfo)
 	}
@@ -336,10 +356,13 @@ func (s *Spotify) parseAlbumSearchResponse(data []byte) ([]m.AlbumSearch, error)
 		}
 
 		albums[idx] = m.AlbumSearch{
-			ID:         alb.ID,
-			ImageUrl:   imageUrl,
-			Name:       alb.Name,
-			ArtistList: artists,
+			ID:          alb.ID,
+			Name:        alb.Name,
+			AlbumType:   alb.AlbumType,
+			ReleaseDate: alb.ReleaseDate,
+			TotalTracks: alb.TotalTracks,
+			ImageURL:    imageUrl,
+			ArtistNames: artists,
 		}
 	}
 	return albums, nil
@@ -376,10 +399,12 @@ func (s *Spotify) parseArtistSearchResponse(data []byte) ([]m.ArtistSearch, erro
 			imageUrl = a.Images[0].URL
 		}
 		artistInfo := m.ArtistSearch{
-			ID:         a.ID,
-			Name:       a.Name,
-			ImageUrl:   imageUrl,
-			Popularity: a.Popularity,
+			ID:             a.ID,
+			Name:           a.Name,
+			ImageURL:       imageUrl,
+			Popularity:     a.Popularity,
+			FollowersTotal: 0, // Not available in search response
+			Genres:         []string{}, // Not available in search response
 		}
 		artists = append(artists, artistInfo)
 	}
@@ -451,9 +476,14 @@ func (s *Spotify) parsePlaylistSearchResponse(data []byte) ([]m.PlaylistSearch, 
 		}
 
 		playlists = append(playlists, m.PlaylistSearch{
-			ID:       p.ID,
-			ImageUrl: imageUrl,
-			Name:     p.Name,
+			ID:             p.ID,
+			Name:           p.Name,
+			Description:    p.Description,
+			ImageURL:       imageUrl,
+			OwnerName:      p.Owner.DisplayName,
+			Public:         p.Public,
+			TotalTracks:    p.Tracks.Total,
+			FollowersTotal: 0, // Not available in search response
 		})
 
 	}

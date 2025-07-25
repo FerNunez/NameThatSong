@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 
 	m "github.com/FerNunez/NameThatSong/internal/models"
 )
@@ -188,14 +189,71 @@ func (s *Spotify) fetchTrackFromAPI(ctx context.Context, accessToken, trackID st
 		return m.TrackData{}, err
 	}
 
+	// Extract album data
+	var albumData *m.AlbumData
+	if fetchTrackResponse.Album.ID != "" {
+		albumImageURL := ""
+		if len(fetchTrackResponse.Album.Images) > 0 {
+			albumImageURL = fetchTrackResponse.Album.Images[0].URL
+		}
+		
+		// Extract album artists
+		albumArtists := make([]m.ArtistData, len(fetchTrackResponse.Album.Artists))
+		for i, artist := range fetchTrackResponse.Album.Artists {
+			albumArtists[i] = m.ArtistData{
+				ID:   artist.ID,
+				Name: artist.Name,
+			}
+		}
+		
+		albumData = &m.AlbumData{
+			ID:                   fetchTrackResponse.Album.ID,
+			Name:                 fetchTrackResponse.Album.Name,
+			AlbumType:            fetchTrackResponse.Album.AlbumType,
+			ReleaseDate:          fetchTrackResponse.Album.ReleaseDate,
+			ReleaseDatePrecision: fetchTrackResponse.Album.ReleaseDatePrecision,
+			TotalTracks:          fetchTrackResponse.Album.TotalTracks,
+			ImageURL:             albumImageURL,
+			Artists:              albumArtists,
+			CachedAt:             time.Now(),
+			UpdatedAt:            time.Now(),
+		}
+	}
+	
+	// Extract track artists
+	trackArtists := make([]m.TrackArtist, len(fetchTrackResponse.Artists))
+	for i, artist := range fetchTrackResponse.Artists {
+		trackArtists[i] = m.TrackArtist{
+			ArtistData: m.ArtistData{
+				ID:   artist.ID,
+				Name: artist.Name,
+			},
+			IsPrimary: i == 0, // First artist is considered primary
+		}
+	}
+	
+	// Handle preview URL (can be null)
+	previewURL := ""
+	if fetchTrackResponse.PreviewURL != nil {
+		if url, ok := fetchTrackResponse.PreviewURL.(string); ok {
+			previewURL = url
+		}
+	}
+
 	return m.TrackData{
-		DiscNumber:  fetchTrackResponse.DiscNumber,
-		DurationMs:  fetchTrackResponse.DurationMs,
 		ID:          trackID,
 		Name:        fetchTrackResponse.Name,
+		Album:       albumData,
+		Artists:     trackArtists,
+		DurationMs:  fetchTrackResponse.DurationMs,
+		DiscNumber:  fetchTrackResponse.DiscNumber,
 		TrackNumber: fetchTrackResponse.TrackNumber,
 		Popularity:  fetchTrackResponse.Popularity,
 		Explicit:    fetchTrackResponse.Explicit,
+		PreviewURL:  previewURL,
+		IsLocal:     false, // Spotify API tracks are not local
+		CachedAt:    time.Now(),
+		UpdatedAt:   time.Now(),
 	}, nil
 }
 
@@ -304,13 +362,29 @@ func (s *Spotify) fetchAlbumFromAPI(ctx context.Context, accessToken, albumID st
 		imageUrl = fetchAlbumResponse.Images[len(fetchAlbumResponse.Images)-1].URL
 	}
 
+	// Extract artists from album data
+	albumArtists := make([]m.ArtistData, len(fetchAlbumResponse.Artists))
+	for i, artist := range fetchAlbumResponse.Artists {
+		albumArtists[i] = m.ArtistData{
+			ID:       artist.ID,
+			Name:     artist.Name,
+			ImageURL: "", // Not available in album artists response
+		}
+	}
+
 	return m.AlbumData{
-		AlbumType:   fetchAlbumResponse.AlbumType,
-		TotalTracks: fetchAlbumResponse.TotalTracks,
-		ID:          albumID,
-		ImagesURL:   imageUrl,
-		Name:        fetchAlbumResponse.Name,
-		ReleaseDate: fetchAlbumResponse.ReleaseDate,
+		ID:                   albumID,
+		Name:                 fetchAlbumResponse.Name,
+		AlbumType:            fetchAlbumResponse.AlbumType,
+		ReleaseDate:          fetchAlbumResponse.ReleaseDate,
+		ReleaseDatePrecision: fetchAlbumResponse.ReleaseDatePrecision,
+		TotalTracks:          fetchAlbumResponse.TotalTracks,
+		ImageURL:             imageUrl,
+		Label:                fetchAlbumResponse.Label,
+		Popularity:           fetchAlbumResponse.Popularity,
+		Artists:              albumArtists,
+		CachedAt:             time.Now(),
+		UpdatedAt:            time.Now(),
 	}, nil
 }
 
@@ -366,10 +440,14 @@ func (s *Spotify) fetchArtistFromAPI(ctx context.Context, accessToken, artistID 
 	}
 
 	return m.ArtistData{
-		ID:         artistID,
-		Name:       fetchArtistResponse.Name,
-		ImageUrl:   imageUrl,
-		Popularity: fetchArtistResponse.Popularity,
+		ID:             artistID,
+		Name:           fetchArtistResponse.Name,
+		ImageURL:       imageUrl,
+		Popularity:     fetchArtistResponse.Popularity,
+		FollowersTotal: fetchArtistResponse.Followers.Total,
+		Genres:         fetchArtistResponse.Genres,
+		CachedAt:       time.Now(),
+		UpdatedAt:      time.Now(),
 	}, nil
 }
 
@@ -473,13 +551,18 @@ func (s *Spotify) fetchPlaylistFromAPI(ctx context.Context, accessToken, playlis
 	}
 
 	return m.PlaylistData{
-		Description:    fetchPlaylistResponse.Description,
-		FollowersTotal: fetchPlaylistResponse.Followers.Total,
-		ID:             playlistID,
-		ImageUrl:       imageUrl,
-		Name:           fetchPlaylistResponse.Name,
-		Public:         fetchPlaylistResponse.Public,
-		TotalTracks:    0, // Will be set when tracks are fetched separately
+		ID:               playlistID,
+		Name:             fetchPlaylistResponse.Name,
+		Description:      fetchPlaylistResponse.Description,
+		OwnerID:          "", // Not available in this API response
+		OwnerDisplayName: "", // Not available in this API response
+		Public:           fetchPlaylistResponse.Public,
+		Collaborative:    false, // Not available in this API response
+		FollowersTotal:   fetchPlaylistResponse.Followers.Total,
+		TotalTracks:      0, // Will be set when tracks are fetched separately
+		ImageURL:         imageUrl,
+		CachedAt:         time.Now(),
+		UpdatedAt:        time.Now(),
 	}, nil
 }
 
