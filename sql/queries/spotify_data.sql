@@ -17,9 +17,6 @@ ON CONFLICT (id) DO UPDATE SET
     updated_at = EXCLUDED.updated_at
 RETURNING *;
 
--- name: BatchGetSpotifyArtists :many
-SELECT * FROM spotify_artists WHERE id = ANY($1::text[]);
-
 -- =============================================================================
 -- ALBUM OPERATIONS  
 -- =============================================================================
@@ -41,18 +38,6 @@ ON CONFLICT (id) DO UPDATE SET
     popularity = EXCLUDED.popularity,
     updated_at = EXCLUDED.updated_at
 RETURNING *;
-
--- name: GetSpotifyAlbumWithArtists :many
-SELECT 
-    a.id, a.name, a.album_type, a.release_date, a.release_date_precision,
-    a.total_tracks, a.image_url, a.label, a.popularity, a.cached_at, a.updated_at,
-    ar.id as artist_id, ar.name as artist_name, ar.image_url as artist_image_url,
-    ar.popularity as artist_popularity, ar.followers_total as artist_followers_total,
-    ar.genres as artist_genres
-FROM spotify_albums a
-LEFT JOIN spotify_album_artists aa ON a.id = aa.album_id  
-LEFT JOIN spotify_artists ar ON aa.artist_id = ar.id
-WHERE a.id = $1;
 
 -- =============================================================================
 -- TRACK OPERATIONS
@@ -77,40 +62,29 @@ ON CONFLICT (id) DO UPDATE SET
     updated_at = EXCLUDED.updated_at
 RETURNING *;
 
--- name: GetSpotifyTrackWithRelations :many
-SELECT 
-    t.id, t.name, t.duration_ms, t.disc_number, t.track_number, 
-    t.popularity, t.explicit, t.preview_url, t.is_local, t.cached_at, t.updated_at,
-    -- Album data
-    a.id as album_id, a.name as album_name, a.album_type, a.release_date,
-    a.release_date_precision, a.total_tracks, a.image_url as album_image_url,
-    a.label as album_label, a.popularity as album_popularity,
-    -- Track artist data (including primary flag)
-    ar.id as artist_id, ar.name as artist_name, ar.image_url as artist_image_url,
-    ar.popularity as artist_popularity, ar.followers_total as artist_followers_total,
-    ar.genres as artist_genres, ta.is_primary as artist_is_primary
-FROM spotify_tracks t
-LEFT JOIN spotify_albums a ON t.album_id = a.id
-LEFT JOIN spotify_track_artists ta ON t.id = ta.track_id
-LEFT JOIN spotify_artists ar ON ta.artist_id = ar.id  
-WHERE t.id = $1
-ORDER BY ta.is_primary DESC, ar.name;
 
--- name: GetMultipleSpotifyTracksWithRelations :many
-SELECT 
-    t.id, t.name, t.duration_ms, t.disc_number, t.track_number,
-    t.popularity, t.explicit, t.preview_url, t.is_local, t.cached_at, t.updated_at,
-    -- Album data
-    a.id as album_id, a.name as album_name, a.album_type, a.release_date,
-    a.image_url as album_image_url, a.label as album_label,
-    -- Primary artist data (for efficient playlist display)
-    ar.id as artist_id, ar.name as artist_name, ta.is_primary as artist_is_primary
-FROM spotify_tracks t
-LEFT JOIN spotify_albums a ON t.album_id = a.id
-LEFT JOIN spotify_track_artists ta ON t.id = ta.track_id AND ta.is_primary = true
-LEFT JOIN spotify_artists ar ON ta.artist_id = ar.id
-WHERE t.id = ANY($1::text[])
-ORDER BY t.id;
+-- =============================================================================
+-- PLAYLIST OPERATIONS
+-- =============================================================================
+
+-- name: GetSpotifyPlaylist :one
+SELECT * FROM spotify_playlists WHERE id = $1;
+
+-- name: UpsertSpotifyPlaylist :one
+INSERT INTO spotify_playlists (id, name, description, owner_id, owner_display_name, public, collaborative, followers_total, total_tracks, image_url, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    description = EXCLUDED.description,
+    owner_id = EXCLUDED.owner_id,
+    owner_display_name = EXCLUDED.owner_display_name,
+    public = EXCLUDED.public,
+    collaborative = EXCLUDED.collaborative,
+    followers_total = EXCLUDED.followers_total,
+    total_tracks = EXCLUDED.total_tracks,
+    image_url = EXCLUDED.image_url,
+    updated_at = EXCLUDED.updated_at
+RETURNING *;
 
 -- =============================================================================
 -- RELATIONSHIP OPERATIONS
@@ -133,28 +107,7 @@ ON CONFLICT (track_id, artist_id) DO UPDATE SET
 -- name: ClearTrackArtists :exec
 DELETE FROM spotify_track_artists WHERE track_id = $1;
 
--- =============================================================================
--- PLAYLIST CACHE OPERATIONS
--- =============================================================================
 
--- name: GetSpotifyPlaylistCache :one
-SELECT * FROM spotify_playlists_cache WHERE id = $1;
-
--- name: UpsertSpotifyPlaylistCache :one
-INSERT INTO spotify_playlists_cache (id, name, description, owner_id, owner_display_name, public, collaborative, followers_total, total_tracks, image_url, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
-ON CONFLICT (id) DO UPDATE SET
-    name = EXCLUDED.name,
-    description = EXCLUDED.description,
-    owner_id = EXCLUDED.owner_id,
-    owner_display_name = EXCLUDED.owner_display_name,
-    public = EXCLUDED.public,
-    collaborative = EXCLUDED.collaborative,
-    followers_total = EXCLUDED.followers_total,
-    total_tracks = EXCLUDED.total_tracks,
-    image_url = EXCLUDED.image_url,
-    updated_at = EXCLUDED.updated_at
-RETURNING *;
 
 -- =============================================================================
 -- CACHE MANAGEMENT OPERATIONS
@@ -169,15 +122,15 @@ DELETE FROM spotify_albums WHERE cached_at < $1;
 -- name: CleanupOldSpotifyTracks :exec
 DELETE FROM spotify_tracks WHERE cached_at < $1;
 
--- name: CleanupOldSpotifyPlaylistsCache :exec
-DELETE FROM spotify_playlists_cache WHERE cached_at < $1;
+-- name: CleanupOldSpotifyPlaylists :exec
+DELETE FROM spotify_playlists WHERE cached_at < $1;
 
 -- name: GetCacheStats :one
 SELECT 
     (SELECT COUNT(*) FROM spotify_artists) as artists_count,
     (SELECT COUNT(*) FROM spotify_albums) as albums_count,
     (SELECT COUNT(*) FROM spotify_tracks) as tracks_count,
-    (SELECT COUNT(*) FROM spotify_playlists_cache) as playlists_count;
+    (SELECT COUNT(*) FROM spotify_playlists) as playlists_count;
 
 -- =============================================================================
 -- EFFICIENT SEARCH OPERATIONS

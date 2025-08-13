@@ -13,42 +13,6 @@ import (
 	"github.com/lib/pq"
 )
 
-const batchGetSpotifyArtists = `-- name: BatchGetSpotifyArtists :many
-SELECT id, name, image_url, popularity, followers_total, genres, cached_at, updated_at FROM spotify_artists WHERE id = ANY($1::text[])
-`
-
-func (q *Queries) BatchGetSpotifyArtists(ctx context.Context, dollar_1 []string) ([]SpotifyArtist, error) {
-	rows, err := q.db.QueryContext(ctx, batchGetSpotifyArtists, pq.Array(dollar_1))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []SpotifyArtist
-	for rows.Next() {
-		var i SpotifyArtist
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.ImageUrl,
-			&i.Popularity,
-			&i.FollowersTotal,
-			pq.Array(&i.Genres),
-			&i.CachedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const cleanupOldSpotifyAlbums = `-- name: CleanupOldSpotifyAlbums :exec
 DELETE FROM spotify_albums WHERE cached_at < $1
 `
@@ -71,12 +35,12 @@ func (q *Queries) CleanupOldSpotifyArtists(ctx context.Context, cachedAt time.Ti
 	return err
 }
 
-const cleanupOldSpotifyPlaylistsCache = `-- name: CleanupOldSpotifyPlaylistsCache :exec
-DELETE FROM spotify_playlists_cache WHERE cached_at < $1
+const cleanupOldSpotifyPlaylists = `-- name: CleanupOldSpotifyPlaylists :exec
+DELETE FROM spotify_playlists WHERE cached_at < $1
 `
 
-func (q *Queries) CleanupOldSpotifyPlaylistsCache(ctx context.Context, cachedAt time.Time) error {
-	_, err := q.db.ExecContext(ctx, cleanupOldSpotifyPlaylistsCache, cachedAt)
+func (q *Queries) CleanupOldSpotifyPlaylists(ctx context.Context, cachedAt time.Time) error {
+	_, err := q.db.ExecContext(ctx, cleanupOldSpotifyPlaylists, cachedAt)
 	return err
 }
 
@@ -112,7 +76,7 @@ SELECT
     (SELECT COUNT(*) FROM spotify_artists) as artists_count,
     (SELECT COUNT(*) FROM spotify_albums) as albums_count,
     (SELECT COUNT(*) FROM spotify_tracks) as tracks_count,
-    (SELECT COUNT(*) FROM spotify_playlists_cache) as playlists_count
+    (SELECT COUNT(*) FROM spotify_playlists) as playlists_count
 `
 
 type GetCacheStatsRow struct {
@@ -132,90 +96,6 @@ func (q *Queries) GetCacheStats(ctx context.Context) (GetCacheStatsRow, error) {
 		&i.PlaylistsCount,
 	)
 	return i, err
-}
-
-const getMultipleSpotifyTracksWithRelations = `-- name: GetMultipleSpotifyTracksWithRelations :many
-SELECT 
-    t.id, t.name, t.duration_ms, t.disc_number, t.track_number,
-    t.popularity, t.explicit, t.preview_url, t.is_local, t.cached_at, t.updated_at,
-    -- Album data
-    a.id as album_id, a.name as album_name, a.album_type, a.release_date,
-    a.image_url as album_image_url, a.label as album_label,
-    -- Primary artist data (for efficient playlist display)
-    ar.id as artist_id, ar.name as artist_name, ta.is_primary as artist_is_primary
-FROM spotify_tracks t
-LEFT JOIN spotify_albums a ON t.album_id = a.id
-LEFT JOIN spotify_track_artists ta ON t.id = ta.track_id AND ta.is_primary = true
-LEFT JOIN spotify_artists ar ON ta.artist_id = ar.id
-WHERE t.id = ANY($1::text[])
-ORDER BY t.id
-`
-
-type GetMultipleSpotifyTracksWithRelationsRow struct {
-	ID              string
-	Name            string
-	DurationMs      int32
-	DiscNumber      sql.NullInt32
-	TrackNumber     sql.NullInt32
-	Popularity      sql.NullInt32
-	Explicit        sql.NullBool
-	PreviewUrl      sql.NullString
-	IsLocal         sql.NullBool
-	CachedAt        time.Time
-	UpdatedAt       time.Time
-	AlbumID         sql.NullString
-	AlbumName       sql.NullString
-	AlbumType       sql.NullString
-	ReleaseDate     sql.NullTime
-	AlbumImageUrl   sql.NullString
-	AlbumLabel      sql.NullString
-	ArtistID        sql.NullString
-	ArtistName      sql.NullString
-	ArtistIsPrimary sql.NullBool
-}
-
-func (q *Queries) GetMultipleSpotifyTracksWithRelations(ctx context.Context, dollar_1 []string) ([]GetMultipleSpotifyTracksWithRelationsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getMultipleSpotifyTracksWithRelations, pq.Array(dollar_1))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetMultipleSpotifyTracksWithRelationsRow
-	for rows.Next() {
-		var i GetMultipleSpotifyTracksWithRelationsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.DurationMs,
-			&i.DiscNumber,
-			&i.TrackNumber,
-			&i.Popularity,
-			&i.Explicit,
-			&i.PreviewUrl,
-			&i.IsLocal,
-			&i.CachedAt,
-			&i.UpdatedAt,
-			&i.AlbumID,
-			&i.AlbumName,
-			&i.AlbumType,
-			&i.ReleaseDate,
-			&i.AlbumImageUrl,
-			&i.AlbumLabel,
-			&i.ArtistID,
-			&i.ArtistName,
-			&i.ArtistIsPrimary,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const getSpotifyAlbum = `-- name: GetSpotifyAlbum :one
@@ -245,80 +125,6 @@ func (q *Queries) GetSpotifyAlbum(ctx context.Context, id string) (SpotifyAlbum,
 	return i, err
 }
 
-const getSpotifyAlbumWithArtists = `-- name: GetSpotifyAlbumWithArtists :many
-SELECT 
-    a.id, a.name, a.album_type, a.release_date, a.release_date_precision,
-    a.total_tracks, a.image_url, a.label, a.popularity, a.cached_at, a.updated_at,
-    ar.id as artist_id, ar.name as artist_name, ar.image_url as artist_image_url,
-    ar.popularity as artist_popularity, ar.followers_total as artist_followers_total,
-    ar.genres as artist_genres
-FROM spotify_albums a
-LEFT JOIN spotify_album_artists aa ON a.id = aa.album_id  
-LEFT JOIN spotify_artists ar ON aa.artist_id = ar.id
-WHERE a.id = $1
-`
-
-type GetSpotifyAlbumWithArtistsRow struct {
-	ID                   string
-	Name                 string
-	AlbumType            string
-	ReleaseDate          sql.NullTime
-	ReleaseDatePrecision sql.NullString
-	TotalTracks          sql.NullInt32
-	ImageUrl             sql.NullString
-	Label                sql.NullString
-	Popularity           sql.NullInt32
-	CachedAt             time.Time
-	UpdatedAt            time.Time
-	ArtistID             sql.NullString
-	ArtistName           sql.NullString
-	ArtistImageUrl       sql.NullString
-	ArtistPopularity     sql.NullInt32
-	ArtistFollowersTotal sql.NullInt32
-	ArtistGenres         []string
-}
-
-func (q *Queries) GetSpotifyAlbumWithArtists(ctx context.Context, id string) ([]GetSpotifyAlbumWithArtistsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getSpotifyAlbumWithArtists, id)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetSpotifyAlbumWithArtistsRow
-	for rows.Next() {
-		var i GetSpotifyAlbumWithArtistsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.AlbumType,
-			&i.ReleaseDate,
-			&i.ReleaseDatePrecision,
-			&i.TotalTracks,
-			&i.ImageUrl,
-			&i.Label,
-			&i.Popularity,
-			&i.CachedAt,
-			&i.UpdatedAt,
-			&i.ArtistID,
-			&i.ArtistName,
-			&i.ArtistImageUrl,
-			&i.ArtistPopularity,
-			&i.ArtistFollowersTotal,
-			pq.Array(&i.ArtistGenres),
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getSpotifyArtist = `-- name: GetSpotifyArtist :one
 
 SELECT id, name, image_url, popularity, followers_total, genres, cached_at, updated_at FROM spotify_artists WHERE id = $1
@@ -343,17 +149,17 @@ func (q *Queries) GetSpotifyArtist(ctx context.Context, id string) (SpotifyArtis
 	return i, err
 }
 
-const getSpotifyPlaylistCache = `-- name: GetSpotifyPlaylistCache :one
+const getSpotifyPlaylist = `-- name: GetSpotifyPlaylist :one
 
-SELECT id, name, description, owner_id, owner_display_name, public, collaborative, followers_total, total_tracks, image_url, cached_at, updated_at FROM spotify_playlists_cache WHERE id = $1
+SELECT id, name, description, owner_id, owner_display_name, public, collaborative, followers_total, total_tracks, image_url, cached_at, updated_at FROM spotify_playlists WHERE id = $1
 `
 
 // =============================================================================
-// PLAYLIST CACHE OPERATIONS
+// PLAYLIST OPERATIONS
 // =============================================================================
-func (q *Queries) GetSpotifyPlaylistCache(ctx context.Context, id string) (SpotifyPlaylistsCache, error) {
-	row := q.db.QueryRowContext(ctx, getSpotifyPlaylistCache, id)
-	var i SpotifyPlaylistsCache
+func (q *Queries) GetSpotifyPlaylist(ctx context.Context, id string) (SpotifyPlaylist, error) {
+	row := q.db.QueryRowContext(ctx, getSpotifyPlaylist, id)
+	var i SpotifyPlaylist
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -397,107 +203,6 @@ func (q *Queries) GetSpotifyTrack(ctx context.Context, id string) (SpotifyTrack,
 		&i.UpdatedAt,
 	)
 	return i, err
-}
-
-const getSpotifyTrackWithRelations = `-- name: GetSpotifyTrackWithRelations :many
-SELECT 
-    t.id, t.name, t.duration_ms, t.disc_number, t.track_number, 
-    t.popularity, t.explicit, t.preview_url, t.is_local, t.cached_at, t.updated_at,
-    -- Album data
-    a.id as album_id, a.name as album_name, a.album_type, a.release_date,
-    a.release_date_precision, a.total_tracks, a.image_url as album_image_url,
-    a.label as album_label, a.popularity as album_popularity,
-    -- Track artist data (including primary flag)
-    ar.id as artist_id, ar.name as artist_name, ar.image_url as artist_image_url,
-    ar.popularity as artist_popularity, ar.followers_total as artist_followers_total,
-    ar.genres as artist_genres, ta.is_primary as artist_is_primary
-FROM spotify_tracks t
-LEFT JOIN spotify_albums a ON t.album_id = a.id
-LEFT JOIN spotify_track_artists ta ON t.id = ta.track_id
-LEFT JOIN spotify_artists ar ON ta.artist_id = ar.id  
-WHERE t.id = $1
-ORDER BY ta.is_primary DESC, ar.name
-`
-
-type GetSpotifyTrackWithRelationsRow struct {
-	ID                   string
-	Name                 string
-	DurationMs           int32
-	DiscNumber           sql.NullInt32
-	TrackNumber          sql.NullInt32
-	Popularity           sql.NullInt32
-	Explicit             sql.NullBool
-	PreviewUrl           sql.NullString
-	IsLocal              sql.NullBool
-	CachedAt             time.Time
-	UpdatedAt            time.Time
-	AlbumID              sql.NullString
-	AlbumName            sql.NullString
-	AlbumType            sql.NullString
-	ReleaseDate          sql.NullTime
-	ReleaseDatePrecision sql.NullString
-	TotalTracks          sql.NullInt32
-	AlbumImageUrl        sql.NullString
-	AlbumLabel           sql.NullString
-	AlbumPopularity      sql.NullInt32
-	ArtistID             sql.NullString
-	ArtistName           sql.NullString
-	ArtistImageUrl       sql.NullString
-	ArtistPopularity     sql.NullInt32
-	ArtistFollowersTotal sql.NullInt32
-	ArtistGenres         []string
-	ArtistIsPrimary      sql.NullBool
-}
-
-func (q *Queries) GetSpotifyTrackWithRelations(ctx context.Context, id string) ([]GetSpotifyTrackWithRelationsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getSpotifyTrackWithRelations, id)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetSpotifyTrackWithRelationsRow
-	for rows.Next() {
-		var i GetSpotifyTrackWithRelationsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.DurationMs,
-			&i.DiscNumber,
-			&i.TrackNumber,
-			&i.Popularity,
-			&i.Explicit,
-			&i.PreviewUrl,
-			&i.IsLocal,
-			&i.CachedAt,
-			&i.UpdatedAt,
-			&i.AlbumID,
-			&i.AlbumName,
-			&i.AlbumType,
-			&i.ReleaseDate,
-			&i.ReleaseDatePrecision,
-			&i.TotalTracks,
-			&i.AlbumImageUrl,
-			&i.AlbumLabel,
-			&i.AlbumPopularity,
-			&i.ArtistID,
-			&i.ArtistName,
-			&i.ArtistImageUrl,
-			&i.ArtistPopularity,
-			&i.ArtistFollowersTotal,
-			pq.Array(&i.ArtistGenres),
-			&i.ArtistIsPrimary,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const searchSpotifyAlbumsByName = `-- name: SearchSpotifyAlbumsByName :many
@@ -798,8 +503,8 @@ func (q *Queries) UpsertSpotifyArtist(ctx context.Context, arg UpsertSpotifyArti
 	return i, err
 }
 
-const upsertSpotifyPlaylistCache = `-- name: UpsertSpotifyPlaylistCache :one
-INSERT INTO spotify_playlists_cache (id, name, description, owner_id, owner_display_name, public, collaborative, followers_total, total_tracks, image_url, updated_at)
+const upsertSpotifyPlaylist = `-- name: UpsertSpotifyPlaylist :one
+INSERT INTO spotify_playlists (id, name, description, owner_id, owner_display_name, public, collaborative, followers_total, total_tracks, image_url, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
 ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
@@ -815,7 +520,7 @@ ON CONFLICT (id) DO UPDATE SET
 RETURNING id, name, description, owner_id, owner_display_name, public, collaborative, followers_total, total_tracks, image_url, cached_at, updated_at
 `
 
-type UpsertSpotifyPlaylistCacheParams struct {
+type UpsertSpotifyPlaylistParams struct {
 	ID               string
 	Name             string
 	Description      sql.NullString
@@ -828,8 +533,8 @@ type UpsertSpotifyPlaylistCacheParams struct {
 	ImageUrl         sql.NullString
 }
 
-func (q *Queries) UpsertSpotifyPlaylistCache(ctx context.Context, arg UpsertSpotifyPlaylistCacheParams) (SpotifyPlaylistsCache, error) {
-	row := q.db.QueryRowContext(ctx, upsertSpotifyPlaylistCache,
+func (q *Queries) UpsertSpotifyPlaylist(ctx context.Context, arg UpsertSpotifyPlaylistParams) (SpotifyPlaylist, error) {
+	row := q.db.QueryRowContext(ctx, upsertSpotifyPlaylist,
 		arg.ID,
 		arg.Name,
 		arg.Description,
@@ -841,7 +546,7 @@ func (q *Queries) UpsertSpotifyPlaylistCache(ctx context.Context, arg UpsertSpot
 		arg.TotalTracks,
 		arg.ImageUrl,
 	)
-	var i SpotifyPlaylistsCache
+	var i SpotifyPlaylist
 	err := row.Scan(
 		&i.ID,
 		&i.Name,

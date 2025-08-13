@@ -45,6 +45,23 @@ CREATE TABLE spotify_tracks (
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+-- Spotify playlists: For caching Spotify playlist metadata (separate from user playlists)
+-- This is pure cache data - not owned by any user in our system
+CREATE TABLE spotify_playlists (
+    id TEXT PRIMARY KEY, -- Spotify playlist ID
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    owner_id TEXT NOT NULL, -- Spotify user ID (not our user ID)
+    owner_display_name VARCHAR(255),
+    public BOOLEAN DEFAULT TRUE,
+    collaborative BOOLEAN DEFAULT FALSE,
+    followers_total INTEGER DEFAULT 0,
+    total_tracks INTEGER DEFAULT 0,
+    image_url TEXT,
+    cached_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
 -- Many-to-many: Albums can have multiple artists (collaborations, compilations)
 CREATE TABLE spotify_album_artists (
     album_id TEXT REFERENCES spotify_albums(id) ON DELETE CASCADE,
@@ -60,22 +77,18 @@ CREATE TABLE spotify_track_artists (
     PRIMARY KEY (track_id, artist_id)
 );
 
--- Spotify playlists cache: For caching Spotify playlist metadata (separate from user playlists)
--- This is pure cache data - not owned by any user in our system
-CREATE TABLE spotify_playlists_cache (
-    id TEXT PRIMARY KEY, -- Spotify playlist ID
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    owner_id TEXT NOT NULL, -- Spotify user ID (not our user ID)
-    owner_display_name VARCHAR(255),
-    public BOOLEAN DEFAULT TRUE,
-    collaborative BOOLEAN DEFAULT FALSE,
-    followers_total INTEGER DEFAULT 0,
-    total_tracks INTEGER DEFAULT 0,
-    image_url TEXT,
-    cached_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+-- One-to-many: One spotify has many tracks
+CREATE TABLE spotify_playlist_tracks(
+    playlist_id TEXT REFERENCES spotify_playlists(id) ON DELETE CASCADE,
+    track_id TEXT REFERENCES spotify_tracks(id) ON DELETE CASCADE,
+    position INTEGER NOT NULL,
+    added_at TIMESTAMP,
+    added_by TEXT, -- User that ID
+    PRIMARY KEY (playlist_id, track_id),
+    UNIQUE(playlist_id, position)
+
 );
+
 
 -- Performance indexes for common queries
 CREATE INDEX idx_spotify_artists_name ON spotify_artists(name);
@@ -93,12 +106,14 @@ CREATE INDEX idx_album_artists_artist ON spotify_album_artists(artist_id);
 CREATE INDEX idx_track_artists_track ON spotify_track_artists(track_id);
 CREATE INDEX idx_track_artists_artist ON spotify_track_artists(artist_id);
 CREATE INDEX idx_track_artists_primary ON spotify_track_artists(track_id, is_primary);
+CREATE INDEX idx_spotify_playlis_trackst_playlist ON spotify_playlist_tracks(playlist_id);
+CREATE INDEX idx_spotify_playlis_trackst_position ON spotify_playlist_tracks(playlist_id, position);
 
 -- Cache management indexes for TTL-based cleanup
 CREATE INDEX idx_spotify_artists_cached_at ON spotify_artists(cached_at);
 CREATE INDEX idx_spotify_albums_cached_at ON spotify_albums(cached_at);
 CREATE INDEX idx_spotify_tracks_cached_at ON spotify_tracks(cached_at);
-CREATE INDEX idx_spotify_playlists_cached_at ON spotify_playlists_cache(cached_at);
+CREATE INDEX idx_spotify_playlists_cached_at ON spotify_playlists(cached_at);
 
 -- Search optimization indexes
 CREATE INDEX idx_spotify_artists_name_trgm ON spotify_artists USING gin(name gin_trgm_ops);
@@ -108,7 +123,7 @@ CREATE INDEX idx_spotify_tracks_name_trgm ON spotify_tracks USING gin(name gin_t
 -- +goose Down
 DROP TABLE spotify_track_artists CASCADE;
 DROP TABLE spotify_album_artists CASCADE;
-DROP TABLE spotify_playlists_cache CASCADE;
+DROP TABLE spotify_playlists CASCADE;
 DROP TABLE spotify_tracks CASCADE;
 DROP TABLE spotify_albums CASCADE;
 DROP TABLE spotify_artists CASCADE;

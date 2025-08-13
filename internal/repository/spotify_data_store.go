@@ -8,7 +8,6 @@ import (
 
 	"github.com/FerNunez/NameThatSong/internal/models"
 	"github.com/FerNunez/NameThatSong/internal/repository/database"
-	"github.com/lib/pq"
 )
 
 // SpotifyDataStore defines the interface for Spotify data persistence operations
@@ -16,23 +15,19 @@ type SpotifyDataStore interface {
 	// Artist operations
 	GetArtist(ctx context.Context, artistID string) (*models.ArtistData, error)
 	StoreArtist(ctx context.Context, artist *models.ArtistData) error
-	BatchGetArtists(ctx context.Context, artistIDs []string) (map[string]*models.ArtistData, error)
-	
-	// Album operations  
+
+	// Album operations
 	GetAlbum(ctx context.Context, albumID string) (*models.AlbumData, error)
-	GetAlbumWithArtists(ctx context.Context, albumID string) (*models.AlbumData, error)
 	StoreAlbum(ctx context.Context, album *models.AlbumData) error
-	
+
 	// Track operations
 	GetTrack(ctx context.Context, trackID string) (*models.TrackData, error)
-	GetTrackWithRelations(ctx context.Context, trackID string) (*models.TrackData, error)
-	GetMultipleTracksWithRelations(ctx context.Context, trackIDs []string) ([]*models.TrackData, error)
 	StoreTrack(ctx context.Context, track *models.TrackData) error
-	
+
 	// Playlist cache operations
-	GetPlaylistCache(ctx context.Context, playlistID string) (*models.PlaylistData, error)
-	StorePlaylistCache(ctx context.Context, playlist *models.PlaylistData) error
-	
+	GetPlaylist(ctx context.Context, playlistID string) (*models.PlaylistData, error)
+	StorePlaylist(ctx context.Context, playlist *models.PlaylistData) error
+
 	// Cache management
 	CleanupOldCacheData(ctx context.Context, olderThan time.Duration) error
 	GetCacheStats(ctx context.Context) (map[string]int64, error)
@@ -62,7 +57,7 @@ func (s *SQLSpotifyDataStore) GetArtist(ctx context.Context, artistID string) (*
 		}
 		return nil, err
 	}
-	
+
 	return convertDbArtistToModel(dbArtist), nil
 }
 
@@ -78,20 +73,6 @@ func (s *SQLSpotifyDataStore) StoreArtist(ctx context.Context, artist *models.Ar
 	return err
 }
 
-func (s *SQLSpotifyDataStore) BatchGetArtists(ctx context.Context, artistIDs []string) (map[string]*models.ArtistData, error) {
-	dbArtists, err := s.db.BatchGetSpotifyArtists(ctx, artistIDs)
-	if err != nil {
-		return nil, err
-	}
-	
-	result := make(map[string]*models.ArtistData, len(dbArtists))
-	for _, dbArtist := range dbArtists {
-		result[dbArtist.ID] = convertDbArtistToModel(dbArtist)
-	}
-	
-	return result, nil
-}
-
 // =============================================================================
 // ALBUM OPERATIONS
 // =============================================================================
@@ -104,56 +85,8 @@ func (s *SQLSpotifyDataStore) GetAlbum(ctx context.Context, albumID string) (*mo
 		}
 		return nil, err
 	}
-	
-	return convertDbAlbumToModel(dbAlbum), nil
-}
 
-func (s *SQLSpotifyDataStore) GetAlbumWithArtists(ctx context.Context, albumID string) (*models.AlbumData, error) {
-	rows, err := s.db.GetSpotifyAlbumWithArtists(ctx, albumID)
-	if err != nil {
-		return nil, err
-	}
-	
-	if len(rows) == 0 {
-		return nil, nil
-	}
-	
-	// Build album with artists from joined rows
-	album := &models.AlbumData{
-		ID:                   rows[0].ID,
-		Name:                 rows[0].Name,
-		AlbumType:            rows[0].AlbumType,
-		ReleaseDate:          rows[0].ReleaseDate.Time.Format("2006-01-02"),
-		ReleaseDatePrecision: nullStringToString(rows[0].ReleaseDatePrecision),
-		TotalTracks:          nullInt32ToInt(rows[0].TotalTracks),
-		ImageURL:             nullStringToString(rows[0].ImageUrl),
-		Label:                nullStringToString(rows[0].Label),
-		Popularity:           nullInt32ToInt(rows[0].Popularity),
-		CachedAt:             rows[0].CachedAt,
-		UpdatedAt:            rows[0].UpdatedAt,
-		Artists:              make([]models.ArtistData, 0),
-	}
-	
-	// Collect unique artists
-	artistMap := make(map[string]models.ArtistData)
-	for _, row := range rows {
-		if row.ArtistID.Valid {
-			artistMap[row.ArtistID.String] = models.ArtistData{
-				ID:             row.ArtistID.String,
-				Name:           row.ArtistName.String,
-				ImageURL:       nullStringToString(row.ArtistImageUrl),
-				Popularity:     int(row.ArtistPopularity.Int32),
-				FollowersTotal: int(row.ArtistFollowersTotal.Int32),
-				Genres:         row.ArtistGenres,
-			}
-		}
-	}
-	
-	for _, artist := range artistMap {
-		album.Artists = append(album.Artists, artist)
-	}
-	
-	return album, nil
+	return convertDbAlbumToModel(dbAlbum), nil
 }
 
 func (s *SQLSpotifyDataStore) StoreAlbum(ctx context.Context, album *models.AlbumData) error {
@@ -172,19 +105,19 @@ func (s *SQLSpotifyDataStore) StoreAlbum(ctx context.Context, album *models.Albu
 	if err != nil {
 		return err
 	}
-	
+
 	// Clear existing album-artist relationships
 	if err := s.db.ClearAlbumArtists(ctx, album.ID); err != nil {
 		return err
 	}
-	
+
 	// Store album artists and relationships
 	for _, artist := range album.Artists {
 		// Store artist
 		if err := s.StoreArtist(ctx, &artist); err != nil {
 			continue // Skip failed artists
 		}
-		
+
 		// Store relationship
 		if err := s.db.UpsertAlbumArtist(ctx, database.UpsertAlbumArtistParams{
 			AlbumID:  album.ID,
@@ -193,7 +126,7 @@ func (s *SQLSpotifyDataStore) StoreAlbum(ctx context.Context, album *models.Albu
 			continue // Skip failed relationships
 		}
 	}
-	
+
 	return nil
 }
 
@@ -209,43 +142,8 @@ func (s *SQLSpotifyDataStore) GetTrack(ctx context.Context, trackID string) (*mo
 		}
 		return nil, err
 	}
-	
+
 	return convertDbTrackToModel(dbTrack), nil
-}
-
-func (s *SQLSpotifyDataStore) GetTrackWithRelations(ctx context.Context, trackID string) (*models.TrackData, error) {
-	rows, err := s.db.GetSpotifyTrackWithRelations(ctx, trackID)
-	if err != nil {
-		return nil, err
-	}
-	
-	if len(rows) == 0 {
-		return nil, nil
-	}
-	
-	return s.buildTrackFromRows(rows), nil
-}
-
-func (s *SQLSpotifyDataStore) GetMultipleTracksWithRelations(ctx context.Context, trackIDs []string) ([]*models.TrackData, error) {
-	rows, err := s.db.GetMultipleSpotifyTracksWithRelations(ctx, trackIDs)
-	if err != nil {
-		return nil, err
-	}
-	
-	// Group rows by track ID
-	trackGroups := make(map[string][]database.GetMultipleSpotifyTracksWithRelationsRow)
-	for _, row := range rows {
-		trackGroups[row.ID] = append(trackGroups[row.ID], row)
-	}
-	
-	// Build tracks
-	tracks := make([]*models.TrackData, 0, len(trackGroups))
-	for _, trackRows := range trackGroups {
-		track := s.buildTrackFromMultipleRows(trackRows)
-		tracks = append(tracks, track)
-	}
-	
-	return tracks, nil
 }
 
 func (s *SQLSpotifyDataStore) StoreTrack(ctx context.Context, track *models.TrackData) error {
@@ -255,13 +153,13 @@ func (s *SQLSpotifyDataStore) StoreTrack(ctx context.Context, track *models.Trac
 			return fmt.Errorf("failed to store album: %w", err)
 		}
 	}
-	
+
 	// Store track
 	albumID := sql.NullString{}
 	if track.Album != nil {
 		albumID = sql.NullString{String: track.Album.ID, Valid: true}
 	}
-	
+
 	_, err := s.db.UpsertSpotifyTrack(ctx, database.UpsertSpotifyTrackParams{
 		ID:          track.ID,
 		Name:        track.Name,
@@ -277,19 +175,19 @@ func (s *SQLSpotifyDataStore) StoreTrack(ctx context.Context, track *models.Trac
 	if err != nil {
 		return err
 	}
-	
+
 	// Clear existing track-artist relationships
 	if err := s.db.ClearTrackArtists(ctx, track.ID); err != nil {
 		return err
 	}
-	
+
 	// Store track artists and relationships
 	for _, trackArtist := range track.Artists {
 		// Store artist
 		if err := s.StoreArtist(ctx, &trackArtist.ArtistData); err != nil {
 			continue // Skip failed artists
 		}
-		
+
 		// Store relationship
 		if err := s.db.UpsertTrackArtist(ctx, database.UpsertTrackArtistParams{
 			TrackID:   track.ID,
@@ -299,7 +197,7 @@ func (s *SQLSpotifyDataStore) StoreTrack(ctx context.Context, track *models.Trac
 			continue // Skip failed relationships
 		}
 	}
-	
+
 	return nil
 }
 
@@ -307,20 +205,20 @@ func (s *SQLSpotifyDataStore) StoreTrack(ctx context.Context, track *models.Trac
 // PLAYLIST CACHE OPERATIONS
 // =============================================================================
 
-func (s *SQLSpotifyDataStore) GetPlaylistCache(ctx context.Context, playlistID string) (*models.PlaylistData, error) {
-	dbPlaylist, err := s.db.GetSpotifyPlaylistCache(ctx, playlistID)
+func (s *SQLSpotifyDataStore) GetPlaylist(ctx context.Context, playlistID string) (*models.PlaylistData, error) {
+	dbPlaylist, err := s.db.GetSpotifyPlaylist(ctx, playlistID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
 		return nil, err
 	}
-	
+
 	return convertDbPlaylistCacheToModel(dbPlaylist), nil
 }
 
-func (s *SQLSpotifyDataStore) StorePlaylistCache(ctx context.Context, playlist *models.PlaylistData) error {
-	_, err := s.db.UpsertSpotifyPlaylistCache(ctx, database.UpsertSpotifyPlaylistCacheParams{
+func (s *SQLSpotifyDataStore) StorePlaylist(ctx context.Context, playlist *models.PlaylistData) error {
+	_, err := s.db.UpsertSpotifyPlaylist(ctx, database.UpsertSpotifyPlaylistParams{
 		ID:               playlist.ID,
 		Name:             playlist.Name,
 		Description:      nullStringFromString(playlist.Description),
@@ -341,24 +239,24 @@ func (s *SQLSpotifyDataStore) StorePlaylistCache(ctx context.Context, playlist *
 
 func (s *SQLSpotifyDataStore) CleanupOldCacheData(ctx context.Context, olderThan time.Duration) error {
 	cutoff := time.Now().Add(-olderThan)
-	
+
 	// Cleanup in parallel (these are independent operations)
 	if err := s.db.CleanupOldSpotifyArtists(ctx, cutoff); err != nil {
 		return fmt.Errorf("failed to cleanup artists: %w", err)
 	}
-	
+
 	if err := s.db.CleanupOldSpotifyAlbums(ctx, cutoff); err != nil {
 		return fmt.Errorf("failed to cleanup albums: %w", err)
 	}
-	
+
 	if err := s.db.CleanupOldSpotifyTracks(ctx, cutoff); err != nil {
 		return fmt.Errorf("failed to cleanup tracks: %w", err)
 	}
-	
-	if err := s.db.CleanupOldSpotifyPlaylistsCache(ctx, cutoff); err != nil {
+
+	if err := s.db.CleanupOldSpotifyPlaylists(ctx, cutoff); err != nil {
 		return fmt.Errorf("failed to cleanup playlists: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -367,7 +265,7 @@ func (s *SQLSpotifyDataStore) GetCacheStats(ctx context.Context) (map[string]int
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return map[string]int64{
 		"artists":   stats.ArtistsCount,
 		"albums":    stats.AlbumsCount,
@@ -426,7 +324,7 @@ func convertDbTrackToModel(dbTrack database.SpotifyTrack) *models.TrackData {
 	}
 }
 
-func convertDbPlaylistCacheToModel(dbPlaylist database.SpotifyPlaylistsCache) *models.PlaylistData {
+func convertDbPlaylistCacheToModel(dbPlaylist database.SpotifyPlaylist) *models.PlaylistData {
 	return &models.PlaylistData{
 		ID:               dbPlaylist.ID,
 		Name:             dbPlaylist.Name,
@@ -448,7 +346,7 @@ func (s *SQLSpotifyDataStore) buildTrackFromRows(rows []database.GetSpotifyTrack
 	if len(rows) == 0 {
 		return nil
 	}
-	
+
 	row := rows[0]
 	track := &models.TrackData{
 		ID:          row.ID,
@@ -463,7 +361,7 @@ func (s *SQLSpotifyDataStore) buildTrackFromRows(rows []database.GetSpotifyTrack
 		CachedAt:    row.CachedAt,
 		UpdatedAt:   row.UpdatedAt,
 	}
-	
+
 	// Build album if present
 	if row.AlbumID.Valid {
 		track.Album = &models.AlbumData{
@@ -478,7 +376,7 @@ func (s *SQLSpotifyDataStore) buildTrackFromRows(rows []database.GetSpotifyTrack
 			Popularity:           int(row.AlbumPopularity.Int32),
 		}
 	}
-	
+
 	// Build artists
 	artistMap := make(map[string]models.TrackArtist)
 	for _, row := range rows {
@@ -496,59 +394,12 @@ func (s *SQLSpotifyDataStore) buildTrackFromRows(rows []database.GetSpotifyTrack
 			}
 		}
 	}
-	
+
 	track.Artists = make([]models.TrackArtist, 0, len(artistMap))
 	for _, artist := range artistMap {
 		track.Artists = append(track.Artists, artist)
 	}
-	
-	return track
-}
 
-func (s *SQLSpotifyDataStore) buildTrackFromMultipleRows(rows []database.GetMultipleSpotifyTracksWithRelationsRow) *models.TrackData {
-	if len(rows) == 0 {
-		return nil
-	}
-	
-	row := rows[0]
-	track := &models.TrackData{
-		ID:          row.ID,
-		Name:        row.Name,
-		DurationMs:  int(row.DurationMs),
-		DiscNumber:  nullInt32ToInt(row.DiscNumber),
-		TrackNumber: nullInt32ToInt(row.TrackNumber),
-		Popularity:  nullInt32ToInt(row.Popularity),
-		Explicit:    nullBoolToBool(row.Explicit),
-		PreviewURL:  nullStringToString(row.PreviewUrl),
-		IsLocal:     nullBoolToBool(row.IsLocal),
-		CachedAt:    row.CachedAt,
-		UpdatedAt:   row.UpdatedAt,
-	}
-	
-	// Build album if present
-	if row.AlbumID.Valid {
-		track.Album = &models.AlbumData{
-			ID:        row.AlbumID.String,
-			Name:      row.AlbumName.String,
-			AlbumType: nullStringToString(row.AlbumType),
-			ImageURL:  nullStringToString(row.AlbumImageUrl),
-			Label:     nullStringToString(row.AlbumLabel),
-		}
-	}
-	
-	// Build primary artist (optimized query only returns primary artist)
-	if row.ArtistID.Valid && row.ArtistIsPrimary.Bool {
-		track.Artists = []models.TrackArtist{
-			{
-				ArtistData: models.ArtistData{
-					ID:   row.ArtistID.String,
-					Name: row.ArtistName.String,
-				},
-				IsPrimary: true,
-			},
-		}
-	}
-	
 	return track
 }
 

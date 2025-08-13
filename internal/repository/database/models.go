@@ -32,16 +32,7 @@ type GameSession struct {
 	CompletedAt     sql.NullTime
 }
 
-type PasswordResetToken struct {
-	ID        uuid.UUID
-	UserID    uuid.UUID
-	Token     string
-	ExpiresAt time.Time
-	UsedAt    sql.NullTime
-	CreatedAt time.Time
-}
-
-type Playlist struct {
+type LocalPlaylist struct {
 	ID                uuid.UUID
 	UserID            uuid.UUID
 	Name              string
@@ -54,16 +45,27 @@ type Playlist struct {
 	UpdatedAt         time.Time
 }
 
+type PasswordResetToken struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	Token     string
+	ExpiresAt time.Time
+	UsedAt    sql.NullTime
+	CreatedAt time.Time
+}
+
 type PlaylistSong struct {
-	ID             uuid.UUID
-	PlaylistID     uuid.UUID
-	SpotifyTrackID string
-	Position       int32
-	TrackName      string
-	ArtistName     string
-	AlbumName      sql.NullString
-	DurationMs     sql.NullInt32
-	AddedAt        time.Time
+	ID              uuid.UUID
+	LocalPlaylistID uuid.UUID
+	SpotifyTrackID  string
+	SpotifyAlbumID  string
+	SpotifyArtistID string
+	TrackName       string
+	AlbumName       string
+	ArtistName      string
+	Position        int32
+	AddedAt         time.Time
+	UpdatedAt       time.Time
 }
 
 type SpotifyAlbum struct {
@@ -96,7 +98,7 @@ type SpotifyArtist struct {
 	UpdatedAt      time.Time
 }
 
-type SpotifyPlaylistsCache struct {
+type SpotifyPlaylist struct {
 	ID               string
 	Name             string
 	Description      sql.NullString
@@ -109,6 +111,14 @@ type SpotifyPlaylistsCache struct {
 	ImageUrl         sql.NullString
 	CachedAt         time.Time
 	UpdatedAt        time.Time
+}
+
+type SpotifyPlaylistTrack struct {
+	PlaylistID string
+	TrackID    string
+	Position   int32
+	AddedAt    sql.NullTime
+	AddedBy    sql.NullString
 }
 
 type SpotifyToken struct {
