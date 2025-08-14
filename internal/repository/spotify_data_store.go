@@ -341,67 +341,9 @@ func convertDbPlaylistCacheToModel(dbPlaylist database.SpotifyPlaylist) *models.
 	}
 }
 
-// Build track with relations from query rows
-func (s *SQLSpotifyDataStore) buildTrackFromRows(rows []database.GetSpotifyTrackWithRelationsRow) *models.TrackData {
-	if len(rows) == 0 {
-		return nil
-	}
-
-	row := rows[0]
-	track := &models.TrackData{
-		ID:          row.ID,
-		Name:        row.Name,
-		DurationMs:  int(row.DurationMs),
-		DiscNumber:  nullInt32ToInt(row.DiscNumber),
-		TrackNumber: nullInt32ToInt(row.TrackNumber),
-		Popularity:  nullInt32ToInt(row.Popularity),
-		Explicit:    nullBoolToBool(row.Explicit),
-		PreviewURL:  nullStringToString(row.PreviewUrl),
-		IsLocal:     nullBoolToBool(row.IsLocal),
-		CachedAt:    row.CachedAt,
-		UpdatedAt:   row.UpdatedAt,
-	}
-
-	// Build album if present
-	if row.AlbumID.Valid {
-		track.Album = &models.AlbumData{
-			ID:                   row.AlbumID.String,
-			Name:                 row.AlbumName.String,
-			AlbumType:            nullStringToString(row.AlbumType),
-			ReleaseDate:          row.ReleaseDate.Time.Format("2006-01-02"),
-			ReleaseDatePrecision: nullStringToString(row.ReleaseDatePrecision),
-			TotalTracks:          int(row.TotalTracks.Int32),
-			ImageURL:             nullStringToString(row.AlbumImageUrl),
-			Label:                nullStringToString(row.AlbumLabel),
-			Popularity:           int(row.AlbumPopularity.Int32),
-		}
-	}
-
-	// Build artists
-	artistMap := make(map[string]models.TrackArtist)
-	for _, row := range rows {
-		if row.ArtistID.Valid {
-			artistMap[row.ArtistID.String] = models.TrackArtist{
-				ArtistData: models.ArtistData{
-					ID:             row.ArtistID.String,
-					Name:           row.ArtistName.String,
-					ImageURL:       nullStringToString(row.ArtistImageUrl),
-					Popularity:     int(row.ArtistPopularity.Int32),
-					FollowersTotal: int(row.ArtistFollowersTotal.Int32),
-					Genres:         row.ArtistGenres,
-				},
-				IsPrimary: row.ArtistIsPrimary.Bool,
-			}
-		}
-	}
-
-	track.Artists = make([]models.TrackArtist, 0, len(artistMap))
-	for _, artist := range artistMap {
-		track.Artists = append(track.Artists, artist)
-	}
-
-	return track
-}
+// TODO: Implement buildTrackFromRows when complex relationship queries are needed
+// This method would be used for fetching tracks with full album and artist relationships
+// in a single query, but for now we use the simpler approach of separate queries
 
 // Null handling helpers
 func nullStringFromString(s string) sql.NullString {

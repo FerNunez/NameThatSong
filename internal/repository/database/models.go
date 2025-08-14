@@ -56,7 +56,7 @@ type PasswordResetToken struct {
 
 type PlaylistSong struct {
 	ID              uuid.UUID
-	LocalPlaylistID uuid.UUID
+	PlaylistID      uuid.UUID
 	SpotifyTrackID  string
 	SpotifyAlbumID  string
 	SpotifyArtistID string
@@ -64,6 +64,7 @@ type PlaylistSong struct {
 	AlbumName       string
 	ArtistName      string
 	Position        int32
+	DurationMs      int32
 	AddedAt         time.Time
 	UpdatedAt       time.Time
 }

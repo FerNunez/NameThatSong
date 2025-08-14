@@ -18,6 +18,7 @@ import (
 type Spotify struct {
 	config     *config.SpotifyConfig
 	tokenStore repository.SpotifyTokenStore
+	dataStore  repository.SpotifyDataStore
 	cache      cache.SpotifyCache
 	httpClient *http.Client
 }
@@ -45,6 +46,9 @@ func NewSpotifyService(
 	}
 	tokenStore := repository.NewSQLSpotifyTokenStore(queries, encryptor)
 
+	// Initialize Spotify data store for three-tier caching
+	dataStore := repository.NewSQLSpotifyDataStore(queries)
+
 	// Initialize cache (Redis only now)
 	var spotifyCache cache.SpotifyCache
 	if redisClient != nil {
@@ -62,6 +66,7 @@ func NewSpotifyService(
 	return &Spotify{
 		config:     config,
 		tokenStore: tokenStore,
+		dataStore:  dataStore,
 		cache:      spotifyCache,
 		httpClient: httpClient,
 	}, nil

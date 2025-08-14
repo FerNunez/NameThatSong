@@ -125,8 +125,8 @@ func (s *SQLPlaylistStore) AddSongToPlaylist(ctx context.Context, song *models.P
 		Position:       int32(song.Position),
 		TrackName:      song.TrackName,
 		ArtistName:     song.ArtistName,
-		AlbumName:      nullStringFromStringPtr(&song.AlbumName),
-		DurationMs:     nullInt32FromIntPtr(&song.DurationMs),
+		AlbumName:      song.AlbumName,
+		DurationMs:     int32(song.DurationMs),
 	})
 	if err != nil {
 		return err
@@ -188,7 +188,7 @@ func (s *SQLPlaylistStore) ClearPlaylistSongs(ctx context.Context, playlistID uu
 }
 
 // Helper functions for conversion
-func convertDbPlaylistToModel(dbPlaylist database.Playlist) *models.Playlist {
+func convertDbPlaylistToModel(dbPlaylist database.LocalPlaylist) *models.Playlist {
 	return &models.Playlist{
 		ID:                dbPlaylist.ID,
 		UserID:            dbPlaylist.UserID,
@@ -211,8 +211,8 @@ func convertDbPlaylistSongToModel(dbSong database.PlaylistSong) *models.Playlist
 		Position:       int(dbSong.Position),
 		TrackName:      dbSong.TrackName,
 		ArtistName:     dbSong.ArtistName,
-		AlbumName:      stringFromNullString(dbSong.AlbumName),
-		DurationMs:     intFromNullInt32(dbSong.DurationMs),
+		AlbumName:      dbSong.AlbumName,
+		DurationMs:     int(dbSong.DurationMs),
 		AddedAt:        dbSong.AddedAt,
 	}
 }

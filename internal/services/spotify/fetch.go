@@ -15,37 +15,59 @@ import (
 // FETCH METHODS
 // =============================================================================
 
-// FetchTrack fetches a track with caching
+// FetchTrack fetches a track using three-tier strategy: Cache → Database → API
 func (s *Spotify) FetchTrack(ctx context.Context, userID, trackID string) (m.TrackData, error) {
-	// Check cache first
+	// Tier 1: Check Redis cache first
 	if cachedTrack, found := s.cache.GetTrack(trackID); found {
 		return cachedTrack, nil
 	}
 
-	// Get access token for user
+	// Tier 2: Check database for persistent storage
+	if dbTrack, err := s.dataStore.GetTrack(ctx, trackID); err == nil && dbTrack != nil {
+		// Found in database, update cache and return
+		s.cache.SetTrack(trackID, *dbTrack)
+		return *dbTrack, nil
+	}
+
+	// Tier 3: Fetch from Spotify API as last resort
 	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
 		return m.TrackData{}, fmt.Errorf("failed to get access token: %v", err)
 	}
 
-	// Cache miss - fetch from Spotify API
 	track, err := s.fetchTrackFromAPI(ctx, accessToken, trackID)
 	if err != nil {
 		return m.TrackData{}, err
 	}
 
-	// Cache the result
+	// Store in database for persistence (async to avoid blocking)
+	go func() {
+		if err := s.dataStore.StoreTrack(context.Background(), &track); err != nil {
+			// Log error but don't fail the request
+			fmt.Printf("Warning: failed to store track %s in database: %v\n", trackID, err)
+		}
+	}()
+
+	// Cache the result for fast future access
 	s.cache.SetTrack(trackID, track)
 	return track, nil
 }
 
-// FetchAlbum fetches an album with caching
+// FetchAlbum fetches an album using three-tier strategy: Cache → Database → API
 func (s *Spotify) FetchAlbum(ctx context.Context, userID, albumID string) (m.AlbumData, error) {
+	// Tier 1: Check Redis cache first
 	if cachedAlbum, found := s.cache.GetAlbum(albumID); found {
 		return cachedAlbum, nil
 	}
 
-	// Get access token for user
+	// Tier 2: Check database for persistent storage
+	if dbAlbum, err := s.dataStore.GetAlbum(ctx, albumID); err == nil && dbAlbum != nil {
+		// Found in database, update cache and return
+		s.cache.SetAlbum(albumID, *dbAlbum)
+		return *dbAlbum, nil
+	}
+
+	// Tier 3: Fetch from Spotify API as last resort
 	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
 		return m.AlbumData{}, fmt.Errorf("failed to get access token: %v", err)
@@ -56,17 +78,34 @@ func (s *Spotify) FetchAlbum(ctx context.Context, userID, albumID string) (m.Alb
 		return m.AlbumData{}, err
 	}
 
+	// Store in database for persistence (async to avoid blocking)
+	go func() {
+		if err := s.dataStore.StoreAlbum(context.Background(), &album); err != nil {
+			// Log error but don't fail the request
+			fmt.Printf("Warning: failed to store album %s in database: %v\n", albumID, err)
+		}
+	}()
+
+	// Cache the result for fast future access
 	s.cache.SetAlbum(albumID, album)
 	return album, nil
 }
 
-// FetchArtist fetches an artist with caching
+// FetchArtist fetches an artist using three-tier strategy: Cache → Database → API
 func (s *Spotify) FetchArtist(ctx context.Context, userID, artistID string) (m.ArtistData, error) {
+	// Tier 1: Check Redis cache first
 	if cachedArtist, found := s.cache.GetArtist(artistID); found {
 		return cachedArtist, nil
 	}
 
-	// Get access token for user
+	// Tier 2: Check database for persistent storage
+	if dbArtist, err := s.dataStore.GetArtist(ctx, artistID); err == nil && dbArtist != nil {
+		// Found in database, update cache and return
+		s.cache.SetArtist(artistID, *dbArtist)
+		return *dbArtist, nil
+	}
+
+	// Tier 3: Fetch from Spotify API as last resort
 	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
 		return m.ArtistData{}, fmt.Errorf("failed to get access token: %v", err)
@@ -77,17 +116,34 @@ func (s *Spotify) FetchArtist(ctx context.Context, userID, artistID string) (m.A
 		return m.ArtistData{}, err
 	}
 
+	// Store in database for persistence (async to avoid blocking)
+	go func() {
+		if err := s.dataStore.StoreArtist(context.Background(), &artist); err != nil {
+			// Log error but don't fail the request
+			fmt.Printf("Warning: failed to store artist %s in database: %v\n", artistID, err)
+		}
+	}()
+
+	// Cache the result for fast future access
 	s.cache.SetArtist(artistID, artist)
 	return artist, nil
 }
 
-// FetchPlaylist fetches a playlist with caching
+// FetchPlaylist fetches a playlist using three-tier strategy: Cache → Database → API
 func (s *Spotify) FetchPlaylist(ctx context.Context, userID, playlistID string) (m.PlaylistData, error) {
+	// Tier 1: Check Redis cache first
 	if cachedPlaylist, found := s.cache.GetPlaylist(playlistID); found {
 		return cachedPlaylist, nil
 	}
 
-	// Get access token for user
+	// Tier 2: Check database for persistent storage
+	if dbPlaylist, err := s.dataStore.GetPlaylist(ctx, playlistID); err == nil && dbPlaylist != nil {
+		// Found in database, update cache and return
+		s.cache.SetPlaylist(playlistID, *dbPlaylist)
+		return *dbPlaylist, nil
+	}
+
+	// Tier 3: Fetch from Spotify API as last resort
 	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
 		return m.PlaylistData{}, fmt.Errorf("failed to get access token: %v", err)
@@ -98,6 +154,15 @@ func (s *Spotify) FetchPlaylist(ctx context.Context, userID, playlistID string) 
 		return m.PlaylistData{}, err
 	}
 
+	// Store in database for persistence (async to avoid blocking)
+	go func() {
+		if err := s.dataStore.StorePlaylist(context.Background(), &playlist); err != nil {
+			// Log error but don't fail the request
+			fmt.Printf("Warning: failed to store playlist %s in database: %v\n", playlistID, err)
+		}
+	}()
+
+	// Cache the result for fast future access
 	s.cache.SetPlaylist(playlistID, playlist)
 	return playlist, nil
 }
