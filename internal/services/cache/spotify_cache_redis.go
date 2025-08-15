@@ -9,6 +9,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	m "github.com/FerNunez/NameThatSong/internal/models"
+	"github.com/FerNunez/NameThatSong/internal/pkg/utils"
 )
 
 type RedisSpotifyCache struct {
@@ -30,7 +31,9 @@ func (r *RedisSpotifyCache) generateKey(entityType, entityId string) string {
 }
 
 func (r *RedisSpotifyCache) generateSearchKey(searchType, query string) string {
-	return fmt.Sprintf("spotify:search:%s:%s", searchType, query)
+	// Normalize and sanitize the query for consistent cache keys
+	normalizedQuery := utils.NormalizeAndSanitizeQuery(query)
+	return fmt.Sprintf("spotify:search:%s:%s", searchType, normalizedQuery)
 }
 
 // Track cache operations
