@@ -2,176 +2,63 @@ package user_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
+	"github.com/FerNunez/NameThatSong/internal/config"
 	"github.com/FerNunez/NameThatSong/internal/services/user"
 )
 
-func TestValidateEmailConfig(t *testing.T) {
+func TestNewEmailService(t *testing.T) {
 	tests := []struct {
 		name        string
-		config      *user.EmailConfig
+		config      *config.EmailConfig
 		expectError bool
 		errorMsg    string
 	}{
 		{
 			name: "valid config",
-			config: &user.EmailConfig{
-				Host:     "smtp.gmail.com",
-				Port:     587,
-				Username: "test@gmail.com",
-				Password: "password",
-				From:     "test@gmail.com",
-				FromName: "Test User",
-				BaseURL:  "https://example.com",
+			config: &config.EmailConfig{
+				SMTPHost:     "smtp.gmail.com",
+				SMTPPort:     "587",
+				SMTPUsername: "test@gmail.com",
+				SMTPPassword: "password",
+				FromEmail:    "test@gmail.com",
+				FromName:     "Test User",
+				BaseURL:      "https://example.com",
 			},
 			expectError: false,
 		},
 		{
-			name: "missing host",
-			config: &user.EmailConfig{
-				Port:     587,
-				Username: "test@gmail.com",
-				Password: "password",
-				From:     "test@gmail.com",
-				FromName: "Test User",
-				BaseURL:  "https://example.com",
-			},
+			name: "nil config",
+			config: nil,
 			expectError: true,
-			errorMsg:    "EMAIL_HOST is required",
+			errorMsg:    "email config is required",
 		},
 		{
-			name: "missing port",
-			config: &user.EmailConfig{
-				Host:     "smtp.gmail.com",
-				Username: "test@gmail.com",
-				Password: "password",
-				From:     "test@gmail.com",
-				FromName: "Test User",
-				BaseURL:  "https://example.com",
+			name: "invalid port",
+			config: &config.EmailConfig{
+				SMTPHost:     "smtp.gmail.com",
+				SMTPPort:     "invalid",
+				SMTPUsername: "test@gmail.com",
+				SMTPPassword: "password",
+				FromEmail:    "test@gmail.com",
+				FromName:     "Test User",
+				BaseURL:      "https://example.com",
 			},
 			expectError: true,
-			errorMsg:    "EMAIL_PORT is required and must be a valid port number",
-		},
-		{
-			name: "missing username",
-			config: &user.EmailConfig{
-				Host:     "smtp.gmail.com",
-				Port:     587,
-				Password: "password",
-				From:     "test@gmail.com",
-				FromName: "Test User",
-				BaseURL:  "https://example.com",
-			},
-			expectError: true,
-			errorMsg:    "EMAIL_USERNAME is required",
-		},
-		{
-			name: "missing password",
-			config: &user.EmailConfig{
-				Host:     "smtp.gmail.com",
-				Port:     587,
-				Username: "test@gmail.com",
-				From:     "test@gmail.com",
-				FromName: "Test User",
-				BaseURL:  "https://example.com",
-			},
-			expectError: true,
-			errorMsg:    "EMAIL_PASSWORD is required",
-		},
-		{
-			name: "missing from",
-			config: &user.EmailConfig{
-				Host:     "smtp.gmail.com",
-				Port:     587,
-				Username: "test@gmail.com",
-				Password: "password",
-				FromName: "Test User",
-				BaseURL:  "https://example.com",
-			},
-			expectError: true,
-			errorMsg:    "EMAIL_FROM is required",
-		},
-		{
-			name: "missing from name",
-			config: &user.EmailConfig{
-				Host:     "smtp.gmail.com",
-				Port:     587,
-				Username: "test@gmail.com",
-				Password: "password",
-				From:     "test@gmail.com",
-				BaseURL:  "https://example.com",
-			},
-			expectError: true,
-			errorMsg:    "EMAIL_FROM_NAME is required",
-		},
-		{
-			name: "missing base URL",
-			config: &user.EmailConfig{
-				Host:     "smtp.gmail.com",
-				Port:     587,
-				Username: "test@gmail.com",
-				Password: "password",
-				From:     "test@gmail.com",
-				FromName: "Test User",
-			},
-			expectError: true,
-			errorMsg:    "BASE_URL is required",
+			errorMsg:    "invalid SMTP port:",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := user.ValidateEmailConfig(tt.config)
+			service, err := user.NewEmailService(tt.config)
 			if tt.expectError {
 				if err == nil {
 					t.Errorf("Expected error but got none")
-				} else if err.Error() != tt.errorMsg {
-					t.Errorf("Expected error message '%s', got '%s'", tt.errorMsg, err.Error())
-				}
-			} else {
-				if err != nil {
-					t.Errorf("Expected no error but got: %v", err)
-				}
-			}
-		})
-	}
-}
-
-func TestNewEmailServiceWithConfig(t *testing.T) {
-	tests := []struct {
-		name        string
-		config      *user.EmailConfig
-		expectError bool
-	}{
-		{
-			name: "valid config creates service",
-			config: &user.EmailConfig{
-				Host:     "smtp.gmail.com",
-				Port:     587,
-				Username: "test@gmail.com",
-				Password: "password",
-				From:     "test@gmail.com",
-				FromName: "Test User",
-				BaseURL:  "https://example.com",
-			},
-			expectError: false,
-		},
-		{
-			name: "invalid config returns error",
-			config: &user.EmailConfig{
-				Host: "smtp.gmail.com",
-			},
-			expectError: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			service, err := user.NewEmailServiceWithConfig(tt.config)
-			if tt.expectError {
-				if err == nil {
-					t.Errorf("Expected error but got none")
+				} else if tt.errorMsg != "" && !strings.Contains(err.Error(), tt.errorMsg) {
+					t.Errorf("Expected error message to contain '%s', got '%s'", tt.errorMsg, err.Error())
 				}
 				if service != nil {
 					t.Errorf("Expected nil service but got: %v", service)
@@ -188,18 +75,19 @@ func TestNewEmailServiceWithConfig(t *testing.T) {
 	}
 }
 
+
 func TestEmailTemplateIntegration(t *testing.T) {
-	config := &user.EmailConfig{
-		Host:     "smtp.example.com",
-		Port:     587,
-		Username: "test@example.com",
-		Password: "password",
-		From:     "test@example.com",
-		FromName: "Test Service",
-		BaseURL:  "https://example.com",
+	config := &config.EmailConfig{
+		SMTPHost:     "smtp.example.com",
+		SMTPPort:     "587",
+		SMTPUsername: "test@example.com",
+		SMTPPassword: "password",
+		FromEmail:    "test@example.com",
+		FromName:     "Test Service",
+		BaseURL:      "https://example.com",
 	}
 
-	service, err := user.NewEmailServiceWithConfig(config)
+	service, err := user.NewEmailService(config)
 	if err != nil {
 		t.Fatalf("Failed to create email service: %v", err)
 	}
@@ -237,3 +125,4 @@ func TestEmailTemplateIntegration(t *testing.T) {
 		}
 	})
 }
+

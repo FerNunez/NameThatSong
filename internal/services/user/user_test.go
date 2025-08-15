@@ -217,7 +217,7 @@ func (m *MockEmailService) SendPasswordResetConfirmation(ctx context.Context, em
 }
 
 // Test setup helper function
-func setupUserService() (*user.User, *MockUserStore, *MockEmailVerificationStore, *MockPasswordResetStore, *MockUserSessionStore, *MockEmailService) {
+func setupUserService() (user.UserService, *MockUserStore, *MockEmailVerificationStore, *MockPasswordResetStore, *MockUserSessionStore, *MockEmailService) {
 	userStore := &MockUserStore{}
 	emailVerificationStore := &MockEmailVerificationStore{}
 	passwordResetStore := &MockPasswordResetStore{}
