@@ -175,6 +175,10 @@ func main() {
 	//
 	// r.Get("/internal/frontend/search-music", handlers.NewGetSearchMusic(accessToken, redisCache).ServeHttp)
 	// r.Get("/internal/frontend/stack-music", handlers.NewGetStackMusic(accessToken, redisCache).ServeHttp)
+	
+	// Debug routes
+	debugSearchHandler := handlers.NewDebugSearchHandler(spotifyService)
+	r.Get("/debug/search", debugSearchHandler.ServeHttp)
 	//
 	// Start the server
 	port := os.Getenv("PORT")

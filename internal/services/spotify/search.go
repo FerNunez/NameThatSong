@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	m "github.com/FerNunez/NameThatSong/internal/models"
+	"github.com/FerNunez/NameThatSong/internal/pkg/utils"
 )
 
 // =============================================================================
@@ -18,10 +19,19 @@ import (
 
 // SearchTracks searches for tracks with caching
 func (s *Spotify) SearchTracks(ctx context.Context, userID, query string) ([]m.TrackSearch, error) {
+	normalizedQuery := utils.NormalizeSearchQuery(query)
+	sanitizedQuery := utils.SanitizeForCacheKey(normalizedQuery)
+	cacheKey := fmt.Sprintf("spotify:search:tracks:%s", sanitizedQuery)
+	
 	// Check cache first
 	if cachedTracks, found := s.cache.GetSearchTracks(query); found {
+		fmt.Printf("[CACHE HIT] Search tracks: query=%q, normalized=%q, cache_key=%q, results=%d\n", 
+			query, normalizedQuery, cacheKey, len(cachedTracks))
 		return cachedTracks, nil
 	}
+
+	fmt.Printf("[CACHE MISS] Search tracks: query=%q, normalized=%q, cache_key=%q, calling API...\n", 
+		query, normalizedQuery, cacheKey)
 
 	// Get access token for user
 	accessToken, err := s.GetValidToken(ctx, userID)
@@ -37,14 +47,24 @@ func (s *Spotify) SearchTracks(ctx context.Context, userID, query string) ([]m.T
 
 	// Cache the results
 	s.cache.SetSearchTracks(query, tracks)
+	fmt.Printf("[CACHED] Search tracks: query=%q, stored %d results\n", query, len(tracks))
 	return tracks, nil
 }
 
 // SearchAlbums searches for albums with caching
 func (s *Spotify) SearchAlbums(ctx context.Context, userID, query string) ([]m.AlbumSearch, error) {
+	normalizedQuery := utils.NormalizeSearchQuery(query)
+	sanitizedQuery := utils.SanitizeForCacheKey(normalizedQuery)
+	cacheKey := fmt.Sprintf("spotify:search:albums:%s", sanitizedQuery)
+	
 	if cachedAlbums, found := s.cache.GetSearchAlbums(query); found {
+		fmt.Printf("[CACHE HIT] Search albums: query=%q, normalized=%q, cache_key=%q, results=%d\n", 
+			query, normalizedQuery, cacheKey, len(cachedAlbums))
 		return cachedAlbums, nil
 	}
+
+	fmt.Printf("[CACHE MISS] Search albums: query=%q, normalized=%q, cache_key=%q, calling API...\n", 
+		query, normalizedQuery, cacheKey)
 
 	// Get access token for user
 	accessToken, err := s.GetValidToken(ctx, userID)
@@ -58,6 +78,7 @@ func (s *Spotify) SearchAlbums(ctx context.Context, userID, query string) ([]m.A
 	}
 
 	s.cache.SetSearchAlbums(query, albums)
+	fmt.Printf("[CACHED] Search albums: query=%q, stored %d results\n", query, len(albums))
 	return albums, nil
 }
 
