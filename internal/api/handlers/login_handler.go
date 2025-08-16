@@ -84,7 +84,19 @@ func (h PostLoginHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	// 	}
 	// }
 
-	// Set session cookie
+	// Clear any existing session cookie first
+	clearCookie := http.Cookie{
+		Name:     h.SessionName,
+		Value:    "",
+		MaxAge:   -1, // Delete immediately
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteNoneMode,
+		Secure:   true,
+	}
+	http.SetCookie(w, &clearCookie)
+
+	// Set new session cookie
 	cookieValue := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", loginResp.SessionID, loginResp.User.ID.String())))
 	cookie := http.Cookie{
 		Name:     h.SessionName,
