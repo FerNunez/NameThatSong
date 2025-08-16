@@ -29,7 +29,7 @@ func main() {
 	// Initialize logger
 	logLevel := logger.GetLogLevelFromEnv()
 	logger.Init(logLevel)
-	logger.Info(nil, "starting NameThatSong application", 
+	logger.Info(nil, "starting NameThatSong application",
 		logger.F("log_level", logLevel))
 
 	err := godotenv.Load()
@@ -51,13 +51,13 @@ func main() {
 	}
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
-		logger.Error(nil, "failed to open database connection", 
+		logger.Error(nil, "failed to open database connection",
 			logger.F("error", err),
 			logger.F("db_url", dbURL))
 		log.Fatalf("Error opening db: %v", err)
 		return
 	}
-	logger.Info(nil, "database connection established", 
+	logger.Info(nil, "database connection established",
 		logger.F("db_url", dbURL))
 	// Db and Stores
 	dbQueries := database.New(db)
@@ -141,6 +141,9 @@ func main() {
 		r.Post("/playlists/{id}/export", playlistHandler.ExportToSpotify)
 		r.Post("/playlists/{id}/sync", playlistHandler.SyncWithSpotify)
 
+		// Debug routes
+		r.Get("/debug/search", handlers.NewDebugSearchHandler(spotifyService).ServeHttp)
+
 		// Search
 		// r.Get("/search-helper", handlers.NewGetSearchArtists().ServeHttp)
 		// r.Get("/search-albums", handlers.NewGetArtistAlbums().ServeHttp)
@@ -186,10 +189,7 @@ func main() {
 	//
 	// r.Get("/internal/frontend/search-music", handlers.NewGetSearchMusic(accessToken, redisCache).ServeHttp)
 	// r.Get("/internal/frontend/stack-music", handlers.NewGetStackMusic(accessToken, redisCache).ServeHttp)
-	
-	// Debug routes
-	debugSearchHandler := handlers.NewDebugSearchHandler(spotifyService)
-	r.Get("/debug/search", debugSearchHandler.ServeHttp)
+
 	//
 	// Start the server
 	port := os.Getenv("PORT")

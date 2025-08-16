@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/FerNunez/NameThatSong/internal/models"
@@ -54,15 +53,13 @@ func (h PostRegisterHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Register user through service
-	dbUser, err := h.UserService.Register(r.Context(), registerReq)
+	_, err := h.UserService.Register(r.Context(), registerReq)
 	if err != nil {
-		fmt.Println("error registering user:", err)
 		w.WriteHeader(http.StatusBadRequest)
 		c := templates.RegisterError()
 		c.Render(r.Context(), w)
 		return
 	}
-	fmt.Println("User has been registered w mail: %v", dbUser.Email)
 
 	c := templates.RegisterSuccess()
 	err = c.Render(r.Context(), w)

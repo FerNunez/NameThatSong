@@ -20,9 +20,19 @@ import (
 
 // SearchTracks searches for tracks with caching
 func (s *Spotify) SearchTracks(ctx context.Context, userID, query string) ([]m.TrackSearch, error) {
+	logger.Info(ctx, "track search initiated",
+		logger.F("user_id", userID),
+		logger.F("query", query))
+	
 	normalizedQuery := utils.NormalizeSearchQuery(query)
 	sanitizedQuery := utils.SanitizeForCacheKey(normalizedQuery)
 	cacheKey := fmt.Sprintf("spotify:search:tracks:%s", sanitizedQuery)
+	
+	logger.Debug(ctx, "track search query processing",
+		logger.F("original_query", query),
+		logger.F("normalized_query", normalizedQuery),
+		logger.F("sanitized_query", sanitizedQuery),
+		logger.F("cache_key", cacheKey))
 	
 	// Check cache first
 	if cachedTracks, found := s.cache.GetSearchTracks(query); found {
@@ -40,19 +50,41 @@ func (s *Spotify) SearchTracks(ctx context.Context, userID, query string) ([]m.T
 		logger.F("cache_key", cacheKey))
 
 	// Get access token for user
+	logger.Debug(ctx, "retrieving access token for track search",
+		logger.F("user_id", userID))
+	
 	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
+		logger.Error(ctx, "failed to get access token for track search",
+			logger.F("user_id", userID),
+			logger.F("query", query),
+			logger.F("error", err))
 		return nil, fmt.Errorf("failed to get access token: %v", err)
 	}
 
 	// Cache miss - search Spotify API
+	logger.Info(ctx, "calling Spotify API for track search",
+		logger.F("user_id", userID),
+		logger.F("query", query),
+		logger.F("normalized_query", normalizedQuery))
+	
 	tracks, err := s.searchTracksFromAPI(ctx, accessToken, query)
 	if err != nil {
+		logger.Error(ctx, "track search API call failed",
+			logger.F("user_id", userID),
+			logger.F("query", query),
+			logger.F("error", err))
 		return nil, err
 	}
 
 	// Cache the results
 	s.cache.SetSearchTracks(query, tracks)
+	logger.Info(ctx, "track search completed successfully",
+		logger.F("user_id", userID),
+		logger.F("query", query),
+		logger.F("results_count", len(tracks)),
+		logger.F("cache_key", cacheKey))
+	
 	logger.Debug(ctx, "cached track search results",
 		logger.F("query", query),
 		logger.F("results_count", len(tracks)))
@@ -61,9 +93,19 @@ func (s *Spotify) SearchTracks(ctx context.Context, userID, query string) ([]m.T
 
 // SearchAlbums searches for albums with caching
 func (s *Spotify) SearchAlbums(ctx context.Context, userID, query string) ([]m.AlbumSearch, error) {
+	logger.Info(ctx, "album search initiated",
+		logger.F("user_id", userID),
+		logger.F("query", query))
+	
 	normalizedQuery := utils.NormalizeSearchQuery(query)
 	sanitizedQuery := utils.SanitizeForCacheKey(normalizedQuery)
 	cacheKey := fmt.Sprintf("spotify:search:albums:%s", sanitizedQuery)
+	
+	logger.Debug(ctx, "album search query processing",
+		logger.F("original_query", query),
+		logger.F("normalized_query", normalizedQuery),
+		logger.F("sanitized_query", sanitizedQuery),
+		logger.F("cache_key", cacheKey))
 	
 	if cachedAlbums, found := s.cache.GetSearchAlbums(query); found {
 		logger.Debug(ctx, "cache hit for album search",
@@ -80,17 +122,39 @@ func (s *Spotify) SearchAlbums(ctx context.Context, userID, query string) ([]m.A
 		logger.F("cache_key", cacheKey))
 
 	// Get access token for user
+	logger.Debug(ctx, "retrieving access token for album search",
+		logger.F("user_id", userID))
+	
 	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
+		logger.Error(ctx, "failed to get access token for album search",
+			logger.F("user_id", userID),
+			logger.F("query", query),
+			logger.F("error", err))
 		return nil, fmt.Errorf("failed to get access token: %v", err)
 	}
 
+	logger.Info(ctx, "calling Spotify API for album search",
+		logger.F("user_id", userID),
+		logger.F("query", query),
+		logger.F("normalized_query", normalizedQuery))
+	
 	albums, err := s.searchAlbumsFromAPI(ctx, accessToken, query)
 	if err != nil {
+		logger.Error(ctx, "album search API call failed",
+			logger.F("user_id", userID),
+			logger.F("query", query),
+			logger.F("error", err))
 		return nil, err
 	}
 
 	s.cache.SetSearchAlbums(query, albums)
+	logger.Info(ctx, "album search completed successfully",
+		logger.F("user_id", userID),
+		logger.F("query", query),
+		logger.F("results_count", len(albums)),
+		logger.F("cache_key", cacheKey))
+	
 	logger.Debug(ctx, "cached album search results",
 		logger.F("query", query),
 		logger.F("results_count", len(albums)))
@@ -99,14 +163,20 @@ func (s *Spotify) SearchAlbums(ctx context.Context, userID, query string) ([]m.A
 
 // SearchArtists searches for artists with caching
 func (s *Spotify) SearchArtists(ctx context.Context, userID, query string) ([]m.ArtistSearch, error) {
+	logger.Info(ctx, "artist search initiated",
+		logger.F("user_id", userID),
+		logger.F("query", query))
+	
 	if cachedArtists, found := s.cache.GetSearchArtists(query); found {
 		logger.Debug(ctx, "cache hit for artist search",
+			logger.F("user_id", userID),
 			logger.F("query", query),
 			logger.F("results_count", len(cachedArtists)))
 		return cachedArtists, nil
 	}
 
 	logger.Info(ctx, "cache miss for artist search - calling Spotify API",
+		logger.F("user_id", userID),
 		logger.F("query", query))
 
 	// Get access token for user
@@ -127,6 +197,11 @@ func (s *Spotify) SearchArtists(ctx context.Context, userID, query string) ([]m.
 	}
 
 	s.cache.SetSearchArtists(query, artists)
+	logger.Info(ctx, "artist search completed successfully",
+		logger.F("user_id", userID),
+		logger.F("query", query),
+		logger.F("results_count", len(artists)))
+	
 	logger.Debug(ctx, "cached artist search results",
 		logger.F("query", query),
 		logger.F("results_count", len(artists)))
@@ -135,22 +210,54 @@ func (s *Spotify) SearchArtists(ctx context.Context, userID, query string) ([]m.
 
 // SearchPlaylists searches for playlists with caching
 func (s *Spotify) SearchPlaylists(ctx context.Context, userID, query string) ([]m.PlaylistSearch, error) {
+	logger.Info(ctx, "playlist search initiated",
+		logger.F("user_id", userID),
+		logger.F("query", query))
+	
 	if cachedPlaylists, found := s.cache.GetSearchPlaylists(query); found {
+		logger.Debug(ctx, "cache hit for playlist search",
+			logger.F("user_id", userID),
+			logger.F("query", query),
+			logger.F("results_count", len(cachedPlaylists)))
 		return cachedPlaylists, nil
 	}
 
+	logger.Info(ctx, "cache miss for playlist search - calling Spotify API",
+		logger.F("user_id", userID),
+		logger.F("query", query))
+
 	// Get access token for user
+	logger.Debug(ctx, "retrieving access token for playlist search",
+		logger.F("user_id", userID))
+	
 	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
+		logger.Error(ctx, "failed to get access token for playlist search",
+			logger.F("user_id", userID),
+			logger.F("query", query),
+			logger.F("error", err))
 		return nil, fmt.Errorf("failed to get access token: %v", err)
 	}
 
+	logger.Info(ctx, "calling Spotify API for playlist search",
+		logger.F("user_id", userID),
+		logger.F("query", query))
+	
 	playlists, err := s.searchPlaylistsFromAPI(ctx, accessToken, query)
 	if err != nil {
+		logger.Error(ctx, "playlist search API call failed",
+			logger.F("user_id", userID),
+			logger.F("query", query),
+			logger.F("error", err))
 		return nil, err
 	}
 
 	s.cache.SetSearchPlaylists(query, playlists)
+	logger.Info(ctx, "playlist search completed successfully",
+		logger.F("user_id", userID),
+		logger.F("query", query),
+		logger.F("results_count", len(playlists)))
+	
 	return playlists, nil
 }
 
@@ -158,8 +265,16 @@ func (s *Spotify) SearchPlaylists(ctx context.Context, userID, query string) ([]
 func (s *Spotify) search(ctx context.Context, accessToken, limit, atype, query string) ([]byte, error) {
 	trackQuery := atype + ":" + strings.ToLower(query)
 
+	logger.Debug(ctx, "building Spotify search request",
+		logger.F("search_type", atype),
+		logger.F("query", query),
+		logger.F("formatted_query", trackQuery),
+		logger.F("limit", limit))
+
 	apiURL, err := url.Parse(s.config.GetAPIBaseURL() + "/search")
 	if err != nil {
+		logger.Error(ctx, "failed to parse Spotify API URL",
+			logger.F("error", err))
 		return nil, err
 	}
 	q := apiURL.Query()
@@ -168,25 +283,51 @@ func (s *Spotify) search(ctx context.Context, accessToken, limit, atype, query s
 	q.Set("limit", limit)
 	apiURL.RawQuery = q.Encode()
 
+	logger.Debug(ctx, "making HTTP request to Spotify API",
+		logger.F("url", apiURL.String()),
+		logger.F("method", "GET"),
+		logger.F("search_type", atype))
+
 	req, err := http.NewRequestWithContext(ctx, "GET", apiURL.String(), nil)
 	if err != nil {
+		logger.Error(ctx, "failed to create HTTP request",
+			logger.F("error", err))
 		return nil, err
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
+		logger.Error(ctx, "HTTP request to Spotify API failed",
+			logger.F("url", apiURL.String()),
+			logger.F("error", err))
 		return nil, err
 	}
 	defer resp.Body.Close()
 
+	logger.Debug(ctx, "received HTTP response from Spotify API",
+		logger.F("status_code", resp.StatusCode),
+		logger.F("content_length", resp.ContentLength),
+		logger.F("search_type", atype))
+
 	if resp.StatusCode != http.StatusOK {
+		logger.Error(ctx, "Spotify API returned non-200 status code",
+			logger.F("status_code", resp.StatusCode),
+			logger.F("url", apiURL.String()),
+			logger.F("search_type", atype))
 		return nil, fmt.Errorf("unexpected status code: %v", resp.StatusCode)
 	}
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
+		logger.Error(ctx, "failed to read response body from Spotify API",
+			logger.F("error", err))
 		return nil, err
 	}
+	
+	logger.Debug(ctx, "successfully read Spotify API response",
+		logger.F("response_size_bytes", len(data)),
+		logger.F("search_type", atype))
+	
 	return data, nil
 }
 
