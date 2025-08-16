@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	m "github.com/FerNunez/NameThatSong/internal/models"
+	"github.com/FerNunez/NameThatSong/internal/pkg/logger"
 	"github.com/FerNunez/NameThatSong/internal/pkg/utils"
 )
 
@@ -25,13 +26,18 @@ func (s *Spotify) SearchTracks(ctx context.Context, userID, query string) ([]m.T
 	
 	// Check cache first
 	if cachedTracks, found := s.cache.GetSearchTracks(query); found {
-		fmt.Printf("[CACHE HIT] Search tracks: query=%q, normalized=%q, cache_key=%q, results=%d\n", 
-			query, normalizedQuery, cacheKey, len(cachedTracks))
+		logger.Debug(ctx, "cache hit for track search",
+			logger.F("query", query),
+			logger.F("normalized_query", normalizedQuery),
+			logger.F("cache_key", cacheKey),
+			logger.F("results_count", len(cachedTracks)))
 		return cachedTracks, nil
 	}
 
-	fmt.Printf("[CACHE MISS] Search tracks: query=%q, normalized=%q, cache_key=%q, calling API...\n", 
-		query, normalizedQuery, cacheKey)
+	logger.Info(ctx, "cache miss for track search - calling Spotify API",
+		logger.F("query", query),
+		logger.F("normalized_query", normalizedQuery),
+		logger.F("cache_key", cacheKey))
 
 	// Get access token for user
 	accessToken, err := s.GetValidToken(ctx, userID)
@@ -47,7 +53,9 @@ func (s *Spotify) SearchTracks(ctx context.Context, userID, query string) ([]m.T
 
 	// Cache the results
 	s.cache.SetSearchTracks(query, tracks)
-	fmt.Printf("[CACHED] Search tracks: query=%q, stored %d results\n", query, len(tracks))
+	logger.Debug(ctx, "cached track search results",
+		logger.F("query", query),
+		logger.F("results_count", len(tracks)))
 	return tracks, nil
 }
 
@@ -58,13 +66,18 @@ func (s *Spotify) SearchAlbums(ctx context.Context, userID, query string) ([]m.A
 	cacheKey := fmt.Sprintf("spotify:search:albums:%s", sanitizedQuery)
 	
 	if cachedAlbums, found := s.cache.GetSearchAlbums(query); found {
-		fmt.Printf("[CACHE HIT] Search albums: query=%q, normalized=%q, cache_key=%q, results=%d\n", 
-			query, normalizedQuery, cacheKey, len(cachedAlbums))
+		logger.Debug(ctx, "cache hit for album search",
+			logger.F("query", query),
+			logger.F("normalized_query", normalizedQuery),
+			logger.F("cache_key", cacheKey),
+			logger.F("results_count", len(cachedAlbums)))
 		return cachedAlbums, nil
 	}
 
-	fmt.Printf("[CACHE MISS] Search albums: query=%q, normalized=%q, cache_key=%q, calling API...\n", 
-		query, normalizedQuery, cacheKey)
+	logger.Info(ctx, "cache miss for album search - calling Spotify API",
+		logger.F("query", query),
+		logger.F("normalized_query", normalizedQuery),
+		logger.F("cache_key", cacheKey))
 
 	// Get access token for user
 	accessToken, err := s.GetValidToken(ctx, userID)
@@ -78,28 +91,45 @@ func (s *Spotify) SearchAlbums(ctx context.Context, userID, query string) ([]m.A
 	}
 
 	s.cache.SetSearchAlbums(query, albums)
-	fmt.Printf("[CACHED] Search albums: query=%q, stored %d results\n", query, len(albums))
+	logger.Debug(ctx, "cached album search results",
+		logger.F("query", query),
+		logger.F("results_count", len(albums)))
 	return albums, nil
 }
 
 // SearchArtists searches for artists with caching
 func (s *Spotify) SearchArtists(ctx context.Context, userID, query string) ([]m.ArtistSearch, error) {
 	if cachedArtists, found := s.cache.GetSearchArtists(query); found {
+		logger.Debug(ctx, "cache hit for artist search",
+			logger.F("query", query),
+			logger.F("results_count", len(cachedArtists)))
 		return cachedArtists, nil
 	}
+
+	logger.Info(ctx, "cache miss for artist search - calling Spotify API",
+		logger.F("query", query))
 
 	// Get access token for user
 	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
+		logger.Error(ctx, "failed to get access token for artist search",
+			logger.F("user_id", userID),
+			logger.F("error", err))
 		return nil, fmt.Errorf("failed to get access token: %v", err)
 	}
 
 	artists, err := s.searchArtistsFromAPI(ctx, accessToken, query)
 	if err != nil {
+		logger.Error(ctx, "artist search API call failed",
+			logger.F("query", query),
+			logger.F("error", err))
 		return nil, err
 	}
 
 	s.cache.SetSearchArtists(query, artists)
+	logger.Debug(ctx, "cached artist search results",
+		logger.F("query", query),
+		logger.F("results_count", len(artists)))
 	return artists, nil
 }
 

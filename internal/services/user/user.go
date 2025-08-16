@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/FerNunez/NameThatSong/internal/models"
+	"github.com/FerNunez/NameThatSong/internal/pkg/logger"
 	"github.com/FerNunez/NameThatSong/internal/pkg/utils"
 	"github.com/FerNunez/NameThatSong/internal/pkg/validation"
 	"github.com/FerNunez/NameThatSong/internal/repository"
@@ -38,47 +39,87 @@ func NewUserService(
 
 // Authentication
 func (u *User) Register(ctx context.Context, req models.RegisterRequest) (*models.User, error) {
+	logger.Info(ctx, "user registration attempt",
+		logger.F("email", req.Email))
+
 	// Validate registration request
 	if err := u.validateRegisterRequest(req); err != nil {
+		logger.Warn(ctx, "user registration validation failed",
+			logger.F("email", req.Email),
+			logger.F("error", err))
 		return nil, fmt.Errorf("validation error: %w", err)
 	}
 
 	// Hash password
 	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
+		logger.Error(ctx, "failed to hash password during registration",
+			logger.F("email", req.Email),
+			logger.F("error", err))
 		return nil, err
 	}
 	// Create user
 	dbUser, err := u.userStore.Create(ctx, req.Email, hashedPassword)
 	if err != nil {
+		logger.Error(ctx, "failed to create user in database :(",
+			logger.F("email", req.Email),
+			logger.F("error", err))
 		return nil, err
 	}
+
+	logger.Info(ctx, "user registration successful",
+		logger.F("user_id", dbUser.ID),
+		logger.F("email", req.Email))
 	return dbUser, nil
 }
 func (u *User) Login(ctx context.Context, req models.LoginRequest) (*models.LoginResponse, error) {
+	logger.Info(ctx, "user login attempt",
+		logger.F("email", req.Email))
+
 	// Validate login request
 	if err := u.validateLoginRequest(req); err != nil {
+		logger.Warn(ctx, "login validation failed",
+			logger.F("email", req.Email),
+			logger.F("error", err))
 		return nil, fmt.Errorf("validation error: %w", err)
 	}
 
 	// Get user
 	dbUser, err := u.userStore.GetByEmail(ctx, req.Email)
 	if err != nil {
+		logger.Warn(ctx, "login failed - user not found",
+			logger.F("email", req.Email))
 		return nil, err
 	}
 	// Check password with stored
 	if err := utils.CheckPasswordHash(req.Password, dbUser.HashedPassword); err != nil {
+		logger.Warn(ctx, "login failed - invalid password",
+			logger.F("email", req.Email),
+			logger.F("user_id", dbUser.ID))
 		return nil, fmt.Errorf("invalid credentials")
 	}
 	// SessionToken creation
 	dbSession, err := u.sessionStore.Create(ctx, dbUser.ID, time.Duration(24)*time.Hour)
 	if err != nil {
+		logger.Error(ctx, "failed to create session during login",
+			logger.F("user_id", dbUser.ID),
+			logger.F("email", req.Email),
+			logger.F("error", err))
 		return nil, fmt.Errorf("failed to create user session: %w", err)
 	}
 	// Last login at
 	if err := u.userStore.UpdateLastLogin(ctx, dbUser.ID); err != nil {
+		logger.Error(ctx, "failed to update last login time",
+			logger.F("user_id", dbUser.ID),
+			logger.F("error", err))
 		return nil, err
 	}
+
+	logger.Info(ctx, "user login successful",
+		logger.F("user_id", dbUser.ID),
+		logger.F("email", req.Email),
+		logger.F("session_id", dbSession.ID))
+
 	return &models.LoginResponse{
 		User:      dbUser,
 		SessionID: dbSession.ID,
@@ -86,7 +127,20 @@ func (u *User) Login(ctx context.Context, req models.LoginRequest) (*models.Logi
 	}, nil
 }
 func (u *User) Logout(ctx context.Context, sessionID string) error {
-	return u.sessionStore.Revoke(ctx, sessionID)
+	logger.Info(ctx, "user logout attempt",
+		logger.F("session_id", sessionID))
+
+	err := u.sessionStore.Revoke(ctx, sessionID)
+	if err != nil {
+		logger.Error(ctx, "failed to revoke session during logout",
+			logger.F("session_id", sessionID),
+			logger.F("error", err))
+		return err
+	}
+
+	logger.Info(ctx, "user logout successful",
+		logger.F("session_id", sessionID))
+	return nil
 }
 
 // Email Verification

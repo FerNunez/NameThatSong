@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/FerNunez/NameThatSong/internal/models"
+	"github.com/FerNunez/NameThatSong/internal/pkg/logger"
 	"github.com/FerNunez/NameThatSong/internal/pkg/validation"
 	"github.com/FerNunez/NameThatSong/internal/repository"
 	"github.com/FerNunez/NameThatSong/internal/services/spotify"
@@ -29,8 +30,17 @@ func NewPlaylistService(
 
 // Local playlist operations
 func (p *Playlist) CreatePlaylist(ctx context.Context, userID uuid.UUID, req models.CreatePlaylistRequest) (*models.Playlist, error) {
+	logger.Info(ctx, "creating new playlist",
+		logger.F("user_id", userID),
+		logger.F("name", req.Name),
+		logger.F("sync_with_spotify", req.SyncWithSpotify))
+	
 	// Validate request
 	if err := p.validateCreatePlaylistRequest(req); err != nil {
+		logger.Warn(ctx, "playlist creation validation failed",
+			logger.F("user_id", userID),
+			logger.F("name", req.Name),
+			logger.F("error", err))
 		return nil, fmt.Errorf("validation error: %w", err)
 	}
 
@@ -46,9 +56,18 @@ func (p *Playlist) CreatePlaylist(ctx context.Context, userID uuid.UUID, req mod
 	}
 
 	if err := p.playlistStore.CreatePlaylist(ctx, playlist); err != nil {
+		logger.Error(ctx, "failed to store playlist in database",
+			logger.F("user_id", userID),
+			logger.F("playlist_id", playlist.ID),
+			logger.F("name", req.Name),
+			logger.F("error", err))
 		return nil, fmt.Errorf("failed to create playlist: %w", err)
 	}
 
+	logger.Info(ctx, "playlist created successfully",
+		logger.F("user_id", userID),
+		logger.F("playlist_id", playlist.ID),
+		logger.F("name", req.Name))
 	return playlist, nil
 }
 
@@ -186,14 +205,27 @@ func (p *Playlist) GetPlaylistWithSongs(ctx context.Context, playlistID, userID 
 
 // Spotify integration
 func (p *Playlist) ImportFromSpotify(ctx context.Context, userID uuid.UUID, req models.ImportPlaylistRequest) (*models.Playlist, error) {
+	logger.Info(ctx, "importing playlist from Spotify",
+		logger.F("user_id", userID),
+		logger.F("spotify_playlist_id", req.SpotifyPlaylistID),
+		logger.F("sync_with_spotify", req.SyncWithSpotify))
+	
 	// Validate request
 	if err := p.validateImportPlaylistRequest(req); err != nil {
+		logger.Warn(ctx, "playlist import validation failed",
+			logger.F("user_id", userID),
+			logger.F("spotify_playlist_id", req.SpotifyPlaylistID),
+			logger.F("error", err))
 		return nil, fmt.Errorf("validation error: %w", err)
 	}
 
 	// Fetch playlist data from Spotify
 	spotifyPlaylist, err := p.spotifyService.FetchPlaylist(ctx, userID.String(), req.SpotifyPlaylistID)
 	if err != nil {
+		logger.Error(ctx, "failed to fetch playlist from Spotify API",
+			logger.F("user_id", userID),
+			logger.F("spotify_playlist_id", req.SpotifyPlaylistID),
+			logger.F("error", err))
 		return nil, fmt.Errorf("failed to fetch playlist from Spotify: %w", err)
 	}
 
@@ -215,11 +247,23 @@ func (p *Playlist) ImportFromSpotify(ctx context.Context, userID uuid.UUID, req 
 		return nil, fmt.Errorf("failed to create playlist: %w", err)
 	}
 
+	logger.Debug(ctx, "fetched playlist metadata from Spotify",
+		logger.F("playlist_name", spotifyPlaylist.Name),
+		logger.F("spotify_playlist_id", req.SpotifyPlaylistID))
+	
 	// Fetch and import tracks
 	trackIDs, err := p.spotifyService.FetchTracksFromPlaylist(ctx, userID.String(), req.SpotifyPlaylistID)
 	if err != nil {
+		logger.Error(ctx, "failed to fetch tracks from Spotify playlist",
+			logger.F("user_id", userID),
+			logger.F("spotify_playlist_id", req.SpotifyPlaylistID),
+			logger.F("error", err))
 		return nil, fmt.Errorf("failed to fetch tracks from playlist: %w", err)
 	}
+	
+	logger.Info(ctx, "fetched tracks from Spotify playlist",
+		logger.F("spotify_playlist_id", req.SpotifyPlaylistID),
+		logger.F("track_count", len(trackIDs)))
 
 	// Add songs to playlist (batch process for better performance)
 	songs := make([]*models.PlaylistSong, 0, len(trackIDs))

@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/FerNunez/NameThatSong/internal/config"
+	"github.com/FerNunez/NameThatSong/internal/pkg/logger"
 	"github.com/FerNunez/NameThatSong/internal/repository"
 	"github.com/FerNunez/NameThatSong/internal/repository/database"
 
@@ -25,6 +26,11 @@ import (
 )
 
 func main() {
+	// Initialize logger
+	logLevel := logger.GetLogLevelFromEnv()
+	logger.Init(logLevel)
+	logger.Info(nil, "starting NameThatSong application", 
+		logger.F("log_level", logLevel))
 
 	err := godotenv.Load()
 
@@ -41,13 +47,18 @@ func main() {
 	if dbURL == "" {
 		fmt.Println("**Please define the DB_RUL in environtment.")
 		fmt.Println("Setting dev dbUrl:", dbURL)
-		dbURL = "postgres://postgres:postgres@localhost:5432/nts"
+		dbURL = "postgres://postgres:postgres@localhost:5432/nts?sslmode=disable"
 	}
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
+		logger.Error(nil, "failed to open database connection", 
+			logger.F("error", err),
+			logger.F("db_url", dbURL))
 		log.Fatalf("Error opening db: %v", err)
 		return
 	}
+	logger.Info(nil, "database connection established", 
+		logger.F("db_url", dbURL))
 	// Db and Stores
 	dbQueries := database.New(db)
 	userStore := repository.NewSQLUserStore(dbQueries)
