@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/FerNunez/NameThatSong/internal/pkg/logger"
 	"github.com/FerNunez/NameThatSong/internal/pkg/utils"
 	"github.com/FerNunez/NameThatSong/internal/repository"
 )
@@ -109,6 +110,9 @@ func (s *Spotify) TokenExchange(ctx context.Context, userID, code, receivedState
 
 // RefreshToken regenerates access token from refresh token
 func (s *Spotify) refreshToken(ctx context.Context, refreshToken string) (TokenResponse, error) {
+	logger.Debug(ctx, "making token refresh request to Spotify",
+		logger.F("has_refresh_token", refreshToken != ""))
+	
 	data := url.Values{}
 	data.Set("grant_type", "refresh_token")
 	data.Set("refresh_token", refreshToken)
@@ -116,6 +120,8 @@ func (s *Spotify) refreshToken(ctx context.Context, refreshToken string) (TokenR
 
 	req, err := http.NewRequestWithContext(ctx, "POST", s.config.GetTokenURL(), strings.NewReader(data.Encode()))
 	if err != nil {
+		logger.Error(ctx, "failed to create token refresh request",
+			logger.F("error", err))
 		return TokenResponse{}, fmt.Errorf("error creating request: %v", err)
 	}
 
@@ -125,34 +131,73 @@ func (s *Spotify) refreshToken(ctx context.Context, refreshToken string) (TokenR
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
+		logger.Error(ctx, "HTTP request to Spotify token endpoint failed",
+			logger.F("error", err))
 		return TokenResponse{}, fmt.Errorf("error refreshing token: %v", err)
 	}
 	defer resp.Body.Close()
 
+	logger.Debug(ctx, "received token refresh response from Spotify",
+		logger.F("status_code", resp.StatusCode))
+
+	if resp.StatusCode != http.StatusOK {
+		logger.Error(ctx, "Spotify token refresh returned non-200 status",
+			logger.F("status_code", resp.StatusCode))
+		return TokenResponse{}, fmt.Errorf("token refresh failed with status code: %d", resp.StatusCode)
+	}
+
 	var tokenResponse TokenResponse
 	if err := json.NewDecoder(resp.Body).Decode(&tokenResponse); err != nil {
+		logger.Error(ctx, "failed to parse token refresh response",
+			logger.F("error", err))
 		return TokenResponse{}, fmt.Errorf("error parsing token response: %v", err)
 	}
+
+	logger.Debug(ctx, "token refresh response parsed successfully",
+		logger.F("token_type", tokenResponse.TokenType),
+		logger.F("expires_in", tokenResponse.ExpiresIn),
+		logger.F("has_new_refresh_token", tokenResponse.RefreshToken != ""))
 
 	return tokenResponse, nil
 }
 
 // GetValidToken retrieves a valid access token for the user (refreshing if necessary)
 func (s *Spotify) GetValidToken(ctx context.Context, userID string) (string, error) {
+	logger.Debug(ctx, "retrieving valid token for user",
+		logger.F("user_id", userID))
+	
 	// Get token from storage
 	token, err := s.tokenStore.Get(ctx, userID)
 	if err != nil {
+		logger.Error(ctx, "failed to retrieve token from storage",
+			logger.F("user_id", userID),
+			logger.F("error", err))
 		return "", fmt.Errorf("no token found for user %s: %v", userID, err)
 	}
 
 	// Check if token is still valid
-	if time.Now().Before(token.ExpiresAt) {
+	now := time.Now()
+	timeUntilExpiry := token.ExpiresAt.Sub(now)
+	
+	if now.Before(token.ExpiresAt) {
+		logger.Debug(ctx, "using existing valid token",
+			logger.F("user_id", userID),
+			logger.F("expires_at", token.ExpiresAt),
+			logger.F("time_until_expiry_minutes", int(timeUntilExpiry.Minutes())))
 		return token.AccessToken, nil
 	}
 
 	// Token is expired, refresh it
+	logger.Info(ctx, "token expired, attempting refresh",
+		logger.F("user_id", userID),
+		logger.F("expired_at", token.ExpiresAt),
+		logger.F("expired_since_minutes", int(timeUntilExpiry.Abs().Minutes())))
+	
 	newTokens, err := s.refreshToken(ctx, token.RefreshToken)
 	if err != nil {
+		logger.Error(ctx, "failed to refresh token",
+			logger.F("user_id", userID),
+			logger.F("error", err))
 		return "", fmt.Errorf("failed to refresh token: %v", err)
 	}
 
@@ -160,8 +205,16 @@ func (s *Spotify) GetValidToken(ctx context.Context, userID string) (string, err
 	expiresAt := time.Now().Add(time.Duration(newTokens.ExpiresIn) * time.Second)
 	err = s.tokenStore.Update(ctx, userID, newTokens.AccessToken, expiresAt)
 	if err != nil {
+		logger.Error(ctx, "failed to update refreshed token in storage",
+			logger.F("user_id", userID),
+			logger.F("error", err))
 		return "", fmt.Errorf("failed to update token: %v", err)
 	}
+
+	logger.Info(ctx, "token refresh successful",
+		logger.F("user_id", userID),
+		logger.F("new_expires_at", expiresAt),
+		logger.F("expires_in_minutes", newTokens.ExpiresIn/60))
 
 	return newTokens.AccessToken, nil
 }
