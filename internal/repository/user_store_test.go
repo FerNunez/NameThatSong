@@ -18,8 +18,8 @@ type MockUserStore struct {
 	mock.Mock
 }
 
-func (m *MockUserStore) Create(ctx context.Context, email, hashedPassword string) (*models.User, error) {
-	args := m.Called(ctx, email, hashedPassword)
+func (m *MockUserStore) Create(ctx context.Context, email, hashedPassword, displayName string) (*models.User, error) {
+	args := m.Called(ctx, email, hashedPassword, displayName)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -106,10 +106,10 @@ func TestUserStoreInterface_Create(t *testing.T) {
 		expectedUser.HashedPassword = hashedPassword
 
 		// Mock expectation
-		mockStore.On("Create", ctx, email, hashedPassword).Return(expectedUser, nil)
+		mockStore.On("Create", ctx, email, hashedPassword, "Test Display Name").Return(expectedUser, nil)
 
 		// Execute
-		result, err := mockStore.Create(ctx, email, hashedPassword)
+		result, err := mockStore.Create(ctx, email, hashedPassword, "Test Display Name")
 
 		// Verify
 		assert.NoError(t, err)
@@ -129,10 +129,10 @@ func TestUserStoreInterface_Create(t *testing.T) {
 		expectedError := errors.New("database connection error")
 
 		// Mock expectation
-		mockStore.On("Create", ctx, email, hashedPassword).Return(nil, expectedError)
+		mockStore.On("Create", ctx, email, hashedPassword, "Test Display Name").Return(nil, expectedError)
 
 		// Execute
-		result, err := mockStore.Create(ctx, email, hashedPassword)
+		result, err := mockStore.Create(ctx, email, hashedPassword, "Test Display Name")
 
 		// Verify
 		assert.Error(t, err)

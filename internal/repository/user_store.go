@@ -11,7 +11,7 @@ import (
 )
 
 type UserStore interface {
-	Create(ctx context.Context, email, hashed_password string) (*models.User, error)
+	Create(ctx context.Context, email, hashed_password, displayName string) (*models.User, error)
 	Delete(ctx context.Context, userID uuid.UUID) error
 	GetByEmail(ctx context.Context, email string) (*models.User, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*models.User, error)
@@ -32,10 +32,14 @@ func NewSQLUserStore(db *database.Queries) UserStore {
 	}
 }
 
-func (s *SQLUserStore) Create(ctx context.Context, email, hashed_password string) (*models.User, error) {
+func (s *SQLUserStore) Create(ctx context.Context, email, hashed_password, displayName string) (*models.User, error) {
 	dbUser, err := s.db.CreateUser(ctx, database.CreateUserParams{
+		ID:             uuid.New(),
 		Email:          email,
 		HashedPassword: hashed_password,
+		EmailVerified:  sql.NullBool{Bool: false, Valid: true},
+		DisplayName:    displayName,
+		AvatarUrl:      sql.NullString{String: "", Valid: false},
 	})
 	if err != nil {
 		return &models.User{}, err

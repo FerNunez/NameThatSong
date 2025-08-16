@@ -59,7 +59,7 @@ func (u *User) Register(ctx context.Context, req models.RegisterRequest) (*model
 		return nil, err
 	}
 	// Create user
-	dbUser, err := u.userStore.Create(ctx, req.Email, hashedPassword)
+	dbUser, err := u.userStore.Create(ctx, req.Email, hashedPassword, req.DisplayName)
 	if err != nil {
 		logger.Error(ctx, "failed to create user in database :(",
 			logger.F("email", req.Email),
@@ -482,6 +482,9 @@ func (u *User) validateRegisterRequest(req models.RegisterRequest) error {
 		return err
 	}
 	if err := validation.ValidatePassword(req.Password); err != nil {
+		return err
+	}
+	if err := validation.ValidateDisplayName(req.DisplayName); err != nil {
 		return err
 	}
 	return nil

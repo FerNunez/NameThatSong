@@ -18,8 +18,8 @@ type MockUserStore struct {
 	mock.Mock
 }
 
-func (m *MockUserStore) Create(ctx context.Context, email, hashedPassword string) (*models.User, error) {
-	args := m.Called(ctx, email, hashedPassword)
+func (m *MockUserStore) Create(ctx context.Context, email, hashedPassword, displayName string) (*models.User, error) {
+	args := m.Called(ctx, email, hashedPassword, displayName)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -278,8 +278,8 @@ func TestUserService_Register(t *testing.T) {
 		expectedUser := createTestUser()
 		expectedUser.Email = req.Email
 
-		// Mock expectation: userStore.Create() should be called with email and hashed password
-		userStore.On("Create", ctx, req.Email, mock.AnythingOfType("string")).Return(expectedUser, nil)
+		// Mock expectation: userStore.Create() should be called with email, hashed password, and display name
+		userStore.On("Create", ctx, req.Email, mock.AnythingOfType("string"), req.DisplayName).Return(expectedUser, nil)
 
 		// Execute
 		result, err := userService.Register(ctx, req)
@@ -303,7 +303,7 @@ func TestUserService_Register(t *testing.T) {
 		}
 
 		// Mock expectation: userStore.Create() should return error
-		userStore.On("Create", ctx, req.Email, mock.AnythingOfType("string")).Return(nil, errors.New("duplicate email"))
+		userStore.On("Create", ctx, req.Email, mock.AnythingOfType("string"), req.DisplayName).Return(nil, errors.New("duplicate email"))
 
 		// Execute
 		result, err := userService.Register(ctx, req)
