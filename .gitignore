@@ -12,4 +12,5 @@ static/css/style.css
 
 .env
 .private
+.claude-code/
 
