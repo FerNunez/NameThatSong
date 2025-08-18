@@ -115,11 +115,6 @@ CREATE INDEX idx_spotify_albums_cached_at ON spotify_albums(cached_at);
 CREATE INDEX idx_spotify_tracks_cached_at ON spotify_tracks(cached_at);
 CREATE INDEX idx_spotify_playlists_cached_at ON spotify_playlists(cached_at);
 
--- Search optimization indexes
-CREATE INDEX idx_spotify_artists_name_trgm ON spotify_artists USING gin(name gin_trgm_ops);
-CREATE INDEX idx_spotify_albums_name_trgm ON spotify_albums USING gin(name gin_trgm_ops);
-CREATE INDEX idx_spotify_tracks_name_trgm ON spotify_tracks USING gin(name gin_trgm_ops);
-
 -- +goose Down
 DROP TABLE spotify_track_artists CASCADE;
 DROP TABLE spotify_album_artists CASCADE;
