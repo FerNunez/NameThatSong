@@ -121,3 +121,4 @@ DROP TABLE spotify_playlists CASCADE;
 DROP TABLE spotify_tracks CASCADE;
 DROP TABLE spotify_albums CASCADE;
 DROP TABLE spotify_artists CASCADE;
+DROP TABLE spotify_playlist_tracks CASCADE;
