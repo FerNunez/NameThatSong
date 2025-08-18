@@ -19,6 +19,7 @@ type UserStore interface {
 	UpdateProfileByID(ctx context.Context, id uuid.UUID, displayName string, avatarUrl string) error
 	VerifyUserEmail(ctx context.Context, id uuid.UUID) error
 	UpdateLastLogin(ctx context.Context, id uuid.UUID) error
+	UpdateSpotifyConnectionStatus(ctx context.Context, id uuid.UUID, connected bool) error
 	Reset(ctx context.Context) error
 }
 
@@ -45,15 +46,16 @@ func (s *SQLUserStore) Create(ctx context.Context, email, hashed_password, displ
 		return &models.User{}, err
 	}
 	return &models.User{
-		ID:             dbUser.ID,
-		Email:          dbUser.Email,
-		HashedPassword: dbUser.HashedPassword,
-		DisplayName:    "",
-		AvatarURL:      "",
-		EmailVerified:  false,
-		CreatedAt:      dbUser.CreatedAt,
-		UpdatedAt:      dbUser.CreatedAt,
-		LastLoginAt:    nil,
+		ID:               dbUser.ID,
+		Email:            dbUser.Email,
+		HashedPassword:   dbUser.HashedPassword,
+		DisplayName:      "",
+		AvatarURL:        "",
+		EmailVerified:    false,
+		SpotifyConnected: false,
+		CreatedAt:        dbUser.CreatedAt,
+		UpdatedAt:        dbUser.CreatedAt,
+		LastLoginAt:      nil,
 	}, nil
 }
 
@@ -91,6 +93,13 @@ func (s *SQLUserStore) UpdateLastLogin(ctx context.Context, id uuid.UUID) error 
 			Valid: true,
 		},
 		UpdatedAt: time.Now(),
+	})
+}
+
+func (s *SQLUserStore) UpdateSpotifyConnectionStatus(ctx context.Context, id uuid.UUID, connected bool) error {
+	return s.db.UpdateSpotifyConnectionStatus(ctx, database.UpdateSpotifyConnectionStatusParams{
+		ID:               id,
+		SpotifyConnected: sql.NullBool{Bool: connected, Valid: true},
 	})
 }
 
@@ -135,6 +144,12 @@ func fromDbUser(dbUser *database.User) *models.User {
 	} else {
 		emailVerified = dbUser.EmailVerified.Bool
 	}
+	var spotifyConnected bool
+	if !dbUser.SpotifyConnected.Valid {
+		spotifyConnected = false
+	} else {
+		spotifyConnected = dbUser.SpotifyConnected.Bool
+	}
 	var lastLoginAt *time.Time
 	if !dbUser.LastLoginAt.Valid {
 		lastLoginAt = nil
@@ -142,15 +157,16 @@ func fromDbUser(dbUser *database.User) *models.User {
 		lastLoginAt = &dbUser.LastLoginAt.Time
 	}
 	return &models.User{
-		ID:             dbUser.ID,
-		Email:          dbUser.Email,
-		HashedPassword: dbUser.HashedPassword,
-		DisplayName:    dbUser.DisplayName,
-		AvatarURL:      avatarURL,
-		EmailVerified:  emailVerified,
-		CreatedAt:      dbUser.CreatedAt,
-		UpdatedAt:      dbUser.UpdatedAt,
-		LastLoginAt:    lastLoginAt,
+		ID:               dbUser.ID,
+		Email:            dbUser.Email,
+		HashedPassword:   dbUser.HashedPassword,
+		DisplayName:      dbUser.DisplayName,
+		AvatarURL:        avatarURL,
+		EmailVerified:    emailVerified,
+		SpotifyConnected: spotifyConnected,
+		CreatedAt:        dbUser.CreatedAt,
+		UpdatedAt:        dbUser.UpdatedAt,
+		LastLoginAt:      lastLoginAt,
 	}
 
 }

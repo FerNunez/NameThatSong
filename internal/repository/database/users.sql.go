@@ -107,9 +107,9 @@ func (q *Queries) CreatePasswordResetTokens(ctx context.Context, arg CreatePassw
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (id, email, hashed_password, email_verified, display_name, avatar_url, last_login_at, created_at, updated_at)
-VALUES ( $1, $2, $3, $4, $5, $6, NULL, NOW(), NOW())
-RETURNING id, email, hashed_password, email_verified, display_name, avatar_url, last_login_at, created_at, updated_at
+INSERT INTO users (id, email, hashed_password, email_verified, display_name, avatar_url, spotify_connected, last_login_at, created_at, updated_at)
+VALUES ( $1, $2, $3, $4, $5, $6, FALSE, NULL, NOW(), NOW())
+RETURNING id, email, hashed_password, email_verified, display_name, avatar_url, spotify_connected, last_login_at, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -139,6 +139,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.EmailVerified,
 		&i.DisplayName,
 		&i.AvatarUrl,
+		&i.SpotifyConnected,
 		&i.LastLoginAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -280,7 +281,7 @@ func (q *Queries) GetPasswordResetTokensByUserID(ctx context.Context, userID uui
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, hashed_password, email_verified, display_name, avatar_url, last_login_at, created_at, updated_at FROM users WHERE email = $1
+SELECT id, email, hashed_password, email_verified, display_name, avatar_url, spotify_connected, last_login_at, created_at, updated_at FROM users WHERE email = $1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -293,6 +294,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.EmailVerified,
 		&i.DisplayName,
 		&i.AvatarUrl,
+		&i.SpotifyConnected,
 		&i.LastLoginAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -301,7 +303,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, hashed_password, email_verified, display_name, avatar_url, last_login_at, created_at, updated_at FROM users WHERE id = $1
+SELECT id, email, hashed_password, email_verified, display_name, avatar_url, spotify_connected, last_login_at, created_at, updated_at FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
@@ -314,6 +316,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.EmailVerified,
 		&i.DisplayName,
 		&i.AvatarUrl,
+		&i.SpotifyConnected,
 		&i.LastLoginAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -397,7 +400,7 @@ const updateLastLogin = `-- name: UpdateLastLogin :exec
 UPDATE users
 SET last_login_at = $2, updated_at = $3
 WHERE id = $1
-RETURNING id, email, hashed_password, email_verified, display_name, avatar_url, last_login_at, created_at, updated_at
+RETURNING id, email, hashed_password, email_verified, display_name, avatar_url, spotify_connected, last_login_at, created_at, updated_at
 `
 
 type UpdateLastLoginParams struct {
@@ -432,6 +435,22 @@ func (q *Queries) UpdatePasswordResetTokensUsedAtByToken(ctx context.Context, to
 	return i, err
 }
 
+const updateSpotifyConnectionStatus = `-- name: UpdateSpotifyConnectionStatus :exec
+UPDATE users
+SET spotify_connected = $2, updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdateSpotifyConnectionStatusParams struct {
+	ID               uuid.UUID
+	SpotifyConnected sql.NullBool
+}
+
+func (q *Queries) UpdateSpotifyConnectionStatus(ctx context.Context, arg UpdateSpotifyConnectionStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateSpotifyConnectionStatus, arg.ID, arg.SpotifyConnected)
+	return err
+}
+
 const updateUserPassword = `-- name: UpdateUserPassword :exec
 UPDATE users
 SET hashed_password = $2, updated_at = NOW()
@@ -452,7 +471,7 @@ const updateUserProfile = `-- name: UpdateUserProfile :exec
 UPDATE users
 SET display_name = $2, avatar_url = $3, updated_at = $4
 WHERE id = $1
-RETURNING id, email, hashed_password, email_verified, display_name, avatar_url, last_login_at, created_at, updated_at
+RETURNING id, email, hashed_password, email_verified, display_name, avatar_url, spotify_connected, last_login_at, created_at, updated_at
 `
 
 type UpdateUserProfileParams struct {
@@ -494,7 +513,7 @@ const verifyUserEmail = `-- name: VerifyUserEmail :exec
 UPDATE users
 SET email_verified = true, updated_at = $2
 WHERE id = $1
-RETURNING id, email, hashed_password, email_verified, display_name, avatar_url, last_login_at, created_at, updated_at
+RETURNING id, email, hashed_password, email_verified, display_name, avatar_url, spotify_connected, last_login_at, created_at, updated_at
 `
 
 type VerifyUserEmailParams struct {

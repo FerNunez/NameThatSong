@@ -155,15 +155,16 @@ type SpotifyTrackArtist struct {
 }
 
 type User struct {
-	ID             uuid.UUID
-	Email          string
-	HashedPassword string
-	EmailVerified  sql.NullBool
-	DisplayName    string
-	AvatarUrl      sql.NullString
-	LastLoginAt    sql.NullTime
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID               uuid.UUID
+	Email            string
+	HashedPassword   string
+	EmailVerified    sql.NullBool
+	DisplayName      string
+	AvatarUrl        sql.NullString
+	SpotifyConnected sql.NullBool
+	LastLoginAt      sql.NullTime
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 type UserSession struct {

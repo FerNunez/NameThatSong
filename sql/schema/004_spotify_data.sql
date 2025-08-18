@@ -86,7 +86,6 @@ CREATE TABLE spotify_playlist_tracks(
     added_by TEXT, -- User that ID
     PRIMARY KEY (playlist_id, track_id),
     UNIQUE(playlist_id, position)
-
 );
 
 

@@ -7,6 +7,7 @@ import (
 	"github.com/FerNunez/NameThatSong/internal/api/middleware"
 	"github.com/FerNunez/NameThatSong/internal/pkg/logger"
 	"github.com/FerNunez/NameThatSong/internal/services/spotify"
+	"github.com/FerNunez/NameThatSong/internal/services/user"
 )
 
 type GetAuthHandler struct {
@@ -18,8 +19,9 @@ func NewGetAuthHandler(ss spotify.SpotifyService) *GetAuthHandler {
 
 }
 func (h *GetAuthHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("HEEEEEEEEEY")
 	logger.Info(r.Context(), "spotify auth request initiated")
-	
+
 	user, ok := middleware.GetUser(r.Context())
 	if !ok {
 		logger.Warn(r.Context(), "spotify auth request without authenticated user")
@@ -29,7 +31,7 @@ func (h *GetAuthHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 
 	logger.Info(r.Context(), "generating spotify auth URL",
 		logger.F("user_id", user.ID.String()))
-	
+
 	urlString, err := h.spotifyService.AuthRequestURL(user.ID.String())
 	if err != nil {
 		logger.Error(r.Context(), "failed to generate spotify auth URL",
@@ -38,11 +40,11 @@ func (h *GetAuthHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("error generating the auth request url: %v", err), http.StatusBadRequest)
 		return
 	}
-	
+
 	logger.Info(r.Context(), "redirecting to spotify auth",
 		logger.F("user_id", user.ID.String()),
 		logger.F("auth_url", urlString))
-	
+
 	// Redirect to Spotify
 	w.Header().Set("HX-Redirect", urlString)
 }
@@ -50,11 +52,14 @@ func (h *GetAuthHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 // //////////////////////////////////////
 type GetAuthCallbackHandler struct {
 	spotifyService spotify.SpotifyService
+	userService    user.UserService
 }
 
-func NewGetAuthCallbackHandler(ss spotify.SpotifyService) *GetAuthCallbackHandler {
-	return &GetAuthCallbackHandler{ss}
-
+func NewGetAuthCallbackHandler(ss spotify.SpotifyService, us user.UserService) *GetAuthCallbackHandler {
+	return &GetAuthCallbackHandler{
+		spotifyService: ss,
+		userService:    us,
+	}
 }
 func (h *GetAuthCallbackHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	logger.Info(r.Context(), "spotify auth callback received")
@@ -67,12 +72,12 @@ func (h *GetAuthCallbackHandler) ServeHttp(w http.ResponseWriter, r *http.Reques
 	}
 	state := r.URL.Query().Get("state")
 	code := r.URL.Query().Get("code")
-	
+
 	logger.Info(r.Context(), "processing spotify token exchange",
 		logger.F("user_id", user.ID.String()),
 		logger.F("has_code", code != ""),
 		logger.F("has_state", state != ""))
-	
+
 	tr, err := h.spotifyService.TokenExchange(r.Context(), user.ID.String(), code, state)
 	if err != nil {
 		logger.Error(r.Context(), "failed to exchange spotify token",
@@ -87,6 +92,18 @@ func (h *GetAuthCallbackHandler) ServeHttp(w http.ResponseWriter, r *http.Reques
 		logger.F("token_type", tr.TokenType),
 		logger.F("expires_in", tr.ExpiresIn),
 		logger.F("scope", tr.Scope))
-	
+
+	// Mark user as Spotify connected
+	err = h.userService.MarkSpotifyConnected(r.Context(), user.ID)
+	if err != nil {
+		logger.Error(r.Context(), "failed to mark user as spotify connected",
+			logger.F("user_id", user.ID.String()),
+			logger.F("error", err))
+		// Continue anyway since the token exchange was successful
+	} else {
+		logger.Info(r.Context(), "user marked as spotify connected",
+			logger.F("user_id", user.ID.String()))
+	}
+
 	http.Redirect(w, r, "/", http.StatusFound)
 }

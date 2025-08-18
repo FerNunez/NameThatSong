@@ -6,6 +6,7 @@ CREATE TABLE users(
   email_verified BOOLEAN DEFAULT FALSE,
   display_name VARCHAR(100) NOT NULL,
   avatar_url TEXT,
+  spotify_connected BOOLEAN DEFAULT FALSE,
   last_login_at TIMESTAMP NULL,
   created_at TIMESTAMP NOT NULL,
   updated_at TIMESTAMP NOT NULL

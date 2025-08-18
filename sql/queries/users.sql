@@ -1,7 +1,7 @@
 -- Users
 -- name: CreateUser :one
-INSERT INTO users (id, email, hashed_password, email_verified, display_name, avatar_url, last_login_at, created_at, updated_at)
-VALUES ( $1, $2, $3, $4, $5, $6, NULL, NOW(), NOW())
+INSERT INTO users (id, email, hashed_password, email_verified, display_name, avatar_url, spotify_connected, last_login_at, created_at, updated_at)
+VALUES ( $1, $2, $3, $4, $5, $6, FALSE, NULL, NOW(), NOW())
 RETURNING *;
 
 -- name: GetUserByID :one
@@ -31,6 +31,11 @@ RETURNING *;
 -- name: UpdateUserPassword :exec
 UPDATE users
 SET hashed_password = $2, updated_at = NOW()
+WHERE id = $1;
+
+-- name: UpdateSpotifyConnectionStatus :exec
+UPDATE users
+SET spotify_connected = $2, updated_at = NOW()
 WHERE id = $1;
 
 -- name: DeleteUser :exec

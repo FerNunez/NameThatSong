@@ -8,15 +8,16 @@ import (
 
 // User model
 type User struct {
-	ID             uuid.UUID  `json:"id"`
-	Email          string     `json:"email"`
-	HashedPassword string     `json:"-"` // Never serialize passwords
-	DisplayName    string     `json:"display_name"`
-	AvatarURL      string     `json:"avatar_url"`
-	EmailVerified  bool       `json:"email_verified"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
-	LastLoginAt    *time.Time `json:"last_login_at"`
+	ID               uuid.UUID  `json:"id"`
+	Email            string     `json:"email"`
+	HashedPassword   string     `json:"-"` // Never serialize passwords
+	DisplayName      string     `json:"display_name"`
+	AvatarURL        string     `json:"avatar_url"`
+	EmailVerified    bool       `json:"email_verified"`
+	SpotifyConnected bool       `json:"spotify_connected"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
+	LastLoginAt      *time.Time `json:"last_login_at"`
 }
 
 // EmailVerificationToken represents a token for email verification

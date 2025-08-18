@@ -476,6 +476,49 @@ func (u *User) ValidateSession(ctx context.Context, sessionID string) (*models.U
 	return dbUser, nil
 }
 
+// Spotify Connection Management
+func (u *User) MarkSpotifyConnected(ctx context.Context, userID uuid.UUID) error {
+	logger.Info(ctx, "marking user as spotify connected",
+		logger.F("user_id", userID.String()))
+
+	err := u.userStore.UpdateSpotifyConnectionStatus(ctx, userID, true)
+	if err != nil {
+		logger.Error(ctx, "failed to mark user as spotify connected",
+			logger.F("user_id", userID.String()),
+			logger.F("error", err))
+		return fmt.Errorf("failed to update spotify connection status: %w", err)
+	}
+
+	logger.Info(ctx, "user marked as spotify connected successfully",
+		logger.F("user_id", userID.String()))
+	return nil
+}
+
+func (u *User) MarkSpotifyDisconnected(ctx context.Context, userID uuid.UUID) error {
+	logger.Info(ctx, "marking user as spotify disconnected",
+		logger.F("user_id", userID.String()))
+
+	err := u.userStore.UpdateSpotifyConnectionStatus(ctx, userID, false)
+	if err != nil {
+		logger.Error(ctx, "failed to mark user as spotify disconnected",
+			logger.F("user_id", userID.String()),
+			logger.F("error", err))
+		return fmt.Errorf("failed to update spotify connection status: %w", err)
+	}
+
+	logger.Info(ctx, "user marked as spotify disconnected successfully",
+		logger.F("user_id", userID.String()))
+	return nil
+}
+
+func (u *User) IsSpotifyConnected(ctx context.Context, userID uuid.UUID) (bool, error) {
+	user, err := u.userStore.GetByID(ctx, userID)
+	if err != nil {
+		return false, fmt.Errorf("failed to get user: %w", err)
+	}
+	return user.SpotifyConnected, nil
+}
+
 // Validation helper methods
 func (u *User) validateRegisterRequest(req models.RegisterRequest) error {
 	if err := validation.ValidateEmail(req.Email); err != nil {

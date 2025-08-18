@@ -32,6 +32,11 @@ type UserService interface {
 	// Session Management
 	CreateSession(ctx context.Context, userID uuid.UUID, deviceInfo, ipAddress, userAgent string) (string, error)
 	ValidateSession(ctx context.Context, sessionID string) (*models.User, error)
+
+	// Spotify Connection Management
+	MarkSpotifyConnected(ctx context.Context, userID uuid.UUID) error
+	MarkSpotifyDisconnected(ctx context.Context, userID uuid.UUID) error
+	IsSpotifyConnected(ctx context.Context, userID uuid.UUID) (bool, error)
 }
 
 // EmailService defines the interface for sending emails

@@ -124,39 +124,45 @@ func main() {
 		r.Get("/login", handlers.NewGetLoginHandler().ServeHttp)
 		r.Post("/login", handlers.NewPostLoginHandler(userService, spotifyService, cookieName).ServeHttp)
 		r.Post("/logout", handlers.NewPostLogoutHandler(userService, cookieName).ServeHTTP)
-		r.Get("/spotify-auth", handlers.NewGetAuthHandler(spotifyService).ServeHttp)
-		r.Get("/auth/callback", handlers.NewGetAuthCallbackHandler(spotifyService).ServeHttp)
+		r.Post("/spotify-auth", handlers.NewGetAuthHandler(spotifyService).ServeHttp)
+		r.Get("/auth/callback", handlers.NewGetAuthCallbackHandler(spotifyService, userService).ServeHttp)
+		r.Get("/connect-spotify", handlers.NewConnectSpotifyHandler().ServeHTTP)
 
-		// Playlist API endpoints
-		playlistHandler := handlers.NewPlaylistHandler(playlistService)
-		r.Get("/playlists", playlistHandler.GetUserPlaylists)
-		r.Post("/playlists", playlistHandler.CreatePlaylist)
-		r.Get("/playlists/{id}", playlistHandler.GetPlaylist)
-		r.Put("/playlists/{id}", playlistHandler.UpdatePlaylist)
-		r.Delete("/playlists/{id}", playlistHandler.DeletePlaylist)
-		r.Post("/playlists/{id}/songs", playlistHandler.AddSongToPlaylist)
-		r.Delete("/playlists/{id}/songs/{songId}", playlistHandler.RemoveSongFromPlaylist)
-		r.Put("/playlists/{id}/songs/reorder", playlistHandler.ReorderPlaylistSongs)
-		r.Post("/playlists/import", playlistHandler.ImportFromSpotify)
-		r.Post("/playlists/{id}/export", playlistHandler.ExportToSpotify)
-		r.Post("/playlists/{id}/sync", playlistHandler.SyncWithSpotify)
+		// Protected routes that require Spotify connection
+		r.Group(func(r chi.Router) {
+			r.Use(m.RequireSpotifyConnection)
 
-		// Debug routes
-		r.Get("/debug/search", handlers.NewDebugSearchHandler(spotifyService).ServeHttp)
+			// Playlist API endpoints
+			playlistHandler := handlers.NewPlaylistHandler(playlistService)
+			r.Get("/playlists", playlistHandler.GetUserPlaylists)
+			r.Post("/playlists", playlistHandler.CreatePlaylist)
+			r.Get("/playlists/{id}", playlistHandler.GetPlaylist)
+			r.Put("/playlists/{id}", playlistHandler.UpdatePlaylist)
+			r.Delete("/playlists/{id}", playlistHandler.DeletePlaylist)
+			r.Post("/playlists/{id}/songs", playlistHandler.AddSongToPlaylist)
+			r.Delete("/playlists/{id}/songs/{songId}", playlistHandler.RemoveSongFromPlaylist)
+			r.Put("/playlists/{id}/songs/reorder", playlistHandler.ReorderPlaylistSongs)
+			r.Post("/playlists/import", playlistHandler.ImportFromSpotify)
+			r.Post("/playlists/{id}/export", playlistHandler.ExportToSpotify)
+			r.Post("/playlists/{id}/sync", playlistHandler.SyncWithSpotify)
 
-		// Simple HTMX Search Interface
-		r.Get("/search", handlers.NewSearchPageHandler().ServeHTTP)
-		r.Get("/api/search", handlers.NewSimpleSearchHandler(spotifyService).ServeHTTP)
-		
-		// Action endpoints for the search interface
-		actionHandler := handlers.NewActionHandler()
-		r.Post("/api/add-track", actionHandler.AddTrackHandler)
-		r.Post("/api/play-track", actionHandler.PlayTrackHandler)
-		r.Post("/api/add-album", actionHandler.AddAlbumHandler)
-		r.Post("/api/play-album", actionHandler.PlayAlbumHandler)
-		r.Post("/api/play-artist", actionHandler.PlayArtistHandler)
-		r.Post("/api/play-playlist", actionHandler.PlayPlaylistHandler)
-		r.Get("/api/artist/{artistId}", handlers.NewArtistDetailHandler(spotifyService).ServeHTTP)
+			// Debug routes
+			r.Get("/debug/search", handlers.NewDebugSearchHandler(spotifyService).ServeHttp)
+
+			// Simple HTMX Search Interface
+			r.Get("/search", handlers.NewSearchPageHandler().ServeHTTP)
+			r.Get("/api/search", handlers.NewSimpleSearchHandler(spotifyService).ServeHTTP)
+
+			// Action endpoints for the search interface
+			actionHandler := handlers.NewActionHandler()
+			r.Post("/api/add-track", actionHandler.AddTrackHandler)
+			r.Post("/api/play-track", actionHandler.PlayTrackHandler)
+			r.Post("/api/add-album", actionHandler.AddAlbumHandler)
+			r.Post("/api/play-album", actionHandler.PlayAlbumHandler)
+			r.Post("/api/play-artist", actionHandler.PlayArtistHandler)
+			r.Post("/api/play-playlist", actionHandler.PlayPlaylistHandler)
+			r.Get("/api/artist/{artistId}", handlers.NewArtistDetailHandler(spotifyService).ServeHTTP)
+		})
 
 		// Search
 		// r.Get("/search-helper", handlers.NewGetSearchArtists().ServeHttp)
