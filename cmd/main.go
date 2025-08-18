@@ -144,6 +144,20 @@ func main() {
 		// Debug routes
 		r.Get("/debug/search", handlers.NewDebugSearchHandler(spotifyService).ServeHttp)
 
+		// Simple HTMX Search Interface
+		r.Get("/search", handlers.NewSearchPageHandler().ServeHTTP)
+		r.Get("/api/search", handlers.NewSimpleSearchHandler(spotifyService).ServeHTTP)
+		
+		// Action endpoints for the search interface
+		actionHandler := handlers.NewActionHandler()
+		r.Post("/api/add-track", actionHandler.AddTrackHandler)
+		r.Post("/api/play-track", actionHandler.PlayTrackHandler)
+		r.Post("/api/add-album", actionHandler.AddAlbumHandler)
+		r.Post("/api/play-album", actionHandler.PlayAlbumHandler)
+		r.Post("/api/play-artist", actionHandler.PlayArtistHandler)
+		r.Post("/api/play-playlist", actionHandler.PlayPlaylistHandler)
+		r.Get("/api/artist/{artistId}", handlers.NewArtistDetailHandler(spotifyService).ServeHTTP)
+
 		// Search
 		// r.Get("/search-helper", handlers.NewGetSearchArtists().ServeHttp)
 		// r.Get("/search-albums", handlers.NewGetArtistAlbums().ServeHttp)
