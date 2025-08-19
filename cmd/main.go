@@ -104,6 +104,9 @@ func main() {
 	// Playlist service
 	playlistService := playlist.NewPlaylistService(playlistStore, spotifyService)
 
+	// Game handler
+	gameHandler := handlers.NewGameHandler(playlistService)
+
 	// Create new router
 	r := chi.NewRouter()
 
@@ -154,7 +157,7 @@ func main() {
 			r.Get("/api/search", handlers.NewSimpleSearchHandler(spotifyService).ServeHTTP)
 
 			// Action endpoints for the search interface
-			actionHandler := handlers.NewActionHandler()
+			actionHandler := handlers.NewActionHandler(spotifyService)
 			r.Post("/api/add-track", actionHandler.AddTrackHandler)
 			r.Post("/api/play-track", actionHandler.PlayTrackHandler)
 			r.Post("/api/add-album", actionHandler.AddAlbumHandler)
@@ -162,6 +165,14 @@ func main() {
 			r.Post("/api/play-artist", actionHandler.PlayArtistHandler)
 			r.Post("/api/play-playlist", actionHandler.PlayPlaylistHandler)
 			r.Get("/api/artist/{artistId}", handlers.NewArtistDetailHandler(spotifyService).ServeHTTP)
+
+			// Game routes
+			r.Get("/game/setup", gameHandler.GameSetupPage)
+			r.Get("/api/playlists", gameHandler.GetUserPlaylists)
+			r.Post("/game/start", gameHandler.StartGame)
+			r.Post("/game/submit-answer", gameHandler.SubmitAnswer)
+			r.Get("/game/timer", gameHandler.GetTimer)
+			r.Get("/game/results", gameHandler.GameResults)
 		})
 
 		// Search

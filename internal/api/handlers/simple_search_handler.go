@@ -31,14 +31,14 @@ func NewSimpleSearchHandler(ss spotify.SpotifyService) *SimpleSearchHandler {
 func (h *SimpleSearchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Get the search query
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
-	
+
 	// If query is empty or too short, return empty state
 	if query == "" {
 		component := templates.EmptySearchState()
 		component.Render(r.Context(), w)
 		return
 	}
-	
+
 	if len(query) < 2 {
 		component := templates.NoResultsFound(query)
 		component.Render(r.Context(), w)
@@ -55,7 +55,7 @@ func (h *SimpleSearchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	// Set reasonable limits for search results
 	const maxResults = 5
-	
+
 	// Create channels for concurrent search operations
 	tracksChan := make(chan []m.TrackSearch)
 	albumsChan := make(chan []m.AlbumSearch)
@@ -72,7 +72,7 @@ func (h *SimpleSearchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			tracksChan <- []m.TrackSearch{}
 			return
 		}
-		
+
 		// Limit results
 		if len(tracks) > maxResults {
 			tracks = tracks[:maxResults]
@@ -89,7 +89,7 @@ func (h *SimpleSearchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			albumsChan <- []m.AlbumSearch{}
 			return
 		}
-		
+
 		// Limit results
 		if len(albums) > maxResults {
 			albums = albums[:maxResults]
@@ -106,7 +106,7 @@ func (h *SimpleSearchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			artistsChan <- []m.ArtistSearch{}
 			return
 		}
-		
+
 		// Limit results
 		if len(artists) > maxResults {
 			artists = artists[:maxResults]
@@ -123,7 +123,7 @@ func (h *SimpleSearchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			playlistsChan <- []m.PlaylistSearch{}
 			return
 		}
-		
+
 		// Limit results
 		if len(playlists) > maxResults {
 			playlists = playlists[:maxResults]
@@ -163,10 +163,10 @@ func (h *SimpleSearchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 
 renderResults:
-	logger.Info(r.Context(), "search completed", 
+	logger.Info(r.Context(), "search completed",
 		logger.F("query", query),
 		logger.F("tracks", len(tracks)),
-		logger.F("albums", len(albums)), 
+		logger.F("albums", len(albums)),
 		logger.F("artists", len(artists)),
 		logger.F("playlists", len(playlists)))
 
@@ -191,17 +191,21 @@ func (h *SearchPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // Action handlers for the buttons (placeholder implementations)
-type ActionHandler struct{}
+type ActionHandler struct {
+	ss spotify.SpotifyService
+}
 
-func NewActionHandler() *ActionHandler {
-	return &ActionHandler{}
+func NewActionHandler(ss spotify.SpotifyService) *ActionHandler {
+	return &ActionHandler{
+		ss: ss,
+	}
 }
 
 // AddTrackHandler handles adding a track to playlist
 func (h *ActionHandler) AddTrackHandler(w http.ResponseWriter, r *http.Request) {
 	trackID := r.FormValue("trackId")
 	logger.Info(r.Context(), "track add requested", logger.F("trackId", trackID))
-	
+
 	// TODO: Implement actual add to playlist logic
 	w.Header().Set("HX-Trigger", "track-added")
 	w.WriteHeader(http.StatusOK)
@@ -212,8 +216,22 @@ func (h *ActionHandler) AddTrackHandler(w http.ResponseWriter, r *http.Request) 
 func (h *ActionHandler) PlayTrackHandler(w http.ResponseWriter, r *http.Request) {
 	trackID := r.FormValue("trackId")
 	logger.Info(r.Context(), "track play requested", logger.F("trackId", trackID))
-	
-	// TODO: Implement actual play logic
+
+	// TODO: Implement act&ual play logic
+	user, ok := middleware.GetUser(r.Context())
+	if !ok {
+		logger.Warn(r.Context(), "debug play track attempted without authenticated user")
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	err := h.ss.PlaySong(r.Context(), user.ID.String(), trackID)
+	if err != nil {
+		logger.Warn(r.Context(), "debug couldnt play track", logger.F("err", err))
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
 	w.Header().Set("HX-Trigger", "track-playing")
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "Playing track %s", trackID)
@@ -223,18 +241,18 @@ func (h *ActionHandler) PlayTrackHandler(w http.ResponseWriter, r *http.Request)
 func (h *ActionHandler) AddAlbumHandler(w http.ResponseWriter, r *http.Request) {
 	albumID := r.FormValue("albumId")
 	logger.Info(r.Context(), "album add requested", logger.F("albumId", albumID))
-	
+
 	// TODO: Implement actual add album logic
 	w.Header().Set("HX-Trigger", "album-added")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Album %s added to playlist", albumID)
+	fmt.Fprint(w, "Album added to playlist", albumID)
 }
 
 // PlayAlbumHandler handles playing an album
 func (h *ActionHandler) PlayAlbumHandler(w http.ResponseWriter, r *http.Request) {
 	albumID := r.FormValue("albumId")
 	logger.Info(r.Context(), "album play requested", logger.F("albumId", albumID))
-	
+
 	// TODO: Implement actual play album logic
 	w.Header().Set("HX-Trigger", "album-playing")
 	w.WriteHeader(http.StatusOK)
@@ -245,7 +263,7 @@ func (h *ActionHandler) PlayAlbumHandler(w http.ResponseWriter, r *http.Request)
 func (h *ActionHandler) PlayArtistHandler(w http.ResponseWriter, r *http.Request) {
 	artistID := r.FormValue("artistId")
 	logger.Info(r.Context(), "artist play requested", logger.F("artistId", artistID))
-	
+
 	// TODO: Implement actual play artist logic
 	w.Header().Set("HX-Trigger", "artist-playing")
 	w.WriteHeader(http.StatusOK)
@@ -256,7 +274,7 @@ func (h *ActionHandler) PlayArtistHandler(w http.ResponseWriter, r *http.Request
 func (h *ActionHandler) PlayPlaylistHandler(w http.ResponseWriter, r *http.Request) {
 	playlistName := r.FormValue("playlistName")
 	logger.Info(r.Context(), "playlist play requested", logger.F("playlistName", playlistName))
-	
+
 	// TODO: Implement actual play playlist logic
 	w.Header().Set("HX-Trigger", "playlist-playing")
 	w.WriteHeader(http.StatusOK)
@@ -278,9 +296,9 @@ func (h *ArtistDetailHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Artist ID required", http.StatusBadRequest)
 		return
 	}
-	
+
 	logger.Info(r.Context(), "artist detail requested", logger.F("artistId", artistID))
-	
+
 	// TODO: Implement artist detail view
 	// For now, just return a simple message
 	w.WriteHeader(http.StatusOK)

@@ -1,0 +1,273 @@
+package templates
+
+import (
+	"strconv"
+)
+
+type GameResults struct {
+	ID               string `json:"id"`
+	TotalScore       int    `json:"total_score"`
+	TotalQuestions   int    `json:"total_questions"`
+	CorrectAnswers   int    `json:"correct_answers"`
+	AccuracyRate     float64 `json:"accuracy_rate"`
+	TotalTime        int    `json:"total_time"`
+	Difficulty       string `json:"difficulty"`
+	PlaylistName     string `json:"playlist_name"`
+	NewBestScore     bool   `json:"new_best_score"`
+	PointsBreakdown  []PointEntry `json:"points_breakdown"`
+}
+
+type PointEntry struct {
+	Round       int    `json:"round"`
+	SongTitle   string `json:"song_title"`
+	Artist      string `json:"artist"`
+	UserAnswer  string `json:"user_answer"`
+	IsCorrect   bool   `json:"is_correct"`
+	Points      int    `json:"points"`
+	ResponseTime int   `json:"response_time"`
+}
+
+templ GameResultsPage(results GameResults) {
+	<div id="game-container" class="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white">
+		<div class="container mx-auto px-4 py-8">
+			<!-- Results Header -->
+			<div class="text-center mb-8">
+				if results.NewBestScore {
+					<div class="mb-4">
+						<div class="inline-flex items-center bg-yellow-500 text-black px-4 py-2 rounded-full font-bold animate-bounce">
+							🏆 NEW BEST SCORE! 🏆
+						</div>
+					</div>
+				}
+				<h1 class="text-4xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500">
+					Game Complete!
+				</h1>
+				<p class="text-gray-300 text-lg">{ results.PlaylistName } • { results.Difficulty } Difficulty</p>
+			</div>
+
+			<!-- Score Overview -->
+			<div class="max-w-4xl mx-auto mb-8">
+				<div class="bg-gray-800 rounded-xl p-8 border border-gray-700">
+					<div class="grid grid-cols-1 md:grid-cols-4 gap-6 text-center">
+						<!-- Final Score -->
+						<div class="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-6">
+							<div class="text-3xl font-bold mb-2">{ strconv.Itoa(results.TotalScore) }</div>
+							<div class="text-green-100 text-sm">Final Score</div>
+						</div>
+						
+						<!-- Accuracy -->
+						<div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-6">
+							<div class="text-3xl font-bold mb-2">{ strconv.FormatFloat(results.AccuracyRate, 'f', 1, 64) }%</div>
+							<div class="text-blue-100 text-sm">Accuracy</div>
+						</div>
+						
+						<!-- Correct Answers -->
+						<div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-6">
+							<div class="text-3xl font-bold mb-2">{ strconv.Itoa(results.CorrectAnswers) }/{ strconv.Itoa(results.TotalQuestions) }</div>
+							<div class="text-purple-100 text-sm">Correct</div>
+						</div>
+						
+						<!-- Time -->
+						<div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg p-6">
+							<div class="text-3xl font-bold mb-2">{ strconv.Itoa(results.TotalTime/60) }:{ strconv.Itoa(results.TotalTime%60) }</div>
+							<div class="text-orange-100 text-sm">Total Time</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Performance Analysis -->
+			<div class="max-w-4xl mx-auto mb-8">
+				<div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+					<h2 class="text-2xl font-bold mb-6">Performance Analysis</h2>
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+						<!-- Performance Chart Placeholder -->
+						<div>
+							<h3 class="text-lg font-semibold mb-4">Score by Round</h3>
+							<div class="bg-gray-700 rounded-lg p-4 h-40 flex items-center justify-center">
+								<div class="flex items-end space-x-1 h-full">
+									for i, entry := range results.PointsBreakdown {
+										<div class="flex flex-col items-center">
+											if entry.IsCorrect {
+												<div class="bg-green-400 w-6 rounded-t" style={ "height: " + strconv.Itoa(entry.Points/10) + "px" }></div>
+											} else {
+												<div class="bg-red-400 w-6 rounded-t h-2"></div>
+											}
+											<span class="text-xs text-gray-400 mt-1">{ strconv.Itoa(i+1) }</span>
+										</div>
+									}
+								</div>
+							</div>
+						</div>
+
+						<!-- Stats -->
+						<div>
+							<h3 class="text-lg font-semibold mb-4">Quick Stats</h3>
+							<div class="space-y-3">
+								<div class="flex justify-between items-center">
+									<span class="text-gray-400">Average Response Time:</span>
+									<span class="font-semibold">
+										{ strconv.Itoa(getAverageResponseTime(results.PointsBreakdown)) }s
+									</span>
+								</div>
+								<div class="flex justify-between items-center">
+									<span class="text-gray-400">Best Round Score:</span>
+									<span class="font-semibold text-green-400">
+										+{ strconv.Itoa(getBestRoundScore(results.PointsBreakdown)) }
+									</span>
+								</div>
+								<div class="flex justify-between items-center">
+									<span class="text-gray-400">Difficulty Bonus:</span>
+									<span class="font-semibold text-blue-400">
+										if results.Difficulty == "hard" {
+											+50%
+										} else if results.Difficulty == "medium" {
+											+25%
+										} else {
+											Base
+										}
+									</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Detailed Breakdown -->
+			<div class="max-w-4xl mx-auto mb-8">
+				<div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+					<h2 class="text-2xl font-bold mb-6">Round by Round</h2>
+					<div class="space-y-3">
+						for i, entry := range results.PointsBreakdown {
+							<div class="bg-gray-700 rounded-lg p-4 flex items-center justify-between">
+								<div class="flex items-center space-x-4">
+									<div class="text-center">
+										<div class="text-lg font-bold text-gray-400">{ strconv.Itoa(i+1) }</div>
+									</div>
+									if entry.IsCorrect {
+										<div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+											<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+												<path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path>
+											</svg>
+										</div>
+									} else {
+										<div class="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+											<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+												<path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path>
+											</svg>
+										</div>
+									}
+									<div>
+										<div class="font-semibold text-white">{ entry.SongTitle }</div>
+										<div class="text-sm text-gray-400">by { entry.Artist }</div>
+										if !entry.IsCorrect && entry.UserAnswer != "" {
+											<div class="text-sm text-red-400">Your answer: { entry.UserAnswer }</div>
+										}
+									</div>
+								</div>
+								<div class="text-right">
+									if entry.IsCorrect {
+										<div class="text-lg font-bold text-green-400">+{ strconv.Itoa(entry.Points) }</div>
+									} else {
+										<div class="text-lg font-bold text-gray-500">0</div>
+									}
+									<div class="text-sm text-gray-400">{ strconv.Itoa(entry.ResponseTime) }s</div>
+								</div>
+							</div>
+						}
+					</div>
+				</div>
+			</div>
+
+			<!-- Action Buttons -->
+			<div class="max-w-md mx-auto text-center space-y-4">
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<!-- Play Again -->
+					<button hx-get="/game/setup" 
+					        hx-target="#game-container" 
+					        hx-swap="outerHTML"
+					        class="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-bold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105">
+						🎵 Play Again
+					</button>
+					
+					<!-- Share Results -->
+					<button onclick="shareResults()" 
+					        class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-xl transition-colors">
+						📱 Share Results
+					</button>
+				</div>
+				
+				<!-- View Statistics -->
+				<button hx-get="/game/stats" 
+				        hx-target="#game-container" 
+				        hx-swap="outerHTML"
+				        class="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-xl transition-colors">
+					📊 View All Statistics
+				</button>
+				
+				<!-- Back to Home -->
+				<button hx-get="/" 
+				        hx-target="body" 
+				        hx-swap="outerHTML"
+				        class="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-3 px-6 rounded-xl transition-colors border border-gray-600">
+					🏠 Back to Home
+				</button>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		// Share results functionality
+		function shareResults() {
+			const text = `🎵 I just scored ${ results.TotalScore } points playing NameThatSong!\n\n` +
+						 `✅ ${ results.CorrectAnswers }/${ results.TotalQuestions } correct (${ results.AccuracyRate }% accuracy)\n` +
+						 `🎯 Difficulty: ${ results.Difficulty.charAt(0).toUpperCase() + results.Difficulty.slice(1) }\n` +
+						 `📀 Playlist: ${ results.PlaylistName }\n\n` +
+						 `Can you beat my score? 🎧`;
+
+			if (navigator.share) {
+				navigator.share({
+					title: 'My NameThatSong Results',
+					text: text,
+					url: window.location.origin
+				});
+			} else {
+				// Fallback: copy to clipboard
+				navigator.clipboard.writeText(text).then(() => {
+					alert('Results copied to clipboard! Share them with your friends!');
+				});
+			}
+		}
+
+		// Celebrate new best score
+		if ({ strconv.FormatBool(results.NewBestScore) }) {
+			// Add confetti effect or celebration animation
+			setTimeout(() => {
+				document.body.style.animation = 'confetti 3s ease-in-out';
+			}, 500);
+		}
+	</script>
+}
+
+// Helper functions would be implemented in Go
+func getAverageResponseTime(breakdown []PointEntry) int {
+	if len(breakdown) == 0 {
+		return 0
+	}
+	total := 0
+	for _, entry := range breakdown {
+		total += entry.ResponseTime
+	}
+	return total / len(breakdown)
+}
+
+func getBestRoundScore(breakdown []PointEntry) int {
+	best := 0
+	for _, entry := range breakdown {
+		if entry.Points > best {
+			best = entry.Points
+		}
+	}
+	return best
+}
