@@ -117,6 +117,7 @@ func main() {
 			authMiddleware.AddUserToCtxt,
 		)
 		r.Get("/", handlers.NewGetIndexHandler().ServeHttp)
+		r.Get("/modern", handlers.NewModernHandler().ServeHTTP)
 		// Set up static file server
 		fileServer := http.FileServer(http.Dir("./static"))
 		r.Handle("/static/*", http.StripPrefix("/static/", fileServer))

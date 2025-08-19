@@ -1,0 +1,275 @@
+package templates
+
+import "strconv"
+
+type ModernGameState struct {
+	ID           string
+	PlaylistID   string
+	CurrentSong  ModernSong
+	Score        int
+	TotalSongs   int
+	TimeLeft     int
+	IsActive     bool
+	Guesses      []string
+	Difficulty   string
+}
+
+templ GameSetup() {
+	<div class="max-w-4xl mx-auto p-8">
+		<div class="text-center mb-12">
+			<h1 class="text-4xl font-bold text-white mb-4">Setup Your Game</h1>
+			<p class="text-forest-50 text-lg">Choose a playlist and difficulty to start your music challenge</p>
+		</div>
+		
+		<div class="bg-forest-300 rounded-xl p-8 space-y-8">
+			<!-- Playlist Selection -->
+			<div>
+				<h3 class="text-xl font-semibold text-white mb-4">Select Playlist</h3>
+				<div id="playlist-selection" 
+					 hx-get="/api/playlists" 
+					 hx-trigger="load"
+					 hx-target="this">
+					@LoadingSpinner()
+				</div>
+			</div>
+			
+			<!-- Difficulty Selection -->
+			<div>
+				<h3 class="text-xl font-semibold text-white mb-4">Choose Difficulty</h3>
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+					@DifficultyCard("easy", "Easy", "10 seconds per song", "bg-green-600")
+					@DifficultyCard("medium", "Medium", "7 seconds per song", "bg-yellow-600")
+					@DifficultyCard("hard", "Hard", "5 seconds per song", "bg-red-600")
+				</div>
+			</div>
+			
+			<!-- Start Game Button -->
+			<div class="text-center pt-4">
+				<button id="start-game-btn"
+						class="px-8 py-4 bg-accent text-forest-400 font-bold text-xl rounded-xl
+							   hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+						disabled
+						hx-post="/api/game/start"
+						hx-include="[name='playlist-id'], [name='difficulty']"
+						hx-target="body"
+						hx-swap="outerHTML">
+					Start Game
+				</button>
+			</div>
+		</div>
+	</div>
+}
+
+templ DifficultyCard(value, title, description, colorClass string) {
+	<label class="block cursor-pointer">
+		<input type="radio" name="difficulty" value={ value } class="sr-only" onchange="enableStartButton()"/>
+		<div class={ "p-4 rounded-lg border-2 border-transparent transition-all hover:border-forest-100", 
+					  "peer-checked:border-accent peer-checked:" + colorClass }>
+			<div class="text-center">
+				<h4 class="font-semibold text-white mb-2">{ title }</h4>
+				<p class="text-forest-50 text-sm">{ description }</p>
+			</div>
+		</div>
+	</label>
+}
+
+templ GameActive(game ModernGameState) {
+	<div class="max-w-4xl mx-auto p-8">
+		<!-- Game Header -->
+		<div class="flex justify-between items-center mb-8">
+			<div class="flex items-center gap-4">
+				<h1 class="text-2xl font-bold text-white">Music Challenge</h1>
+				<div class="px-3 py-1 bg-forest-200 rounded-lg">
+					<span class="text-forest-50 text-sm">Score: </span>
+					<span class="text-white font-bold">{ strconv.Itoa(game.Score) }</span>
+				</div>
+			</div>
+			<div class="flex items-center gap-4">
+				<div class={ "px-4 py-2 rounded-lg font-bold", 
+							templ.KV("bg-green-600", game.TimeLeft > 7),
+							templ.KV("bg-yellow-600", game.TimeLeft <= 7 && game.TimeLeft > 3),
+							templ.KV("bg-red-600", game.TimeLeft <= 3) }>
+					<span class="text-white">{ strconv.Itoa(game.TimeLeft) }s</span>
+				</div>
+				<button class="px-4 py-2 bg-forest-200 text-white rounded-lg hover:bg-forest-100"
+						hx-post="/api/game/pause">
+					Pause
+				</button>
+			</div>
+		</div>
+		
+		<!-- Progress Bar -->
+		<div class="mb-8">
+			<div class="flex justify-between text-sm text-forest-50 mb-2">
+				<span>Progress</span>
+				<span>{ strconv.Itoa(game.Score) } / { strconv.Itoa(game.TotalSongs) }</span>
+			</div>
+			<div class="w-full bg-forest-200 rounded-full h-2">
+				<div class="bg-accent rounded-full h-2 transition-all duration-300" 
+					 style={ "width: " + strconv.Itoa((game.Score*100)/game.TotalSongs) + "%" }></div>
+			</div>
+		</div>
+		
+		<!-- Song Player Area -->
+		<div class="bg-forest-300 rounded-xl p-8 text-center mb-8">
+			<div class="mb-6">
+				<div class="w-32 h-32 mx-auto bg-forest-200 rounded-full mb-4 flex items-center justify-center animate-pulse-soft">
+					@MusicIcon()
+				</div>
+				<p class="text-forest-50">Listen carefully...</p>
+			</div>
+			
+			<!-- Playback Controls -->
+			<div class="flex justify-center gap-4 mb-6">
+				<button class="w-12 h-12 bg-forest-200 rounded-full flex items-center justify-center hover:bg-forest-100"
+						hx-post="/api/game/replay">
+					@PlayIcon()
+				</button>
+			</div>
+		</div>
+		
+		<!-- Guess Input -->
+		<div class="bg-forest-300 rounded-xl p-6">
+			<h3 class="text-xl font-semibold text-white mb-4 text-center">What's the song?</h3>
+			<div class="max-w-2xl mx-auto">
+				<input type="text" 
+					   name="guess"
+					   placeholder="Enter song title or artist..."
+					   class="w-full px-4 py-3 bg-forest-200 border border-forest-100 rounded-lg 
+							  text-white placeholder-forest-50 focus:outline-none focus:border-accent"
+					   hx-post="/api/game/guess"
+					   hx-trigger="keyup[key=='Enter']"
+					   hx-include="this"
+					   hx-target="#game-content"
+					   autocomplete="off"/>
+				
+				<div class="flex justify-center gap-4 mt-4">
+					<button class="px-6 py-2 bg-accent text-forest-400 font-bold rounded-lg hover:bg-opacity-90"
+							hx-post="/api/game/guess"
+							hx-include="[name='guess']"
+							hx-target="#game-content">
+						Submit Guess
+					</button>
+					<button class="px-6 py-2 bg-forest-200 text-white rounded-lg hover:bg-forest-100"
+							hx-post="/api/game/skip"
+							hx-target="#game-content">
+						Skip Song
+					</button>
+				</div>
+			</div>
+		</div>
+		
+		<!-- Previous Guesses -->
+		if len(game.Guesses) > 0 {
+			<div class="mt-8 bg-forest-300 rounded-xl p-6">
+				<h4 class="text-lg font-semibold text-white mb-4">Previous Guesses</h4>
+				<div class="flex flex-wrap gap-2">
+					for _, guess := range game.Guesses {
+						<span class="px-3 py-1 bg-forest-200 text-forest-50 rounded-lg text-sm">{ guess }</span>
+					}
+				</div>
+			</div>
+		}
+	</div>
+}
+
+templ ModernGameResults(game ModernGameState, finalScore int, correctAnswers []ModernSong) {
+	<div class="max-w-4xl mx-auto p-8 text-center">
+		<!-- Results Header -->
+		<div class="mb-12">
+			<h1 class="text-4xl font-bold text-white mb-4">Game Complete!</h1>
+			<div class="text-6xl font-bold text-accent mb-4">{ strconv.Itoa(finalScore) }/{ strconv.Itoa(game.TotalSongs) }</div>
+			<p class="text-forest-50 text-xl">
+				if finalScore == game.TotalSongs {
+					Perfect score! You're a music master! 🎉
+				} else if finalScore >= (game.TotalSongs * 3 / 4) {
+					Great job! You really know your music! 🎵
+				} else if finalScore >= (game.TotalSongs / 2) {
+					Not bad! Keep practicing! 🎶
+				} else {
+					Keep listening and try again! 🎧
+				}
+			</p>
+		</div>
+		
+		<!-- Score Breakdown -->
+		<div class="bg-forest-300 rounded-xl p-8 mb-8">
+			<h3 class="text-2xl font-semibold text-white mb-6">Score Breakdown</h3>
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+				<div class="text-center">
+					<div class="text-3xl font-bold text-green-400">{ strconv.Itoa(finalScore) }</div>
+					<div class="text-forest-50">Correct</div>
+				</div>
+				<div class="text-center">
+					<div class="text-3xl font-bold text-red-400">{ strconv.Itoa(game.TotalSongs - finalScore) }</div>
+					<div class="text-forest-50">Missed</div>
+				</div>
+				<div class="text-center">
+					<div class="text-3xl font-bold text-accent">{ strconv.Itoa((finalScore * 100) / game.TotalSongs) }%</div>
+					<div class="text-forest-50">Accuracy</div>
+				</div>
+			</div>
+		</div>
+		
+		<!-- Correct Answers -->
+		if len(correctAnswers) > 0 {
+			<div class="bg-forest-300 rounded-xl p-8 mb-8">
+				<h3 class="text-2xl font-semibold text-white mb-6">Songs You Heard</h3>
+				<div class="space-y-3">
+					for _, song := range correctAnswers {
+						@GameResultSong(song)
+					}
+				</div>
+			</div>
+		}
+		
+		<!-- Action Buttons -->
+		<div class="flex justify-center gap-4">
+			<button class="px-8 py-4 bg-accent text-forest-400 font-bold text-xl rounded-xl hover:bg-opacity-90"
+					hx-get="/game/setup"
+					hx-target="body"
+					hx-swap="outerHTML">
+				Play Again
+			</button>
+			<a href="/" 
+			   class="px-8 py-4 bg-forest-200 text-white font-bold text-xl rounded-xl hover:bg-forest-100 inline-block">
+				Home
+			</a>
+		</div>
+	</div>
+}
+
+templ GameResultSong(song ModernSong) {
+	<div class="flex items-center gap-4 p-3 bg-forest-200 rounded-lg">
+		<div class="w-12 h-12 bg-forest-100 rounded overflow-hidden flex-shrink-0">
+			if song.AlbumArt != "" {
+				<img src={ song.AlbumArt } alt={ song.Title } class="w-full h-full object-cover"/>
+			} else {
+				<div class="w-full h-full flex items-center justify-center">
+					@MusicIcon()
+				</div>
+			}
+		</div>
+		<div class="flex-1 text-left">
+			<p class="font-medium text-white">{ song.Title }</p>
+			<p class="text-forest-50 text-sm">{ song.Artist }</p>
+		</div>
+	</div>
+}
+
+templ LoadingSpinner() {
+	<div class="flex justify-center items-center p-8">
+		<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+	</div>
+}
+
+script enableStartButton() {
+	// Enable start button when both playlist and difficulty are selected
+	const playlistSelected = document.querySelector('[name="playlist-id"]:checked');
+	const difficultySelected = document.querySelector('[name="difficulty"]:checked');
+	const startBtn = document.getElementById('start-game-btn');
+	
+	if (playlistSelected && difficultySelected && startBtn) {
+		startBtn.disabled = false;
+	}
+}

@@ -1,5 +1,6 @@
 package templates
 
+// Legacy IndexPage - keeping for backward compatibility
 templ IndexPage() {
 	<div>
 		<script>
@@ -37,23 +38,15 @@ templ IndexPage() {
 					   class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-4 px-8 rounded-xl text-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200">
 						🔍 Search Music
 					</a>
+					
+					<a href="/modern" 
+					   class="bg-accent hover:bg-green-400 text-forest-400 font-bold py-4 px-8 rounded-xl text-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200">
+						✨ New UI
+					</a>
 				</div>
 			</div>
 		</div>
 
 		@SimpleSearchLayout()
-		//@SearchInput(g.IsUserSpotifyConnected())
-		//		<div class="fixed bottom-3/8 left-1/2 transform -translate-x-1/2 w-full flex justify-center">
-		//			<div class="w-full flex-1 flex flex-col items-center gap-4">
-		//				if g!=nil {
-		//					<div class="w-full max-w-6xl px-4">
-		//						@MusicPlayer(g)
-		//					</div>
-		//				}
-		//				<div class="w-full max-w-2xl px-4">
-		//					@GuesserInterface()
-		//				</div>
-		//			</div>
-		//		</div>
 	</div>
 }

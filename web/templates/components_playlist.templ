@@ -1,0 +1,205 @@
+package templates
+
+import "strconv"
+
+type ModernSong struct {
+	ID       string
+	Title    string
+	Artist   string
+	AlbumArt string
+	Duration int    // Duration in seconds
+	Liked    bool
+}
+
+type ModernPlaylist struct {
+	ID          string
+	Title       string
+	Description string
+	CoverImage  string
+	Songs       []ModernSong
+	IsEditable  bool
+	SongCount   int
+	TotalTime   int // Total duration in seconds
+}
+
+templ PlaylistView(playlist ModernPlaylist) {
+	<div class="flex flex-col max-w-6xl mx-auto p-8">
+		<!-- Playlist Header -->
+		@PlaylistHeader(playlist)
+		
+		<!-- Action Buttons -->
+		<div class="flex gap-3 py-6 border-b border-forest-100">
+			<button 
+				class="px-6 h-12 bg-accent text-forest-400 font-bold rounded-lg 
+					   hover:bg-opacity-90 transition-colors flex items-center gap-2"
+				hx-post={ "/api/playlist/" + playlist.ID + "/play" }>
+				@PlayIcon()
+				Play
+			</button>
+			<button 
+				class="px-6 h-12 bg-forest-200 text-white font-bold rounded-lg 
+					   hover:bg-forest-100 transition-colors flex items-center gap-2"
+				hx-post={ "/api/playlist/" + playlist.ID + "/shuffle" }>
+				@ShuffleIcon()
+				Shuffle
+			</button>
+			<button 
+				class="px-6 h-12 bg-forest-200 text-white font-medium rounded-lg 
+					   hover:bg-forest-100 transition-colors"
+				hx-post={ "/api/playlist/" + playlist.ID + "/like" }>
+				@HeartIcon()
+			</button>
+			<button 
+				class="px-4 h-12 bg-forest-200 text-white font-medium rounded-lg 
+					   hover:bg-forest-100 transition-colors"
+				hx-get={ "/api/playlist/" + playlist.ID + "/menu" }
+				hx-target="#playlist-menu">
+				@MoreIcon()
+			</button>
+		</div>
+		
+		<!-- Song List Header -->
+		<div class="flex items-center gap-4 px-4 py-3 text-sm font-medium text-forest-50 border-b border-forest-100">
+			<div class="w-8">#</div>
+			<div class="w-12"></div>
+			<div class="flex-1">Title</div>
+			<div class="w-32">Album</div>
+			<div class="w-20">Duration</div>
+			<div class="w-12"></div>
+		</div>
+		
+		<!-- Song List -->
+		<div id="song-list" class="space-y-0">
+			for i, song := range playlist.Songs {
+				@SongItem(song, i+1, playlist.ID)
+			}
+		</div>
+		
+		<!-- Playlist Menu (Initially Hidden) -->
+		<div id="playlist-menu"></div>
+	</div>
+}
+
+templ PlaylistHeader(playlist ModernPlaylist) {
+	<div class="flex gap-6 mb-6">
+		<!-- Cover Image -->
+		<div class="w-48 h-48 bg-forest-200 rounded-xl shadow-lg flex-shrink-0 overflow-hidden">
+			if playlist.CoverImage != "" {
+				<img src={ playlist.CoverImage } alt={ playlist.Title } class="w-full h-full object-cover"/>
+			} else {
+				<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-forest-200 to-forest-300">
+					@MusicIcon()
+				</div>
+			}
+		</div>
+		
+		<!-- Playlist Info -->
+		<div class="flex-1 flex flex-col justify-end">
+			<p class="text-sm font-medium text-forest-50 mb-2">Playlist</p>
+			<h1 class="text-4xl font-bold text-white mb-4 leading-tight">{ playlist.Title }</h1>
+			if playlist.Description != "" {
+				<p class="text-forest-50 mb-4 text-lg">{ playlist.Description }</p>
+			}
+			<div class="flex items-center gap-2 text-sm text-forest-50">
+				<span>{ strconv.Itoa(playlist.SongCount) } songs</span>
+				<span>•</span>
+				<span>{ formatDuration(playlist.TotalTime) }</span>
+			</div>
+		</div>
+	</div>
+}
+
+templ SongItem(song ModernSong, index int, playlistID string) {
+	<div class="flex items-center gap-4 px-4 py-3 hover:bg-forest-300 transition-colors group">
+		<!-- Index/Play Button -->
+		<div class="w-8 text-forest-50 text-sm">
+			<span class="group-hover:hidden">{ strconv.Itoa(index) }</span>
+			<button class="hidden group-hover:block text-white hover:text-accent">
+				@PlayIcon()
+			</button>
+		</div>
+		
+		<!-- Album Art -->
+		<div class="w-12 h-12 bg-forest-200 rounded overflow-hidden flex-shrink-0">
+			if song.AlbumArt != "" {
+				<img src={ song.AlbumArt } alt={ song.Title } class="w-full h-full object-cover"/>
+			} else {
+				<div class="w-full h-full flex items-center justify-center">
+					@MusicIcon()
+				</div>
+			}
+		</div>
+		
+		<!-- Song Info -->
+		<div class="flex-1 min-w-0">
+			<p class="font-medium text-white truncate">{ song.Title }</p>
+			<p class="text-forest-50 text-sm truncate">{ song.Artist }</p>
+		</div>
+		
+		<!-- Album -->
+		<div class="w-32 text-forest-50 text-sm truncate hidden md:block">
+			Album Name
+		</div>
+		
+		<!-- Duration -->
+		<div class="w-20 text-forest-50 text-sm">
+			{ formatDuration(song.Duration) }
+		</div>
+		
+		<!-- Actions -->
+		<div class="w-12 flex justify-end">
+			<button class="opacity-0 group-hover:opacity-100 text-forest-50 hover:text-white transition-all"
+					hx-post={ "/api/song/" + song.ID + "/like" }
+					hx-target="this">
+				if song.Liked {
+					@HeartFilledIcon()
+				} else {
+					@HeartIcon()
+				}
+			</button>
+		</div>
+	</div>
+}
+
+templ PlaylistCard(playlist ModernPlaylist) {
+	<div class="bg-forest-300 rounded-xl p-4 hover:bg-forest-200 transition-colors cursor-pointer group"
+		 hx-get={ "/playlist/" + playlist.ID }
+		 hx-target="#main-content">
+		
+		<!-- Cover Image -->
+		<div class="w-full aspect-square bg-forest-200 rounded-lg mb-4 overflow-hidden group-hover:shadow-lg transition-shadow">
+			if playlist.CoverImage != "" {
+				<img src={ playlist.CoverImage } alt={ playlist.Title } class="w-full h-full object-cover"/>
+			} else {
+				<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-forest-200 to-forest-100">
+					@MusicIcon()
+				</div>
+			}
+		</div>
+		
+		<!-- Playlist Info -->
+		<h3 class="font-semibold text-white mb-1 truncate">{ playlist.Title }</h3>
+		<p class="text-forest-50 text-sm truncate">{ strconv.Itoa(playlist.SongCount) } songs</p>
+	</div>
+}
+
+templ ModernPlaylistGrid(playlists []ModernPlaylist) {
+	<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+		for _, playlist := range playlists {
+			@PlaylistCard(playlist)
+		}
+	</div>
+}
+
+// Helper function to format duration from seconds to MM:SS
+func formatDuration(seconds int) string {
+	if seconds <= 0 {
+		return "0:00"
+	}
+	minutes := seconds / 60
+	secs := seconds % 60
+	if secs < 10 {
+		return strconv.Itoa(minutes) + ":0" + strconv.Itoa(secs)
+	}
+	return strconv.Itoa(minutes) + ":" + strconv.Itoa(secs)
+}

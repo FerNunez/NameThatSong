@@ -1,0 +1,77 @@
+package templates
+
+templ ModernIndexPage() {
+	<div class="min-h-full flex flex-col">
+		<!-- Hero Section -->
+		<div class="flex-1 flex items-center justify-center px-8 py-12">
+			<div class="text-center max-w-4xl mx-auto">
+				<h1 class="text-7xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-accent to-forest-50">
+					🎵 NameThatSong
+				</h1>
+				<p class="text-forest-50 text-xl mb-12 leading-relaxed">
+					Test your music knowledge with our interactive guessing game!
+					<br/>
+					Import your Spotify playlists and challenge yourself.
+				</p>
+				<div class="flex justify-center gap-6 mb-12">
+					<button
+						hx-get="/game/setup"
+						hx-target="body"
+						hx-swap="outerHTML"
+						class="group bg-gradient-to-r from-accent to-green-400 hover:from-green-400 hover:to-accent 
+							   text-forest-400 font-bold py-4 px-8 rounded-xl text-xl 
+							   shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 
+							   flex items-center gap-3"
+					>
+						@PlayIcon()
+						Start Game
+					</button>
+					<a
+						href="/search"
+						class="group bg-forest-200 hover:bg-forest-100 text-white font-bold py-4 px-8 rounded-xl text-xl 
+							  shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 
+							  flex items-center gap-3"
+					>
+						@SearchIcon()
+						Search Music
+					</a>
+				</div>
+			</div>
+		</div>
+		<!-- Features Section -->
+		<div class="px-8 py-12 border-t border-forest-100">
+			<div class="max-w-6xl mx-auto">
+				<h2 class="text-3xl font-bold text-center mb-12 text-white">Features</h2>
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+					@FeatureCard("🎮", "Interactive Games", "Challenge yourself with song guessing games from your favorite playlists")
+					@FeatureCard("🎧", "Spotify Integration", "Import and manage your Spotify playlists seamlessly")
+					@FeatureCard("📊", "Track Progress", "Monitor your music knowledge and see your improvement over time")
+				</div>
+			</div>
+		</div>
+		<!-- Search Interface -->
+		<div class="px-8 py-12 bg-forest-300">
+			@QuickSearch()
+		</div>
+	</div>
+}
+
+templ FeatureCard(icon, title, description string) {
+	<div class="text-center p-6 bg-forest-300 rounded-xl border border-forest-200 hover:border-forest-100 transition-colors">
+		<div class="text-4xl mb-4">{ icon }</div>
+		<h3 class="text-xl font-semibold mb-3 text-white">{ title }</h3>
+		<p class="text-forest-50 leading-relaxed">{ description }</p>
+	</div>
+}
+
+templ QuickSearch() {
+	<div class="max-w-4xl mx-auto text-center">
+		<h3 class="text-2xl font-bold mb-6 text-white">Quick Search</h3>
+		<div class="max-w-2xl mx-auto">
+			@SearchInput("Search for songs, artists, or albums...", "main-search")
+		</div>
+		<div id="search-results" class="mt-8">
+			<!-- Search results will appear here -->
+		</div>
+	</div>
+}
