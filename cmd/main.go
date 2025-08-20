@@ -137,7 +137,7 @@ func main() {
 			r.Use(m.RequireSpotifyConnection)
 
 			// Playlist API endpoints
-			playlistHandler := handlers.NewPlaylistHandler(playlistService)
+			playlistHandler := handlers.NewPlaylistHandlerWithSpotify(playlistService, spotifyService)
 			r.Get("/playlists", playlistHandler.GetUserPlaylists)
 			r.Post("/playlists", playlistHandler.CreatePlaylist)
 			r.Get("/playlists/{id}", playlistHandler.GetPlaylist)
@@ -147,6 +147,7 @@ func main() {
 			r.Delete("/playlists/{id}/songs/{songId}", playlistHandler.RemoveSongFromPlaylist)
 			r.Put("/playlists/{id}/songs/reorder", playlistHandler.ReorderPlaylistSongs)
 			r.Post("/playlists/import", playlistHandler.ImportFromSpotify)
+			r.Get("/api/import-spotify-playlists", playlistHandler.GetSpotifyPlaylistsForImport)
 			r.Post("/playlists/{id}/export", playlistHandler.ExportToSpotify)
 			r.Post("/playlists/{id}/sync", playlistHandler.SyncWithSpotify)
 

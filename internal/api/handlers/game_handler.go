@@ -17,27 +17,27 @@ import (
 var activeGames = make(map[string]*GameSession)
 
 type GameSession struct {
-	ID           string `json:"id"`
-	UserID       string `json:"user_id"`
-	PlaylistID   string `json:"playlist_id"`
-	Difficulty   string `json:"difficulty"`
-	TotalRounds  int    `json:"total_rounds"`
-	CurrentRound int    `json:"current_round"`
-	Score        int    `json:"score"`
-	Status       string `json:"status"`
-	TimeLeft     int    `json:"time_left"`
+	ID           string                `json:"id"`
+	UserID       string                `json:"user_id"`
+	PlaylistID   string                `json:"playlist_id"`
+	Difficulty   string                `json:"difficulty"`
+	TotalRounds  int                   `json:"total_rounds"`
+	CurrentRound int                   `json:"current_round"`
+	Score        int                   `json:"score"`
+	Status       string                `json:"status"`
+	TimeLeft     int                   `json:"time_left"`
 	Songs        []models.PlaylistSong `json:"songs"`
 	CurrentSong  *models.PlaylistSong  `json:"current_song"`
-	Answers      []GameAnswer `json:"answers"`
+	Answers      []GameAnswer          `json:"answers"`
 }
 
 type GameAnswer struct {
-	Round        int    `json:"round"`
-	UserAnswer   string `json:"user_answer"`
+	Round         int    `json:"round"`
+	UserAnswer    string `json:"user_answer"`
 	CorrectAnswer string `json:"correct_answer"`
-	IsCorrect    bool   `json:"is_correct"`
-	Points       int    `json:"points"`
-	ResponseTime int    `json:"response_time"`
+	IsCorrect     bool   `json:"is_correct"`
+	Points        int    `json:"points"`
+	ResponseTime  int    `json:"response_time"`
 }
 
 type GameHandler struct {
@@ -96,6 +96,7 @@ func (h *GameHandler) GetUserPlaylists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	logger.Info(r.Context(), "got user playlists", logger.F("playlist_size", len(playlists)))
 	// Convert []*models.Playlist to []models.Playlist
 	playlistsSlice := make([]models.Playlist, len(playlists))
 	for i, p := range playlists {
@@ -131,7 +132,7 @@ func (h *GameHandler) StartGame(w http.ResponseWriter, r *http.Request) {
 	playlistID := r.FormValue("selected_playlist")
 	difficulty := r.FormValue("difficulty")
 	roundsStr := r.FormValue("rounds")
-	
+
 	rounds, err := strconv.Atoi(roundsStr)
 	if err != nil {
 		rounds = 10 // default
@@ -262,7 +263,7 @@ func (h *GameHandler) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
 	// Next round
 	game.CurrentRound++
 	game.TimeLeft = getTimeLimit(game.Difficulty)
-	
+
 	if game.CurrentRound <= len(game.Songs) {
 		game.CurrentSong = &game.Songs[game.CurrentRound-1]
 	}
@@ -298,11 +299,11 @@ func (h *GameHandler) GetTimer(w http.ResponseWriter, r *http.Request) {
 		}
 
 		game.Answers = append(game.Answers, answer)
-		
+
 		if game.CurrentRound >= game.TotalRounds {
 			game.Status = "completed"
 			// Redirect to results
-			w.Header().Set("HX-Redirect", "/game/results?id=" + gameID)
+			w.Header().Set("HX-Redirect", "/game/results?id="+gameID)
 			return
 		}
 
@@ -341,7 +342,7 @@ func (h *GameHandler) renderGameResults(w http.ResponseWriter, r *http.Request, 
 			correctAnswers++
 		}
 		totalTime += answer.ResponseTime
-		
+
 		// Get song info
 		var songTitle, artist string
 		if answer.Round <= len(game.Songs) {
@@ -364,16 +365,16 @@ func (h *GameHandler) renderGameResults(w http.ResponseWriter, r *http.Request, 
 	accuracyRate := float64(correctAnswers) / float64(game.TotalRounds) * 100
 
 	results := templates.GameResults{
-		ID:               game.ID,
-		TotalScore:       game.Score,
-		TotalQuestions:   game.TotalRounds,
-		CorrectAnswers:   correctAnswers,
-		AccuracyRate:     accuracyRate,
-		TotalTime:        totalTime,
-		Difficulty:       game.Difficulty,
-		PlaylistName:     "Selected Playlist", // TODO: get actual playlist name
-		NewBestScore:     false, // TODO: check against user's best scores
-		PointsBreakdown:  pointsBreakdown,
+		ID:              game.ID,
+		TotalScore:      game.Score,
+		TotalQuestions:  game.TotalRounds,
+		CorrectAnswers:  correctAnswers,
+		AccuracyRate:    accuracyRate,
+		TotalTime:       totalTime,
+		Difficulty:      game.Difficulty,
+		PlaylistName:    "Selected Playlist", // TODO: get actual playlist name
+		NewBestScore:    false,               // TODO: check against user's best scores
+		PointsBreakdown: pointsBreakdown,
 	}
 
 	component := templates.GameResultsPage(results)
@@ -388,8 +389,8 @@ func (h *GameHandler) renderGameResults(w http.ResponseWriter, r *http.Request, 
 func (h *GameHandler) showAnswerFeedback(w http.ResponseWriter, r *http.Request, game *GameSession, answer GameAnswer) {
 	// Return JSON for HTMX to handle with JavaScript
 	feedback := map[string]interface{}{
-		"correct": answer.IsCorrect,
-		"points":  answer.Points,
+		"correct":        answer.IsCorrect,
+		"points":         answer.Points,
 		"correct_answer": answer.CorrectAnswer,
 	}
 
@@ -426,10 +427,10 @@ func selectRandomSongs(songs []models.PlaylistSong, count int) []models.Playlist
 
 func checkAnswer(userAnswer, correctAnswer string) bool {
 	// Simple case-insensitive matching - in production use fuzzy matching
-	return len(userAnswer) > 0 && 
-		   (userAnswer == correctAnswer || 
-		    len(userAnswer) > 3 && 
-		    contains(correctAnswer, userAnswer))
+	return len(userAnswer) > 0 &&
+		(userAnswer == correctAnswer ||
+			len(userAnswer) > 3 &&
+				contains(correctAnswer, userAnswer))
 }
 
 func contains(s, substr string) bool {
@@ -442,7 +443,7 @@ func calculatePoints(isCorrect bool, difficulty string, timeLeft int) int {
 	}
 
 	basePoints := 100
-	
+
 	// Difficulty multiplier
 	switch difficulty {
 	case "easy":
@@ -462,3 +463,4 @@ func calculatePoints(isCorrect bool, difficulty string, timeLeft int) int {
 
 // Helper functions for future Spotify API integration
 // TODO: Implement these when we add full track metadata
+

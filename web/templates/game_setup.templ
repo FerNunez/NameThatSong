@@ -1,8 +1,8 @@
 package templates
 
 import (
-	"strconv"
 	"github.com/FerNunez/NameThatSong/internal/models"
+	"strconv"
 )
 
 templ GameSetupPage() {
@@ -15,7 +15,6 @@ templ GameSetupPage() {
 				</h1>
 				<p class="text-gray-300 text-lg">Choose your playlist and game settings</p>
 			</div>
-
 			<div class="max-w-4xl mx-auto">
 				<form hx-post="/game/start" hx-target="body" hx-swap="outerHTML" id="game-setup-form">
 					<!-- Playlist Selection -->
@@ -24,18 +23,19 @@ templ GameSetupPage() {
 							<span class="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm mr-3">1</span>
 							Select Playlist
 						</h2>
-						<div id="playlist-grid" 
-						     hx-get="/api/playlists" 
-						     hx-trigger="load" 
-						     hx-target="this" 
-						     hx-swap="innerHTML">
+						<div
+							id="playlist-grid"
+							hx-get="/api/playlists"
+							hx-trigger="load"
+							hx-target="this"
+							hx-swap="innerHTML"
+						>
 							<div class="flex items-center justify-center py-8">
 								<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
 								<span class="ml-3 text-gray-400">Loading your playlists...</span>
 							</div>
 						</div>
 					</div>
-
 					<!-- Difficulty Selection -->
 					<div class="bg-gray-800 rounded-xl p-6 mb-6 border border-gray-700">
 						<h2 class="text-2xl font-semibold mb-4 flex items-center">
@@ -81,7 +81,6 @@ templ GameSetupPage() {
 							</label>
 						</div>
 					</div>
-
 					<!-- Game Settings -->
 					<div class="bg-gray-800 rounded-xl p-6 mb-8 border border-gray-700">
 						<h2 class="text-2xl font-semibold mb-4 flex items-center">
@@ -110,12 +109,13 @@ templ GameSetupPage() {
 							</div>
 						</div>
 					</div>
-
 					<!-- Start Game Button -->
 					<div class="text-center">
-						<button type="submit" 
-						        class="start-game-btn bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-bold py-4 px-8 rounded-xl text-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-						        disabled>
+						<button
+							type="submit"
+							class="start-game-btn bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-bold py-4 px-8 rounded-xl text-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+							disabled
+						>
 							<span class="flex items-center">
 								<svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 24 24">
 									<path d="M8 5v14l11-7z"></path>
@@ -129,7 +129,6 @@ templ GameSetupPage() {
 			</div>
 		</div>
 	</div>
-
 	<script>
 		// Enable start button when playlist and difficulty are selected
 		function updateStartButton() {
@@ -195,14 +194,15 @@ templ PlaylistGrid(playlists []models.Playlist) {
 			</div>
 			<h3 class="text-xl font-semibold text-gray-300 mb-2">No playlists found</h3>
 			<p class="text-gray-400 mb-4">Import your Spotify playlists to start playing</p>
-			<button hx-post="/playlists/import" 
-			        hx-target="#playlist-grid" 
-			        class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors">
+			<button
+				hx-get="/api/import-spotify-playlists"
+				hx-target="#playlist-grid"
+				class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors"
+			>
 				Import Playlists
 			</button>
 		</div>
 	}
-
 	<script>
 		// Add click handlers for playlist selection
 		document.querySelectorAll('.playlist-option').forEach(option => {

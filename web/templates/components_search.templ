@@ -10,10 +10,9 @@ templ SearchInput(placeholder, id string) {
 	<div class="flex w-full max-w-64 h-10">
 		<div class="flex w-full rounded-lg bg-forest-200 border border-forest-100 transition-colors hover:border-forest-50">
 			<!-- Search Icon -->
-			<div class="flex items-center justify-center pl-4">
+			<div class="flex items-center justify-center ">
 				@SearchIcon()
 			</div>
-			
 			<!-- Input Field -->
 			<input
 				type="text"
@@ -27,10 +26,9 @@ templ SearchInput(placeholder, id string) {
 				name="q"
 				id={ id }
 			/>
-			
 			<!-- Clear Button -->
 			if placeholder != "" {
-				<button 
+				<button
 					class="flex items-center justify-center pr-4 hover:text-forest-50 transition-colors"
 					hx-get="/api/clear-search"
 					hx-target="#search-results"
@@ -43,12 +41,10 @@ templ SearchInput(placeholder, id string) {
 }
 
 templ FilterTag(label string, active bool) {
-	<button 
-		class={
-			"h-8 px-4 rounded-lg text-sm font-medium transition-colors",
+	<button
+		class={ "h-8 px-4 rounded-lg text-sm font-medium transition-colors",
 			templ.KV("bg-accent text-forest-400", active),
-			templ.KV("bg-forest-200 text-white hover:bg-forest-100", !active)
-		}
+			templ.KV("bg-forest-200 text-white hover:bg-forest-100", !active) }
 		hx-get="/api/filter"
 		hx-vals={ `{"type": "` + label + `"}` }
 		hx-target="#search-results"
@@ -85,11 +81,12 @@ type ModernSearchResult struct {
 }
 
 templ SearchResultItem(result ModernSearchResult) {
-	<div class="flex items-center gap-3 p-3 rounded-lg hover:bg-forest-300 transition-colors group cursor-pointer"
-		 hx-get={ "/api/details/" + result.Type + "/" + result.ID }
-		 hx-target="#main-content"
-		 hx-push-url="true">
-		
+	<div
+		class="flex items-center gap-3 p-3 rounded-lg hover:bg-forest-300 transition-colors group cursor-pointer"
+		hx-get={ "/api/details/" + result.Type + "/" + result.ID }
+		hx-target="#main-content"
+		hx-push-url="true"
+	>
 		<!-- Album Art / Icon -->
 		<div class="w-12 h-12 bg-forest-200 rounded-lg flex-shrink-0 overflow-hidden">
 			if result.AlbumArt != "" {
@@ -100,13 +97,11 @@ templ SearchResultItem(result ModernSearchResult) {
 				</div>
 			}
 		</div>
-		
 		<!-- Content -->
 		<div class="flex-1 min-w-0">
 			<p class="font-medium text-white truncate">{ result.Title }</p>
 			<p class="text-forest-50 text-sm truncate">{ result.Artist }</p>
 		</div>
-		
 		<!-- Type Badge -->
 		<div class="text-xs px-2 py-1 rounded bg-forest-200 text-forest-50 uppercase tracking-wide">
 			{ result.Type }
