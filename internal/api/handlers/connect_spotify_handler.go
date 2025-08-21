@@ -36,9 +36,9 @@ func (h *ConnectSpotifyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	logger.Info(r.Context(), "rendering connect spotify page",
 		logger.F("user_id", user.ID.String()))
 
-	// Render the connect spotify page with layout
+	// Render the connect spotify page with auth layout
 	component := templates.ConnectSpotifyPage()
-	layout := templates.Layout(component, "Connect to Spotify - NameThatSong")
+	layout := templates.AuthLayout(component, "Connect to Spotify - NameThatSong")
 	if err := layout.Render(r.Context(), w); err != nil {
 		logger.Error(r.Context(), "failed to render connect spotify page",
 			logger.F("user_id", user.ID.String()),

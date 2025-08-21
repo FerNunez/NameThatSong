@@ -63,6 +63,7 @@ func (s *Spotify) RemoveTracksFromPlaylist(ctx context.Context, userID, playlist
 	return s.removeTracksFromSpotifyPlaylist(ctx, accessToken, playlistID, trackIDs)
 }
 
+// Returns a list of playlist for the current user.
 func (s *Spotify) getUserPlaylistsFromAPI(ctx context.Context, accessToken string) ([]m.PlaylistData, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", "https://api.spotify.com/v1/me/playlists", nil)
 	if err != nil {
@@ -90,19 +91,37 @@ func (s *Spotify) getUserPlaylistsFromAPI(ctx context.Context, accessToken strin
 
 	type spotifyPlaylistsResponse struct {
 		Items []struct {
-			Description string `json:"description"`
-			Followers   struct {
-				Total int `json:"total"`
-			} `json:"followers"`
+			Collaborative bool   `json:"collaborative"`
+			Description   string `json:"description"`
+			ExternalUrls  struct {
+				Spotify string `json:"spotify"`
+			} `json:"external_urls"`
+			Href   string `json:"href"`
 			ID     string `json:"id"`
 			Images []struct {
-				URL string `json:"url"`
+				URL    string `json:"url"`
+				Height int    `json:"height"`
+				Width  int    `json:"width"`
 			} `json:"images"`
-			Name   string `json:"name"`
-			Public bool   `json:"public"`
-			Tracks struct {
-				Total int `json:"total"`
+			Name  string `json:"name"`
+			Owner struct {
+				ExternalUrls struct {
+					Spotify string `json:"spotify"`
+				} `json:"external_urls"`
+				Href        string `json:"href"`
+				ID          string `json:"id"`
+				Type        string `json:"type"`
+				URI         string `json:"uri"`
+				DisplayName string `json:"display_name"`
+			} `json:"owner"`
+			Public     bool   `json:"public"`
+			SnapshotID string `json:"snapshot_id"`
+			Tracks     struct {
+				Href  string `json:"href"`
+				Total int    `json:"total"`
 			} `json:"tracks"`
+			Type string `json:"type"`
+			URI  string `json:"uri"`
 		} `json:"items"`
 	}
 
@@ -122,11 +141,11 @@ func (s *Spotify) getUserPlaylistsFromAPI(ctx context.Context, accessToken strin
 			ID:               item.ID,
 			Name:             item.Name,
 			Description:      item.Description,
-			OwnerID:          "", // Not available in this response
-			OwnerDisplayName: "", // Not available in this response
+			OwnerID:          item.Owner.ID,
+			OwnerDisplayName: item.Owner.DisplayName,
 			Public:           item.Public,
-			Collaborative:    false, // Not available in this response
-			FollowersTotal:   item.Followers.Total,
+			Collaborative:    item.Collaborative,
+			FollowersTotal:   0,
 			TotalTracks:      item.Tracks.Total,
 			ImageURL:         imageUrl,
 		}

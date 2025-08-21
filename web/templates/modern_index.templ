@@ -1,12 +1,74 @@
 package templates
 
-import "strconv"
+import (
+	m "github.com/FerNunez/NameThatSong/internal/models"
+	"strconv"
+)
 
 templ ModernIndexPage() {
-	<div class="min-h-full flex flex-col">
-		<!-- Playlist Songs Section -->
-		<div class="px-8 py-12 bg-forest-400 border-b-4 border-forest-200">
+	<div class="h-full flex">
+		<!-- Main Content - Playlist Songs Section -->
+		<div class="flex-1 p-3 bg-forest-400 border-r border-forest-200 overflow-hidden">
 			@PlaylistSongs()
+		</div>
+		<!-- Right Sidebar - Music Search -->
+		<div class="w-80 bg-forest-400 border-l border-forest-100 overflow-hidden">
+			@MusicSearchSidebar()
+		</div>
+	</div>
+}
+
+templ WelcomeIndexPage() {
+	<div class="h-full flex items-center justify-center bg-forest-400">
+		<div class="max-w-2xl mx-auto text-center p-8">
+			<!-- Welcome Header -->
+			<div class="mb-12">
+				<div class="w-32 h-32 mx-auto mb-6 text-accent">
+					<svg fill="currentColor" viewBox="0 0 24 24">
+						<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"></path>
+					</svg>
+				</div>
+				<h1 class="text-5xl font-bold text-white mb-4">🎵 NameThatSong</h1>
+				<p class="text-xl text-forest-50 mb-8">Test your music knowledge with personalized playlists</p>
+			</div>
+			<!-- Features -->
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+				<div class="bg-forest-300 rounded-xl p-6 border border-forest-200">
+					<div class="text-3xl mb-3">🎮</div>
+					<h3 class="text-lg font-semibold text-white mb-2">Music Games</h3>
+					<p class="text-forest-50 text-sm">Challenge yourself with song guessing games from your favorite playlists</p>
+				</div>
+				<div class="bg-forest-300 rounded-xl p-6 border border-forest-200">
+					<div class="text-3xl mb-3">🎵</div>
+					<h3 class="text-lg font-semibold text-white mb-2">Your Playlists</h3>
+					<p class="text-forest-50 text-sm">Import and manage your Spotify playlists or create new ones</p>
+				</div>
+				<div class="bg-forest-300 rounded-xl p-6 border border-forest-200">
+					<div class="text-3xl mb-3">🔍</div>
+					<h3 class="text-lg font-semibold text-white mb-2">Music Discovery</h3>
+					<p class="text-forest-50 text-sm">Search and discover new music to add to your collections</p>
+				</div>
+			</div>
+			<!-- Call to Action -->
+			<div class="bg-forest-300 rounded-xl p-8 border border-forest-200">
+				<h2 class="text-2xl font-bold text-white mb-4">Ready to Start Playing?</h2>
+				<p class="text-forest-50 mb-6">Sign in to access your music library and start testing your knowledge!</p>
+				<div class="flex justify-center gap-4">
+					<a
+						href="/login"
+						class="px-8 py-3 bg-accent text-forest-400 font-bold rounded-lg hover:bg-opacity-90 transition-colors text-xl"
+					>
+						🎵 Sign In
+					</a>
+					<a
+						href="/register"
+						class="px-8 py-3 bg-forest-200 text-white font-bold rounded-lg hover:bg-forest-100 transition-colors text-xl"
+					>
+						Create Account
+					</a>
+				</div>
+				<p class="text-forest-100 text-sm mt-4">Connect your Spotify account to get started</p>
+			</div>
 		</div>
 	</div>
 }
@@ -16,6 +78,99 @@ templ FeatureCard(icon, title, description string) {
 		<div class="text-4xl mb-4">{ icon }</div>
 		<h3 class="text-xl font-semibold mb-3 text-white">{ title }</h3>
 		<p class="text-forest-50 leading-relaxed">{ description }</p>
+	</div>
+}
+
+templ MusicSearchSidebar() {
+	<div class="h-full flex flex-col p-4">
+		<div class="border-b border-forest-200 pb-4 mb-4">
+			<h3 class="text-xl font-bold text-white mb-4">Search Music</h3>
+			<div class="relative">
+				<input
+					type="text"
+					placeholder="Search songs, artists, albums..."
+					class="w-full px-4 py-3 bg-forest-300 border border-forest-200 rounded-lg text-white placeholder-forest-50 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent pl-10"
+					hx-get="/api/music-search"
+					hx-trigger="keyup changed delay:300ms"
+					hx-target="#music-search-results"
+					name="query"
+				/>
+				<div class="absolute left-3 top-1/2 transform -translate-y-1/2 text-forest-50">
+					<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+						<path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
+					</svg>
+				</div>
+			</div>
+		</div>
+		<div class="flex-1 overflow-y-auto">
+			<div id="music-search-results" class="space-y-2">
+				@MusicSearchEmpty()
+			</div>
+		</div>
+	</div>
+}
+
+templ MusicSearchEmpty() {
+	<div class="text-center py-8">
+		<div class="w-12 h-12 mx-auto mb-4 text-forest-50 opacity-50">
+			<svg fill="currentColor" viewBox="0 0 20 20">
+				<path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
+			</svg>
+		</div>
+		<p class="text-forest-50 text-sm">Search for music</p>
+		<p class="text-forest-100 text-xs mt-1">Type to find songs, artists, or albums</p>
+	</div>
+}
+
+templ MusicSearchResults(results []SearchResult) {
+	<div class="space-y-2">
+		for _, result := range results {
+			@MusicSearchResultItem(result)
+		}
+	</div>
+}
+
+type SearchResult struct {
+	ID       string
+	Type     string // "track", "artist", "album"
+	Title    string
+	Artist   string
+	Album    string
+	Duration string
+	ImageURL string
+}
+
+templ MusicSearchResultItem(result SearchResult) {
+	<div class="flex items-center gap-3 p-3 rounded-lg hover:bg-forest-300 transition-colors group cursor-pointer">
+		<!-- Cover Art -->
+		<div class="w-10 h-10 bg-forest-200 rounded flex-shrink-0 overflow-hidden">
+			if result.ImageURL != "" {
+				<img src={ result.ImageURL } alt={ result.Title } class="w-full h-full object-cover"/>
+			} else {
+				<div class="w-full h-full flex items-center justify-center">
+					@MusicIcon()
+				</div>
+			}
+		</div>
+		<!-- Track Info -->
+		<div class="flex-1 min-w-0">
+			<p class="font-medium text-white text-sm truncate">{ result.Title }</p>
+			<p class="text-forest-50 text-xs truncate">
+				{ result.Artist }
+				if result.Album != "" {
+					• { result.Album }
+				}
+			</p>
+		</div>
+		<!-- Action Button -->
+		<button
+			class="p-1.5 text-forest-50 hover:text-accent hover:bg-forest-100 rounded transition-colors opacity-0 group-hover:opacity-100"
+			title="Add to current playlist"
+			hx-post="/api/add-to-current-playlist"
+			hx-vals={ `{"trackId": "` + result.ID + `"}` }
+		>
+			@PlusIcon()
+		</button>
 	</div>
 }
 
@@ -32,8 +187,8 @@ templ QuickSearch() {
 }
 
 templ PlaylistSongs() {
-	<div class="max-w-4xl mx-auto">
-		<div id="playlist-songs-container" class="h-80 overflow-y-auto border border-forest-200 rounded-lg bg-forest-300 p-4">
+	<div class="h-full flex flex-col">
+		<div id="playlist-songs-container" class="flex-1 overflow-y-auto border border-forest-200 rounded-lg bg-forest-300 p-4">
 			<h3 class="text-2xl font-bold mb-6 text-white">Playlist Songs</h3>
 			@PlaylistSongsEmpty()
 		</div>
@@ -60,6 +215,125 @@ templ PlaylistSongsWithData(songs []PlaylistSong) {
 			@PlaylistSongItem(song, i+1)
 		}
 	</div>
+}
+
+templ PlaylistDetailsView(playlist PlaylistInfo, songs []PlaylistSong) {
+	<div class="h-full flex flex-col">
+		<!-- Playlist Header -->
+		<div class="mb-6 pb-6 border-b border-forest-200">
+			<div class="flex items-start gap-6">
+				<!-- Playlist Image -->
+				<div class="w-32 h-32 bg-forest-200 rounded-xl flex-shrink-0 overflow-hidden">
+					if playlist.ImageURL != "" {
+						<img src={ playlist.ImageURL } alt={ playlist.Name } class="w-full h-full object-cover"/>
+					} else {
+						<div class="w-full h-full flex items-center justify-center">
+							if playlist.IsSpotify {
+								@SpotifyIcon()
+							} else {
+								@MusicIcon()
+							}
+						</div>
+					}
+				</div>
+				<!-- Playlist Info -->
+				<div class="flex-1 min-w-0">
+					<div class="flex items-center gap-2 mb-2">
+						if playlist.IsSpotify {
+							<span class="inline-flex items-center gap-1 px-2 py-1 bg-green-600 text-white text-xs font-medium rounded-full">
+								@SpotifyIcon()
+								Spotify
+							</span>
+						} else {
+							<span class="inline-flex items-center gap-1 px-2 py-1 bg-forest-200 text-white text-xs font-medium rounded-full">
+								@MusicIcon()
+								Local
+							</span>
+						}
+					</div>
+					<h1 class="text-3xl font-bold text-white mb-2">{ playlist.Name }</h1>
+					if playlist.Description != "" {
+						<p class="text-forest-50 text-base mb-3">{ playlist.Description }</p>
+					}
+					<div class="flex items-center gap-4 text-sm text-forest-50">
+						<span class="font-medium">{ strconv.Itoa(len(songs)) } songs</span>
+						if playlist.TotalDuration != "" {
+							<span>• { playlist.TotalDuration }</span>
+						}
+						if playlist.Owner != "" {
+							<span>• by { playlist.Owner }</span>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+		<!-- Playlist Actions -->
+		<div class="flex items-center gap-3 mb-6">
+			<button
+				class="px-6 py-3 bg-accent text-forest-400 font-bold rounded-lg hover:bg-opacity-90 transition-colors"
+				hx-post="/api/play-playlist"
+				hx-vals={ `{"playlistId": "` + playlist.ID + `"}` }
+			>
+				▶️ Play All
+			</button>
+			<button
+				class="px-4 py-3 bg-forest-200 text-white font-medium rounded-lg hover:bg-forest-100 transition-colors"
+				hx-get="/api/game/setup"
+				hx-target="#playlist-songs-container"
+				hx-swap="innerHTML"
+				hx-vals={ `{"preSelectedPlaylist": "` + playlist.ID + `"}` }
+			>
+				🎮 Start Game
+			</button>
+			if !playlist.IsSpotify {
+				<button
+					class="px-4 py-3 bg-forest-200 text-white font-medium rounded-lg hover:bg-forest-100 transition-colors"
+					hx-post={ "/playlists/" + playlist.ID + "/export" }
+					title="Export to Spotify"
+				>
+					📤 Export
+				</button>
+			}
+			<button
+				class="px-4 py-3 bg-forest-200 text-white font-medium rounded-lg hover:bg-forest-100 transition-colors"
+				hx-get="/api/playlist-songs-empty"
+				hx-target="#playlist-songs-container"
+				hx-swap="innerHTML"
+			>
+				← Back
+			</button>
+		</div>
+		<!-- Songs List -->
+		<div class="flex-1 overflow-y-auto">
+			if len(songs) > 0 {
+				<div class="space-y-2">
+					for i, song := range songs {
+						@PlaylistSongItem(song, i+1)
+					}
+				</div>
+			} else {
+				<div class="flex items-center justify-center h-full">
+					<div class="text-center">
+						<div class="w-16 h-16 mx-auto mb-4 text-forest-50 opacity-50">
+							@MusicIcon()
+						</div>
+						<p class="text-forest-50 text-lg font-medium">No songs in this playlist</p>
+						<p class="text-forest-100 text-sm mt-2">Use the search sidebar to add songs</p>
+					</div>
+				</div>
+			}
+		</div>
+	</div>
+}
+
+type PlaylistInfo struct {
+	ID            string
+	Name          string
+	Description   string
+	ImageURL      string
+	IsSpotify     bool
+	Owner         string
+	TotalDuration string
 }
 
 type PlaylistSong struct {
@@ -100,8 +374,8 @@ templ PlaylistSongItem(song PlaylistSong, index int) {
 			<button
 				class="p-2 text-forest-50 hover:text-white hover:bg-forest-100 rounded transition-colors"
 				title="Play song"
-				hx-post="/api/play-song"
-				hx-vals={ `{"songId": "` + song.ID + `"}` }
+				hx-post="/api/play-track"
+				hx-vals={ `{"trackId": "` + song.ID + `"}` }
 			>
 				@PlayIcon()
 			</button>
@@ -118,106 +392,89 @@ templ PlaylistSongItem(song PlaylistSong, index int) {
 }
 
 templ CreatePlaylistForm() {
-	<div class="max-w-2xl mx-auto">
-		<h3 class="text-2xl font-bold mb-6 text-white">Create New Playlist</h3>
-		<form
-			hx-post="/api/playlist/create"
-			hx-target="#playlist-songs-container"
-			hx-swap="innerHTML"
-			class="space-y-4"
-		>
-			<div>
-				<label for="playlist-name" class="block text-sm font-medium text-white mb-2">
-					Playlist Name
-				</label>
-				<input
-					type="text"
-					id="playlist-name"
-					name="name"
-					required
-					class="w-full px-3 py-2 bg-forest-200 border border-forest-100 rounded-lg text-white placeholder-forest-50 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-					placeholder="Enter playlist name..."
-					maxlength="100"
-				/>
-			</div>
-			<div>
-				<label for="playlist-description" class="block text-sm font-medium text-white mb-2">
-					Description (Optional)
-				</label>
-				<textarea
-					id="playlist-description"
-					name="description"
-					rows="3"
-					class="w-full px-3 py-2 bg-forest-200 border border-forest-100 rounded-lg text-white placeholder-forest-50 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent resize-none"
-					placeholder="Enter playlist description..."
-					maxlength="300"
-				></textarea>
-			</div>
-			<div class="flex items-center">
-				<input
-					type="checkbox"
-					id="is-public"
-					name="is_public"
-					class="h-4 w-4 text-accent focus:ring-accent border-forest-100 rounded bg-forest-200"
-				/>
-				<label for="is-public" class="ml-2 block text-sm text-white">
-					Make this playlist public
-				</label>
-			</div>
-			<div class="flex gap-3 pt-4">
-				<button
-					type="submit"
-					class="px-6 py-2 bg-accent text-forest-400 font-medium rounded-lg hover:bg-opacity-90 transition-colors"
-				>
-					Create Playlist
-				</button>
-				<button
-					type="button"
-					class="px-6 py-2 bg-forest-200 text-white font-medium rounded-lg hover:bg-forest-100 transition-colors"
-					hx-get="/api/playlist/cancel-create"
-					hx-target="#playlist-songs-container"
-					hx-swap="innerHTML"
-				>
-					Cancel
-				</button>
-			</div>
-		</form>
+	<div class="h-full flex flex-col justify-center">
+		<div class="max-w-2xl mx-auto w-full">
+			<h3 class="text-2xl font-bold mb-6 text-white">Create New Playlist</h3>
+			<form
+				hx-post="/api/playlist/create"
+				hx-target="#playlist-songs-container"
+				hx-swap="innerHTML"
+				class="space-y-4"
+			>
+				<div>
+					<label for="playlist-name" class="block text-sm font-medium text-white mb-2">
+						Playlist Name
+					</label>
+					<input
+						type="text"
+						id="playlist-name"
+						name="name"
+						required
+						class="w-full px-3 py-2 bg-forest-200 border border-forest-100 rounded-lg text-white placeholder-forest-50 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+						placeholder="Enter playlist name..."
+						maxlength="100"
+					/>
+				</div>
+				<div>
+					<label for="playlist-description" class="block text-sm font-medium text-white mb-2">
+						Description (Optional)
+					</label>
+					<textarea
+						id="playlist-description"
+						name="description"
+						rows="3"
+						class="w-full px-3 py-2 bg-forest-200 border border-forest-100 rounded-lg text-white placeholder-forest-50 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent resize-none"
+						placeholder="Enter playlist description..."
+						maxlength="300"
+					></textarea>
+				</div>
+				<div class="flex items-center">
+					<input
+						type="checkbox"
+						id="is-public"
+						name="is_public"
+						class="h-4 w-4 text-accent focus:ring-accent border-forest-100 rounded bg-forest-200"
+					/>
+					<label for="is-public" class="ml-2 block text-sm text-white">
+						Make this playlist public
+					</label>
+				</div>
+				<div class="flex gap-3 pt-4">
+					<button
+						type="submit"
+						class="px-6 py-2 bg-accent text-forest-400 font-medium rounded-lg hover:bg-opacity-90 transition-colors"
+					>
+						Create Playlist
+					</button>
+					<button
+						type="button"
+						class="px-6 py-2 bg-forest-200 text-white font-medium rounded-lg hover:bg-forest-100 transition-colors"
+						hx-get="/api/playlist/cancel-create"
+						hx-target="#playlist-songs-container"
+						hx-swap="innerHTML"
+					>
+						Cancel
+					</button>
+				</div>
+			</form>
+		</div>
 	</div>
 }
 
 templ NewPlaylistView(playlist UserPlaylist) {
-	<div class="max-w-4xl mx-auto">
+	<div class="h-full flex flex-col">
 		<div class="mb-6">
 			<h3 class="text-2xl font-bold text-white mb-2">{ playlist.Name }</h3>
 			<p class="text-forest-50 text-sm">New playlist • 0 songs</p>
 		</div>
 		<!-- Empty playlist state -->
-		<div class="text-center py-12">
-			<div class="w-16 h-16 mx-auto mb-4 text-forest-50 opacity-50">
-				@MusicIcon()
-			</div>
-			<h4 class="text-lg font-medium text-white mb-2">Let's find something for your playlist</h4>
-			<p class="text-forest-50 text-sm mb-6">Search for songs, artists, or albums to add to "{ playlist.Name }"</p>
-			<div class="max-w-md mx-auto">
-				<div class="relative">
-					<input
-						type="text"
-						placeholder="Search for music..."
-						class="w-full px-4 py-3 bg-forest-200 border border-forest-100 rounded-lg text-white placeholder-forest-50 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent pl-10"
-						hx-get="/api/search"
-						hx-trigger="keyup changed delay:300ms"
-						hx-target="#search-results"
-						hx-vals={ `{"playlist_id": "` + playlist.ID + `"}` }
-					/>
-					<div class="absolute left-3 top-1/2 transform -translate-y-1/2 text-forest-50">
-						<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-							<path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
-						</svg>
-					</div>
+		<div class="flex-1 flex items-center justify-center">
+			<div class="text-center">
+				<div class="w-16 h-16 mx-auto mb-4 text-forest-50 opacity-50">
+					@MusicIcon()
 				</div>
-			</div>
-			<div id="search-results" class="mt-6">
-				<!-- Search results will appear here -->
+				<h4 class="text-lg font-medium text-white mb-2">Let's find something for your playlist</h4>
+				<p class="text-forest-50 text-sm mb-6">Use the search sidebar on the right to find and add songs to "{ playlist.Name }"</p>
 			</div>
 		</div>
 		<!-- Action buttons -->
@@ -234,3 +491,294 @@ templ NewPlaylistView(playlist UserPlaylist) {
 		</div>
 	</div>
 }
+
+templ GameSetupView() {
+	<div class="h-full flex flex-col">
+		<div class="mb-6">
+			<h3 class="text-2xl font-bold text-white mb-2">Start New Game</h3>
+			<p class="text-forest-50 text-sm">Choose your playlist and difficulty to begin</p>
+		</div>
+		<form
+			hx-post="/game/start"
+			hx-target="body"
+			hx-swap="outerHTML"
+			class="flex-1 flex flex-col space-y-6"
+		>
+			<!-- Playlist Selection -->
+			<div>
+				<h4 class="text-lg font-semibold text-white mb-4">Select Playlist</h4>
+				<div
+					id="game-playlist-selection"
+					class="space-y-2 max-h-60 overflow-y-auto"
+					hx-get="/api/game/playlists"
+					hx-trigger="load"
+					hx-target="this"
+				>
+					@PlaylistsLoading()
+				</div>
+			</div>
+			<!-- Difficulty Selection -->
+			<div>
+				<h4 class="text-lg font-semibold text-white mb-4">Choose Difficulty</h4>
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+					@GameDifficultyCard("easy", "🟢 Easy", "30s previews, multiple choice, 30s per question", "bg-green-600")
+					@GameDifficultyCard("medium", "🟡 Medium", "20s previews, type answer, 20s per question", "bg-yellow-600")
+					@GameDifficultyCard("hard", "🔴 Hard", "10s previews, type answer, 15s per question", "bg-red-600")
+				</div>
+			</div>
+			<!-- Game Settings -->
+			<div>
+				<h4 class="text-lg font-semibold text-white mb-4">Game Settings</h4>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div>
+						<label class="block text-sm font-medium text-forest-50 mb-2">Number of Questions</label>
+						<select name="rounds" class="w-full bg-forest-300 border border-forest-200 rounded-lg px-3 py-2 text-white focus:border-accent focus:outline-none">
+							<option value="5">5 Questions (Quick)</option>
+							<option value="10" selected>10 Questions (Standard)</option>
+							<option value="15">15 Questions (Extended)</option>
+							<option value="20">20 Questions (Marathon)</option>
+						</select>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-forest-50 mb-2">Question Type</label>
+						<select name="question_type" class="w-full bg-forest-300 border border-forest-200 rounded-lg px-3 py-2 text-white focus:border-accent focus:outline-none">
+							<option value="song_title" selected>Guess Song Title</option>
+							<option value="artist_name">Guess Artist Name</option>
+							<option value="mixed">Mixed Questions</option>
+						</select>
+					</div>
+				</div>
+			</div>
+			<!-- Action buttons -->
+			<div class="flex gap-3 pt-4 border-t border-forest-100 mt-auto">
+				<button
+					type="submit"
+					id="start-game-button"
+					class="px-6 py-3 bg-accent text-forest-400 font-bold rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+					disabled
+				>
+					🎮 Start Game
+				</button>
+				<button
+					type="button"
+					class="px-4 py-2 bg-forest-200 text-white font-medium rounded-lg hover:bg-forest-100 transition-colors"
+					hx-get="/api/playlist-songs-empty"
+					hx-target="#playlist-songs-container"
+					hx-swap="innerHTML"
+				>
+					← Cancel
+				</button>
+			</div>
+		</form>
+	</div>
+	<script>
+		// Enable start button when both playlist and difficulty are selected
+		function updateGameStartButton() {
+			const playlist = document.querySelector('input[name="selected_playlist"]:checked');
+			const difficulty = document.querySelector('input[name="difficulty"]:checked');
+			const startBtn = document.getElementById('start-game-button');
+			
+			if (playlist && difficulty && startBtn) {
+				startBtn.disabled = false;
+			} else if (startBtn) {
+				startBtn.disabled = true;
+			}
+		}
+
+		// Add change listeners for form inputs
+		document.addEventListener('change', function(e) {
+			if (e.target.name === 'difficulty' || e.target.name === 'selected_playlist') {
+				updateGameStartButton();
+			}
+		});
+	</script>
+}
+
+templ GameDifficultyCard(value, title, description, colorClass string) {
+	<label class="block cursor-pointer">
+		<input type="radio" name="difficulty" value={ value } class="sr-only" onchange="updateGameStartButton()"/>
+		<div class={ "p-4 rounded-lg border-2 border-transparent transition-all hover:border-forest-100 text-center", colorClass }>
+			<div class="peer-checked:border-accent">
+				<h5 class="font-semibold text-white mb-2">{ title }</h5>
+				<p class="text-white text-sm opacity-90">{ description }</p>
+			</div>
+		</div>
+	</label>
+}
+
+templ GamePlaylistSelection(playlists []UserPlaylist) {
+	for _, playlist := range playlists {
+		<label class="block cursor-pointer">
+			<input type="radio" name="selected_playlist" value={ playlist.ID } class="sr-only" onchange="updateGameStartButton()"/>
+			<div class="flex items-center gap-3 p-3 rounded-lg hover:bg-forest-300 border-2 border-transparent peer-checked:border-accent transition-colors">
+				<div class="w-10 h-10 bg-forest-200 rounded-lg flex items-center justify-center flex-shrink-0">
+					if playlist.IsSpotify {
+						@SpotifyIcon()
+					} else {
+						@MusicIcon()
+					}
+				</div>
+				<div class="flex-1 min-w-0">
+					<span class="text-white font-medium truncate block">{ playlist.Name }</span>
+					<span class="text-forest-50 text-sm">{ strconv.Itoa(playlist.TrackCount) } songs</span>
+				</div>
+			</div>
+		</label>
+	}
+	if len(playlists) == 0 {
+		<div class="text-center py-6">
+			<div class="w-12 h-12 mx-auto mb-3 text-forest-50 opacity-50">
+				@MusicIcon()
+			</div>
+			<p class="text-forest-50 text-sm">No playlists available</p>
+			<p class="text-forest-100 text-xs mt-1">Create or import playlists to start playing</p>
+		</div>
+	}
+}
+
+// Search-related templates for API endpoints
+templ EmptySearchState() {
+	<div class="text-center py-8">
+		<div class="w-12 h-12 mx-auto mb-4 text-forest-50 opacity-50">
+			<svg fill="currentColor" viewBox="0 0 20 20">
+				<path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
+			</svg>
+		</div>
+		<h3 class="text-lg font-medium text-forest-50 mb-2">Start searching for music</h3>
+		<p class="text-forest-100 text-sm">Type in the search box to find tracks, albums, artists, and playlists</p>
+	</div>
+}
+
+templ NoResultsFound(query string) {
+	<div class="text-center py-8">
+		<div class="w-12 h-12 mx-auto mb-4 text-forest-50 opacity-50">
+			<svg fill="currentColor" viewBox="0 0 20 20">
+				<path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
+			</svg>
+		</div>
+		<h3 class="text-lg font-medium text-forest-50 mb-2">No results found</h3>
+		<p class="text-forest-100 text-sm">No music found for "{ query }". Try a different search term.</p>
+	</div>
+}
+
+templ SimpleSearchResults(tracks []m.TrackSearch, albums []m.AlbumSearch, artists []m.ArtistSearch, playlists []m.PlaylistSearch, query string) {
+	if len(tracks) == 0 && len(albums) == 0 && len(artists) == 0 && len(playlists) == 0 {
+		@NoResultsFound(query)
+	} else {
+		<div class="space-y-4">
+			if len(tracks) > 0 {
+				<div>
+					<h3 class="text-sm font-semibold text-forest-50 mb-2">🎵 Tracks</h3>
+					<div class="space-y-1">
+						for _, track := range tracks {
+							@SimpleTrackSearchItem(track)
+						}
+					</div>
+				</div>
+			}
+			if len(albums) > 0 {
+				<div>
+					<h3 class="text-sm font-semibold text-forest-50 mb-2">💿 Albums</h3>
+					<div class="space-y-1">
+						for _, album := range albums {
+							@SimpleAlbumSearchItem(album)
+						}
+					</div>
+				</div>
+			}
+			if len(artists) > 0 {
+				<div>
+					<h3 class="text-sm font-semibold text-forest-50 mb-2">🎤 Artists</h3>
+					<div class="space-y-1">
+						for _, artist := range artists {
+							@SimpleArtistSearchItem(artist)
+						}
+					</div>
+				</div>
+			}
+		</div>
+	}
+}
+
+// Using models.TrackSearch, models.AlbumSearch, etc. instead of redefining types
+templ SimpleTrackSearchItem(track m.TrackSearch) {
+	<div class="flex items-center gap-3 p-2 rounded hover:bg-forest-300 transition-colors group">
+		<div class="w-8 h-8 bg-forest-200 rounded flex-shrink-0 overflow-hidden">
+			if track.AlbumImageURL != "" {
+				<img src={ track.AlbumImageURL } alt={ track.Name } class="w-full h-full object-cover"/>
+			} else {
+				<div class="w-full h-full flex items-center justify-center">
+					@MusicIcon()
+				</div>
+			}
+		</div>
+		<div class="flex-1 min-w-0">
+			<p class="font-medium text-white text-sm truncate">{ track.Name }</p>
+			<p class="text-forest-50 text-xs truncate">{ TruncateAndJoin(50, track.ArtistNames) }</p>
+		</div>
+		<button
+			class="p-1.5 text-forest-50 hover:text-accent hover:bg-forest-100 rounded transition-colors opacity-0 group-hover:opacity-100"
+			title="Add to current playlist"
+			hx-post="/api/add-to-current-playlist"
+			hx-vals={ `{"trackId": "` + track.ID + `"}` }
+		>
+			@PlusIcon()
+		</button>
+	</div>
+}
+
+templ SimpleAlbumSearchItem(album m.AlbumSearch) {
+	<div class="flex items-center gap-3 p-2 rounded hover:bg-forest-300 transition-colors group">
+		<div class="w-8 h-8 bg-forest-200 rounded flex-shrink-0 overflow-hidden">
+			if album.ImageURL != "" {
+				<img src={ album.ImageURL } alt={ album.Name } class="w-full h-full object-cover"/>
+			} else {
+				<div class="w-full h-full flex items-center justify-center">
+					@MusicIcon()
+				</div>
+			}
+		</div>
+		<div class="flex-1 min-w-0">
+			<p class="font-medium text-white text-sm truncate">{ album.Name }</p>
+			<p class="text-forest-50 text-xs truncate">{ TruncateAndJoin(50, album.ArtistNames) }</p>
+		</div>
+		<button
+			class="p-1.5 text-forest-50 hover:text-accent hover:bg-forest-100 rounded transition-colors opacity-0 group-hover:opacity-100"
+			title="Add album to current playlist"
+			hx-post="/api/add-album-to-current-playlist"
+			hx-vals={ `{"albumId": "` + album.ID + `"}` }
+		>
+			@PlusIcon()
+		</button>
+	</div>
+}
+
+templ SimpleArtistSearchItem(artist m.ArtistSearch) {
+	<div class="flex items-center gap-3 p-2 rounded hover:bg-forest-300 transition-colors group">
+		<div class="w-8 h-8 bg-forest-200 rounded-full flex-shrink-0 overflow-hidden">
+			if artist.ImageURL != "" {
+				<img src={ artist.ImageURL } alt={ artist.Name } class="w-full h-full object-cover"/>
+			} else {
+				<div class="w-full h-full flex items-center justify-center">
+					@MusicIcon()
+				</div>
+			}
+		</div>
+		<div class="flex-1 min-w-0">
+			<p class="font-medium text-white text-sm truncate">{ artist.Name }</p>
+			<p class="text-forest-50 text-xs">Artist</p>
+		</div>
+		<button
+			class="p-1.5 text-forest-50 hover:text-blue-400 hover:bg-forest-100 rounded transition-colors opacity-0 group-hover:opacity-100"
+			title="View artist"
+			hx-get={ "/api/artist/" + artist.ID }
+			hx-target="#music-search-results"
+		>
+			<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+				<path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
+			</svg>
+		</button>
+	</div>
+}
+
+// TruncateAndJoin function is defined in helper.go

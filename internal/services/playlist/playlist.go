@@ -34,7 +34,7 @@ func (p *Playlist) CreatePlaylist(ctx context.Context, userID uuid.UUID, req mod
 		logger.F("user_id", userID),
 		logger.F("name", req.Name),
 		logger.F("sync_with_spotify", req.SyncWithSpotify))
-	
+
 	// Validate request
 	if err := p.validateCreatePlaylistRequest(req); err != nil {
 		logger.Warn(ctx, "playlist creation validation failed",
@@ -209,7 +209,7 @@ func (p *Playlist) ImportFromSpotify(ctx context.Context, userID uuid.UUID, req 
 		logger.F("user_id", userID),
 		logger.F("spotify_playlist_id", req.SpotifyPlaylistID),
 		logger.F("sync_with_spotify", req.SyncWithSpotify))
-	
+
 	// Validate request
 	if err := p.validateImportPlaylistRequest(req); err != nil {
 		logger.Warn(ctx, "playlist import validation failed",
@@ -220,7 +220,7 @@ func (p *Playlist) ImportFromSpotify(ctx context.Context, userID uuid.UUID, req 
 	}
 
 	// Fetch playlist data from Spotify
-	spotifyPlaylist, err := p.spotifyService.FetchPlaylist(ctx, userID.String(), req.SpotifyPlaylistID)
+	spotifyPlaylist, _, _, err := p.spotifyService.FetchPlaylist(ctx, userID.String(), req.SpotifyPlaylistID)
 	if err != nil {
 		logger.Error(ctx, "failed to fetch playlist from Spotify API",
 			logger.F("user_id", userID),
@@ -250,7 +250,7 @@ func (p *Playlist) ImportFromSpotify(ctx context.Context, userID uuid.UUID, req 
 	logger.Debug(ctx, "fetched playlist metadata from Spotify",
 		logger.F("playlist_name", spotifyPlaylist.Name),
 		logger.F("spotify_playlist_id", req.SpotifyPlaylistID))
-	
+
 	// Fetch and import tracks
 	trackIDs, err := p.spotifyService.FetchTracksFromPlaylist(ctx, userID.String(), req.SpotifyPlaylistID)
 	if err != nil {
@@ -260,7 +260,7 @@ func (p *Playlist) ImportFromSpotify(ctx context.Context, userID uuid.UUID, req 
 			logger.F("error", err))
 		return nil, fmt.Errorf("failed to fetch tracks from playlist: %w", err)
 	}
-	
+
 	logger.Info(ctx, "fetched tracks from Spotify playlist",
 		logger.F("spotify_playlist_id", req.SpotifyPlaylistID),
 		logger.F("track_count", len(trackIDs)))
@@ -485,4 +485,3 @@ func (p *Playlist) validateReorderSongsRequest(req models.ReorderSongsRequest) e
 
 	return nil
 }
-

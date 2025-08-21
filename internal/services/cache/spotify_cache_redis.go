@@ -140,6 +140,56 @@ func (r *RedisSpotifyCache) SetPlaylist(playlistId string, playlist m.PlaylistDa
 	r.client.Set(r.ctx, key, playlistJson, r.ttl)
 }
 
+func (r *RedisSpotifyCache) GetPlaylistTracks(playlistId string) ([]string, bool) {
+	key := r.generateKey("playlist:trackIDs", playlistId)
+
+	val, err := r.client.Get(r.ctx, key).Result()
+	if err != nil {
+		return []string{}, false
+	}
+
+	var trackIDs []string
+	if err := json.Unmarshal([]byte(val), &trackIDs); err != nil {
+		return trackIDs, false
+	}
+
+	return trackIDs, true
+}
+func (r *RedisSpotifyCache) SetPlaylistTracks(playlistId string, tracks []string) {
+	key := r.generateKey("playlist:trackIDs", playlistId)
+
+	playlistJson, err := json.Marshal(tracks)
+	if err != nil {
+		return
+	}
+	r.client.Set(r.ctx, key, playlistJson, r.ttl)
+}
+
+func (r *RedisSpotifyCache) GetPlaylistAlbums(playlistId string) ([]string, bool) {
+	key := r.generateKey("playlist:albumIDs", playlistId)
+
+	val, err := r.client.Get(r.ctx, key).Result()
+	if err != nil {
+		return []string{}, false
+	}
+
+	var albumIDs []string
+	if err := json.Unmarshal([]byte(val), &albumIDs); err != nil {
+		return albumIDs, false
+	}
+
+	return albumIDs, true
+}
+func (r *RedisSpotifyCache) SetPlaylistAlbums(playlistId string, albums []string) {
+	key := r.generateKey("playlist:albumIDs", playlistId)
+
+	playlistJson, err := json.Marshal(albums)
+	if err != nil {
+		return
+	}
+	r.client.Set(r.ctx, key, playlistJson, r.ttl)
+}
+
 // Search cache operations
 func (r *RedisSpotifyCache) GetSearchTracks(query string) ([]m.TrackSearch, bool) {
 	var tracks []m.TrackSearch
@@ -244,12 +294,12 @@ func (r *RedisSpotifyCache) SetSearchPlaylists(query string, playlists []m.Playl
 // OAuth state management operations
 func (r *RedisSpotifyCache) GetOAuthState(userID string) (string, bool) {
 	key := r.generateStateKey(userID)
-	
+
 	val, err := r.client.Get(r.ctx, key).Result()
 	if err != nil {
 		return "", false
 	}
-	
+
 	return val, true
 }
 

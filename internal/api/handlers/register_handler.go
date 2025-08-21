@@ -17,7 +17,7 @@ func NewGetRegisterHandler() *GetRegisterHandler {
 }
 func (h GetRegisterHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 	t := templates.RegisterPage()
-	err := templates.Layout(t, "NameThanSong").Render(r.Context(), w)
+	err := templates.AuthLayout(t, "Register - NameThatSong").Render(r.Context(), w)
 
 	if err != nil {
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)

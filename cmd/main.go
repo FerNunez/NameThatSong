@@ -116,8 +116,8 @@ func main() {
 		r.Use(
 			authMiddleware.AddUserToCtxt,
 		)
-		r.Get("/", handlers.NewGetIndexHandler().ServeHttp)
-		r.Get("/modern", handlers.NewModernHandler().ServeHTTP)
+		r.Get("/", handlers.NewModernHandler().ServeHTTP)
+		// Legacy route removed - modern UI is now the default
 		// Set up static file server
 		fileServer := http.FileServer(http.Dir("./static"))
 		r.Handle("/static/*", http.StripPrefix("/static/", fileServer))
@@ -138,25 +138,18 @@ func main() {
 
 			// Playlist API endpoints
 			playlistHandler := handlers.NewPlaylistHandlerWithSpotify(playlistService, spotifyService)
-			r.Get("/playlists", playlistHandler.GetUserPlaylists)
-			r.Post("/playlists", playlistHandler.CreatePlaylist)
-			r.Get("/playlists/{id}", playlistHandler.GetPlaylist)
-			r.Put("/playlists/{id}", playlistHandler.UpdatePlaylist)
-			r.Delete("/playlists/{id}", playlistHandler.DeletePlaylist)
-			r.Post("/playlists/{id}/songs", playlistHandler.AddSongToPlaylist)
-			r.Delete("/playlists/{id}/songs/{songId}", playlistHandler.RemoveSongFromPlaylist)
-			r.Put("/playlists/{id}/songs/reorder", playlistHandler.ReorderPlaylistSongs)
-			r.Post("/playlists/import", playlistHandler.ImportFromSpotify)
 			r.Get("/api/import-spotify-playlists", playlistHandler.GetSpotifyPlaylistsForImport)
-			r.Post("/playlists/{id}/export", playlistHandler.ExportToSpotify)
-			r.Post("/playlists/{id}/sync", playlistHandler.SyncWithSpotify)
+			r.Get("/api/local-playlists", playlistHandler.GetLocalPlaylists)
+			r.Get("/api/spotify-playlists", playlistHandler.GetSpotifyPlaylists)
+			r.Put("/api/spotify-playlists/{id}/update", playlistHandler.UpdateSpotifyPlaylist)
+			r.Put("/api/spotify-playlists/refresh", playlistHandler.RefreshSpotifyPlaylists)
+			r.Get("/api/playlist/create-form", playlistHandler.ShowCreatePlaylistForm)
+			r.Post("/api/playlist/create", playlistHandler.CreateAndShowPlaylist)
+			r.Get("/api/playlist/cancel-create", playlistHandler.CancelCreatePlaylist)
 
-			// Debug routes
-			r.Get("/debug/search", handlers.NewDebugSearchHandler(spotifyService).ServeHttp)
-
-			// Simple HTMX Search Interface
-			r.Get("/search", handlers.NewSearchPageHandler().ServeHTTP)
+			// HTMX Search API (integrated into modern UI sidebar)
 			r.Get("/api/search", handlers.NewSimpleSearchHandler(spotifyService).ServeHTTP)
+			r.Get("/api/music-search", handlers.NewSimpleSearchHandler(spotifyService).ServeHTTP)
 
 			// Action endpoints for the search interface
 			actionHandler := handlers.NewActionHandler(spotifyService)
@@ -168,60 +161,20 @@ func main() {
 			r.Post("/api/play-playlist", actionHandler.PlayPlaylistHandler)
 			r.Get("/api/artist/{artistId}", handlers.NewArtistDetailHandler(spotifyService).ServeHTTP)
 
-			// Game routes
-			r.Get("/game/setup", gameHandler.GameSetupPage)
-			r.Get("/api/playlists", gameHandler.GetUserPlaylists)
+			// Game routes (integrated into modern UI)
+			r.Get("/api/game/setup", playlistHandler.ShowGameSetup)
+			r.Get("/api/game/playlists", playlistHandler.GetGamePlaylists)
 			r.Post("/game/start", gameHandler.StartGame)
 			r.Post("/game/submit-answer", gameHandler.SubmitAnswer)
 			r.Get("/game/timer", gameHandler.GetTimer)
 			r.Get("/game/results", gameHandler.GameResults)
+
+			// Utility endpoints
+			r.Get("/api/playlist-songs-empty", playlistHandler.ShowPlaylistSongsEmpty)
+			r.Get("/api/playlist/{id}/songs", playlistHandler.GetPlaylistSongsView)
 		})
 
-		// Search
-		// r.Get("/search-helper", handlers.NewGetSearchArtists().ServeHttp)
-		// r.Get("/search-albums", handlers.NewGetArtistAlbums().ServeHttp)
-
-		// Select
-		// r.Post("/api/select-album", handlers.NewPostSelectAlbum().ServeHttp)
-		// r.Post("/start-game", handlers.NewPostStartGame().ServeHttp)
-
-		// Guess
-		// r.Post("/guess-track", handlers.NewPostGuessTrack().ServeHttp)
-
-		// Player
-		// r.Post("/play-pause", handlers.NewPostPlayPause().ServeHttp)
-		// r.Post("/skip", handlers.NewPostSkip().ServeHttp)
-		// r.Post("/clear-queue", handlers.NewPostClearQueue().ServeHttp)
-		//r.Get("/song-time", handlers.NewGetSongTime(gm).ServeHttp)
 	})
-
-	// //spotifyCache := cache.NewSpotifyCacheMap()
-	// songProvider := spotify.NewSpotifySongProvider("", "", "", "")
-	// accessToken := "BQBwioRufaWQxtoe3lkUwq6DaFlsY8mzWdOW18zhx_-bk047G6Pi4Zhd19c_kHDwgTnbA2p0sy7znDirTqUicySw9v3r7a1FyuWkBphj9Enp1Tt-RV9z468nR3UZgMlxZga15EddZUAtlfnqhV-TfSbdt5zSd2CnQV_-PvhXvQIjO2JKNGuLRjPUnXh4bMKU1Tu5ZT9PZt2vkCwJHFF7Qja5Nifhdf1C6sSOdlf0J_PxCoabg8lMkT0zprhdMkQUHAZGFnU"
-	// songProvider.AccessToken = accessToken
-	//
-	// r.Get("/internal/spotifyapi", handlers.NewGetSpotifyApi().ServeHttp)
-	// r.Get("/internal/spotifyapi/track", handlers.NewGetSpotifyApiTrack(accessToken).ServeHttp)
-	// r.Get("/internal/spotifyapi/album", handlers.NewGetSpotifyApiAlbum(accessToken).ServeHttp)
-	// r.Get("/internal/spotifyapi/artist", handlers.NewGetSpotifyApiArtist(accessToken).ServeHttp)
-	// r.Get("/internal/spotifyapi/playlist", handlers.NewGetSpotifyApiPlaylist(accessToken).ServeHttp)
-	// r.Get("/internal/spotifyapi/track/name", handlers.NewGetSpotifyApiTrackName(accessToken).ServeHttp)
-	// r.Get("/internal/spotifyapi/album/name", handlers.NewGetSpotifyApiAlbumName(accessToken).ServeHttp)
-	// r.Get("/internal/spotifyapi/artist/name", handlers.NewGetSpotifyApiArtistName(accessToken).ServeHttp)
-	// r.Get("/internal/spotifyapi/playlist/name", handlers.NewGetSpotifyApiPlaylistName(accessToken).ServeHttp)
-	//
-	// r.Get("/internal/spotifycache", handlers.NewGetSpotifyCache().ServeHttp)
-	// r.Get("/internal/spotifycache/track", handlers.NewGetSpotifyCacheTrack(accessToken, redisCache).ServeHttp)
-	// r.Get("/internal/spotifycache/album", handlers.NewGetSpotifyCacheAlbum(accessToken, redisCache).ServeHttp)
-	// r.Get("/internal/spotifycache/artist", handlers.NewGetSpotifyCacheArtist(accessToken, redisCache).ServeHttp)
-	// r.Get("/internal/spotifycache/playlist", handlers.NewGetSpotifyCachePlaylist(accessToken, redisCache).ServeHttp)
-	// r.Get("/internal/spotifycache/track/name", handlers.NewGetSpotifyCacheTrackName(accessToken, redisCache).ServeHttp)
-	// r.Get("/internal/spotifycache/album/name", handlers.NewGetSpotifyCacheAlbumName(accessToken, redisCache).ServeHttp)
-	// r.Get("/internal/spotifycache/artist/name", handlers.NewGetSpotifyCacheArtistName(accessToken, redisCache).ServeHttp)
-	// r.Get("/internal/spotifycache/playlist/name", handlers.NewGetSpotifyCachePlaylistName(accessToken, redisCache).ServeHttp)
-	//
-	// r.Get("/internal/frontend/search-music", handlers.NewGetSearchMusic(accessToken, redisCache).ServeHttp)
-	// r.Get("/internal/frontend/stack-music", handlers.NewGetStackMusic(accessToken, redisCache).ServeHttp)
 
 	//
 	// Start the server

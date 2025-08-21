@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/FerNunez/NameThatSong/internal/api/middleware"
@@ -30,249 +30,6 @@ func NewPlaylistHandlerWithSpotify(playlistService playlist.PlaylistService, spo
 		playlistService: playlistService,
 		spotifyService:  spotifyService,
 	}
-}
-
-// GET /playlists - Get user playlists
-func (h *PlaylistHandler) GetUserPlaylists(w http.ResponseWriter, r *http.Request) {
-	user, ok := middleware.GetUser(r.Context())
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	playlists, err := h.playlistService.GetUserPlaylists(r.Context(), user.ID)
-	if err != nil {
-		http.Error(w, "Failed to get playlists", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(playlists)
-}
-
-// POST /playlists - Create playlist
-func (h *PlaylistHandler) CreatePlaylist(w http.ResponseWriter, r *http.Request) {
-	user, ok := middleware.GetUser(r.Context())
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	var req models.CreatePlaylistRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	playlist, err := h.playlistService.CreatePlaylist(r.Context(), user.ID, req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(playlist)
-}
-
-// GET /playlists/{id} - Get specific playlist
-func (h *PlaylistHandler) GetPlaylist(w http.ResponseWriter, r *http.Request) {
-	user, ok := middleware.GetUser(r.Context())
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	playlistIDStr := chi.URLParam(r, "id")
-	playlistID, err := uuid.Parse(playlistIDStr)
-	if err != nil {
-		http.Error(w, "Invalid playlist ID", http.StatusBadRequest)
-		return
-	}
-
-	// Check if we should include songs
-	includeSongs := r.URL.Query().Get("include_songs") == "true"
-
-	var playlist *models.Playlist
-	if includeSongs {
-		playlist, err = h.playlistService.GetPlaylistWithSongs(r.Context(), playlistID, user.ID)
-	} else {
-		playlist, err = h.playlistService.GetPlaylist(r.Context(), playlistID, user.ID)
-	}
-
-	if err != nil {
-		http.Error(w, "Playlist not found", http.StatusNotFound)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(playlist)
-}
-
-// PUT /playlists/{id} - Update playlist
-func (h *PlaylistHandler) UpdatePlaylist(w http.ResponseWriter, r *http.Request) {
-	user, ok := middleware.GetUser(r.Context())
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	playlistIDStr := chi.URLParam(r, "id")
-	playlistID, err := uuid.Parse(playlistIDStr)
-	if err != nil {
-		http.Error(w, "Invalid playlist ID", http.StatusBadRequest)
-		return
-	}
-
-	var req models.UpdatePlaylistRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	playlist, err := h.playlistService.UpdatePlaylist(r.Context(), playlistID, user.ID, req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(playlist)
-}
-
-// DELETE /playlists/{id} - Delete playlist
-func (h *PlaylistHandler) DeletePlaylist(w http.ResponseWriter, r *http.Request) {
-	user, ok := middleware.GetUser(r.Context())
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	playlistIDStr := chi.URLParam(r, "id")
-	playlistID, err := uuid.Parse(playlistIDStr)
-	if err != nil {
-		http.Error(w, "Invalid playlist ID", http.StatusBadRequest)
-		return
-	}
-
-	if err := h.playlistService.DeletePlaylist(r.Context(), playlistID, user.ID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// POST /playlists/{id}/songs - Add song to playlist
-func (h *PlaylistHandler) AddSongToPlaylist(w http.ResponseWriter, r *http.Request) {
-	user, ok := middleware.GetUser(r.Context())
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	playlistIDStr := chi.URLParam(r, "id")
-	playlistID, err := uuid.Parse(playlistIDStr)
-	if err != nil {
-		http.Error(w, "Invalid playlist ID", http.StatusBadRequest)
-		return
-	}
-
-	var req models.AddSongRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	if err := h.playlistService.AddSongToPlaylist(r.Context(), playlistID, user.ID, req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	w.WriteHeader(http.StatusCreated)
-}
-
-// DELETE /playlists/{id}/songs/{songId} - Remove song
-func (h *PlaylistHandler) RemoveSongFromPlaylist(w http.ResponseWriter, r *http.Request) {
-	user, ok := middleware.GetUser(r.Context())
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	playlistIDStr := chi.URLParam(r, "id")
-	playlistID, err := uuid.Parse(playlistIDStr)
-	if err != nil {
-		http.Error(w, "Invalid playlist ID", http.StatusBadRequest)
-		return
-	}
-
-	songIDStr := chi.URLParam(r, "songId")
-	songID, err := uuid.Parse(songIDStr)
-	if err != nil {
-		http.Error(w, "Invalid song ID", http.StatusBadRequest)
-		return
-	}
-
-	if err := h.playlistService.RemoveSongFromPlaylist(r.Context(), playlistID, user.ID, songID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// PUT /playlists/{id}/songs/reorder - Reorder playlist songs
-func (h *PlaylistHandler) ReorderPlaylistSongs(w http.ResponseWriter, r *http.Request) {
-	user, ok := middleware.GetUser(r.Context())
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	playlistIDStr := chi.URLParam(r, "id")
-	playlistID, err := uuid.Parse(playlistIDStr)
-	if err != nil {
-		http.Error(w, "Invalid playlist ID", http.StatusBadRequest)
-		return
-	}
-
-	var req models.ReorderSongsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	if err := h.playlistService.ReorderPlaylistSongs(r.Context(), playlistID, user.ID, req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// POST /playlists/import - Import from Spotify
-func (h *PlaylistHandler) ImportFromSpotify(w http.ResponseWriter, r *http.Request) {
-	user, ok := middleware.GetUser(r.Context())
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	var req models.ImportPlaylistRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	playlist, err := h.playlistService.ImportFromSpotify(r.Context(), user.ID, req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(playlist)
 }
 
 // GET /api/local-playlists - Get user's local playlists only
@@ -391,68 +148,6 @@ func (h *PlaylistHandler) GetSpotifyPlaylistsForImport(w http.ResponseWriter, r 
 	templates.SpotifyImportList(templatePlaylists).Render(r.Context(), w)
 }
 
-// POST /playlists/{id}/export - Export to Spotify
-func (h *PlaylistHandler) ExportToSpotify(w http.ResponseWriter, r *http.Request) {
-	user, ok := middleware.GetUser(r.Context())
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	playlistIDStr := chi.URLParam(r, "id")
-	playlistID, err := uuid.Parse(playlistIDStr)
-	if err != nil {
-		http.Error(w, "Invalid playlist ID", http.StatusBadRequest)
-		return
-	}
-
-	var req models.ExportPlaylistRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	// Set the playlist ID from URL
-	req.PlaylistID = playlistID
-
-	spotifyPlaylistID, err := h.playlistService.ExportToSpotify(r.Context(), user.ID, req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	response := map[string]string{
-		"spotify_playlist_id": spotifyPlaylistID,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(response)
-}
-
-// POST /playlists/{id}/sync - Sync with Spotify
-func (h *PlaylistHandler) SyncWithSpotify(w http.ResponseWriter, r *http.Request) {
-	user, ok := middleware.GetUser(r.Context())
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	playlistIDStr := chi.URLParam(r, "id")
-	playlistID, err := uuid.Parse(playlistIDStr)
-	if err != nil {
-		http.Error(w, "Invalid playlist ID", http.StatusBadRequest)
-		return
-	}
-
-	if err := h.playlistService.SyncWithSpotify(r.Context(), playlistID, user.ID); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
 // PUT /api/spotify-playlists/{id}/update - Update single Spotify playlist data
 func (h *PlaylistHandler) UpdateSpotifyPlaylist(w http.ResponseWriter, r *http.Request) {
 	user, ok := middleware.GetUser(r.Context())
@@ -564,4 +259,186 @@ func (h *PlaylistHandler) CreateAndShowPlaylist(w http.ResponseWriter, r *http.R
 func (h *PlaylistHandler) CancelCreatePlaylist(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	templates.PlaylistSongsEmpty().Render(r.Context(), w)
+}
+
+// GET /api/game/setup - Show game setup component
+func (h *PlaylistHandler) ShowGameSetup(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	templates.GameSetupView().Render(r.Context(), w)
+}
+
+// GET /api/playlist-songs-empty - Show empty playlist state
+func (h *PlaylistHandler) ShowPlaylistSongsEmpty(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	templates.PlaylistSongsEmpty().Render(r.Context(), w)
+}
+
+// GET /api/game/playlists - Get user playlists for game setup
+func (h *PlaylistHandler) GetGamePlaylists(w http.ResponseWriter, r *http.Request) {
+	user, ok := middleware.GetUser(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Get user's playlists from the service
+	playlists, err := h.playlistService.GetUserPlaylists(r.Context(), user.ID)
+	if err != nil {
+		logger.Error(r.Context(), "failed to get user playlists",
+			logger.F("user_id", user.ID.String()),
+			logger.F("error", err))
+		http.Error(w, "failed to get playlists", http.StatusInternalServerError)
+		return
+	}
+
+	// Convert to template format
+	templatePlaylists := make([]templates.UserPlaylist, len(playlists))
+	for i, p := range playlists {
+		templatePlaylists[i] = templates.UserPlaylist{
+			ID:         p.ID.String(),
+			Name:       p.Name,
+			TrackCount: len(p.Songs),
+			IsSpotify:  p.SpotifyPlaylistID != nil,
+			SpotifyID: func() string {
+				if p.SpotifyPlaylistID != nil {
+					return *p.SpotifyPlaylistID
+				}
+				return ""
+			}(),
+		}
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	templates.GamePlaylistSelection(templatePlaylists).Render(r.Context(), w)
+}
+
+// GET /api/playlist/{id}/songs - Get playlist details with songs for display
+func (h *PlaylistHandler) GetPlaylistSongsView(w http.ResponseWriter, r *http.Request) {
+	user, ok := middleware.GetUser(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	playlistIDStr := chi.URLParam(r, "id")
+
+	// Check if this is a Spotify playlist ID or local playlist UUID
+	var playlist *models.Playlist
+	var err error
+
+	if playlistID, uuidErr := uuid.Parse(playlistIDStr); uuidErr == nil {
+		// It's a UUID, get local playlist with songs
+		playlist, err = h.playlistService.GetPlaylistWithSongs(r.Context(), playlistID, user.ID)
+	} else {
+		// It's likely a Spotify playlist ID, get it from Spotify service
+		spotifyPlaylist, trackIDs, albumIDs, spotifyErr := h.spotifyService.FetchPlaylist(r.Context(), user.ID.String(), playlistIDStr)
+		if spotifyErr != nil {
+			logger.Error(r.Context(), "failed to get spotify playlist",
+				logger.F("playlist_id", playlistIDStr),
+				logger.F("user_id", user.ID.String()),
+				logger.F("error", spotifyErr))
+			http.Error(w, "Playlist not found", http.StatusNotFound)
+			return
+		}
+		// Convert Spotify playlist to our playlist model
+		playlist = &models.Playlist{
+			ID:                uuid.New(), // Temporary ID for display
+			Name:              spotifyPlaylist.Name,
+			Description:       spotifyPlaylist.Description,
+			IsPublic:          spotifyPlaylist.Public,
+			SpotifyPlaylistID: &spotifyPlaylist.ID,
+			Songs:             []models.PlaylistSong{}, // Will be populated below
+		}
+
+		for idx, trackID := range trackIDs {
+			trackData, err := h.spotifyService.FetchTrack(r.Context(), user.ID.String(), trackID)
+			if err != nil {
+				logger.Error(r.Context(), "failed to get spotify track",
+					logger.F("trackID", trackID),
+					logger.F("error", err))
+				http.Error(w, "Track not found", http.StatusNotFound)
+				return
+			}
+
+			albumData, err := h.spotifyService.FetchAlbum(r.Context(), user.ID.String(), albumIDs[idx])
+			playlist.Songs = append(playlist.Songs, models.PlaylistSong{
+				ID:             uuid.New(), // Temporary ID
+				PlaylistID:     playlist.ID,
+				SpotifyTrackID: trackData.ID,
+				Position:       idx + 1,
+				TrackName:      trackData.Name,
+				ArtistName:     trackData.GetPrimaryArtistName(),
+				AlbumName:      albumData.Name,
+				AlbumURL:       albumData.ImageURL,
+				DurationMs:     trackData.DurationMs,
+			})
+		}
+
+	}
+
+	if err != nil {
+		logger.Error(r.Context(), "failed to get playlist",
+			logger.F("playlist_id", playlistIDStr),
+			logger.F("user_id", user.ID.String()),
+			logger.F("error", err))
+		http.Error(w, "Playlist not found", http.StatusNotFound)
+		return
+	}
+
+	// Convert playlist to template format
+	playlistInfo := templates.PlaylistInfo{
+		ID:          playlistIDStr,
+		Name:        playlist.Name,
+		Description: playlist.Description,
+		IsSpotify:   playlist.SpotifyPlaylistID != nil,
+	}
+
+	// Set image URL if available
+	if playlist.SpotifyPlaylistID != nil && h.spotifyService != nil {
+		if spotifyPlaylist, _, _, err := h.spotifyService.FetchPlaylist(r.Context(), user.ID.String(), *playlist.SpotifyPlaylistID); err == nil {
+			playlistInfo.ImageURL = spotifyPlaylist.ImageURL
+			playlistInfo.Owner = spotifyPlaylist.OwnerDisplayName
+		}
+	}
+
+	// Convert songs to template format
+	var templateSongs []templates.PlaylistSong
+	for _, song := range playlist.Songs {
+		templateSong := templates.PlaylistSong{
+			ID:       song.SpotifyTrackID,
+			Title:    song.TrackName,
+			Artist:   song.ArtistName,
+			AlbumArt: song.AlbumURL, // Will need to fetch this from Spotify if needed
+		}
+
+		// Format duration
+		if song.DurationMs > 0 {
+			duration := song.DurationMs / 1000
+			minutes := duration / 60
+			seconds := duration % 60
+			templateSong.Duration = fmt.Sprintf("%d:%02d", minutes, seconds)
+		}
+
+		templateSongs = append(templateSongs, templateSong)
+	}
+
+	// Calculate total duration
+	var totalMs int
+	for _, song := range playlist.Songs {
+		totalMs += song.DurationMs
+	}
+	if totalMs > 0 {
+		totalSeconds := totalMs / 1000
+		totalMinutes := totalSeconds / 60
+		hours := totalMinutes / 60
+		minutes := totalMinutes % 60
+		if hours > 0 {
+			playlistInfo.TotalDuration = fmt.Sprintf("%d hr %d min", hours, minutes)
+		} else {
+			playlistInfo.TotalDuration = fmt.Sprintf("%d min", minutes)
+		}
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	templates.PlaylistDetailsView(playlistInfo, templateSongs).Render(r.Context(), w)
 }

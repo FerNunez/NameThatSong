@@ -62,6 +62,7 @@ CREATE TABLE spotify_playlists (
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+-- RELATIONSHIPS
 -- Many-to-many: Albums can have multiple artists (collaborations, compilations)
 CREATE TABLE spotify_album_artists (
     album_id TEXT REFERENCES spotify_albums(id) ON DELETE CASCADE,
@@ -77,13 +78,21 @@ CREATE TABLE spotify_track_artists (
     PRIMARY KEY (track_id, artist_id)
 );
 
+-- -- One-to-many: Alums can have multiple tracks
+CREATE TABLE spotify_album_tracks (
+    album_id TEXT REFERENCES spotify_albums(id) ON DELETE CASCADE,
+    track_id TEXT REFERENCES spotify_tracks(id) ON DELETE CASCADE,
+    position INTEGER NOT NULL,
+    PRIMARY KEY (album_id, track_id)
+);
+
+
 -- One-to-many: One spotify has many tracks
 CREATE TABLE spotify_playlist_tracks(
     playlist_id TEXT REFERENCES spotify_playlists(id) ON DELETE CASCADE,
     track_id TEXT REFERENCES spotify_tracks(id) ON DELETE CASCADE,
     position INTEGER NOT NULL,
-    added_at TIMESTAMP,
-    added_by TEXT, -- User that ID
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     PRIMARY KEY (playlist_id, track_id),
     UNIQUE(playlist_id, position)
 );
@@ -100,13 +109,11 @@ CREATE INDEX idx_spotify_tracks_duration ON spotify_tracks(duration_ms);
 CREATE INDEX idx_spotify_tracks_popularity ON spotify_tracks(popularity DESC);
 
 -- Relationship indexes for efficient JOINs
-CREATE INDEX idx_album_artists_album ON spotify_album_artists(album_id);
 CREATE INDEX idx_album_artists_artist ON spotify_album_artists(artist_id);
-CREATE INDEX idx_track_artists_track ON spotify_track_artists(track_id);
 CREATE INDEX idx_track_artists_artist ON spotify_track_artists(artist_id);
 CREATE INDEX idx_track_artists_primary ON spotify_track_artists(track_id, is_primary);
-CREATE INDEX idx_spotify_playlis_trackst_playlist ON spotify_playlist_tracks(playlist_id);
-CREATE INDEX idx_spotify_playlis_trackst_position ON spotify_playlist_tracks(playlist_id, position);
+CREATE INDEX idx_album_tracks_track ON spotify_album_tracks(track_id);
+CREATE INDEX idx_spotify_playlist_trackst_position ON spotify_playlist_tracks(playlist_id, position);
 
 -- Cache management indexes for TTL-based cleanup
 CREATE INDEX idx_spotify_artists_cached_at ON spotify_artists(cached_at);
@@ -122,3 +129,4 @@ DROP TABLE spotify_tracks CASCADE;
 DROP TABLE spotify_albums CASCADE;
 DROP TABLE spotify_artists CASCADE;
 DROP TABLE spotify_playlist_tracks CASCADE;
+DROP TABLE spotify_album_tracks CASCADE;

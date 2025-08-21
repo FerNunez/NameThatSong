@@ -14,6 +14,10 @@ type SpotifyCache interface {
 	SetArtist(artistId string, artist m.ArtistData)
 	GetPlaylist(playlistId string) (m.PlaylistData, bool)
 	SetPlaylist(playlistId string, playlist m.PlaylistData)
+	GetPlaylistTracks(playlistId string) ([]string, bool)
+	SetPlaylistTracks(playlistId string, tracks []string)
+	GetPlaylistAlbums(playlistId string) ([]string, bool)
+	SetPlaylistAlbums(playlistId string, tracks []string)
 
 	// Search cache operations (cache-only, no API calls)
 	GetSearchTracks(query string) ([]m.TrackSearch, bool)

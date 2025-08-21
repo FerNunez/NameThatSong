@@ -50,31 +50,8 @@ func NewGameHandler(ps playlist.PlaylistService) *GameHandler {
 	}
 }
 
-// GET /game/setup - Show game setup page
-func (h *GameHandler) GameSetupPage(w http.ResponseWriter, r *http.Request) {
-	logger.Info(r.Context(), "game setup page requested")
-
-	// Check if user is authenticated
-	user, ok := middleware.GetUser(r.Context())
-	if !ok {
-		http.Redirect(w, r, "/login", http.StatusFound)
-		return
-	}
-
-	logger.Info(r.Context(), "rendering game setup page",
-		logger.F("user_id", user.ID.String()))
-
-	// Render the game setup page with layout
-	component := templates.GameSetupPage()
-	layout := templates.Layout(component, "Start New Game - NameThatSong")
-	if err := layout.Render(r.Context(), w); err != nil {
-		logger.Error(r.Context(), "failed to render game setup page",
-			logger.F("user_id", user.ID.String()),
-			logger.F("error", err))
-		http.Error(w, "failed to render page", http.StatusInternalServerError)
-		return
-	}
-}
+// GameSetupPage method removed - game setup is now integrated into modern UI
+// Use /api/game/setup endpoint in playlist_handler.go instead
 
 // GET /api/playlists - Get user playlists for game selection
 func (h *GameHandler) GetUserPlaylists(w http.ResponseWriter, r *http.Request) {
@@ -103,14 +80,9 @@ func (h *GameHandler) GetUserPlaylists(w http.ResponseWriter, r *http.Request) {
 		playlistsSlice[i] = *p
 	}
 
-	// Render playlist grid
-	component := templates.PlaylistGrid(playlistsSlice)
-	if err := component.Render(r.Context(), w); err != nil {
-		logger.Error(r.Context(), "failed to render playlist grid",
-			logger.F("error", err))
-		http.Error(w, "failed to render playlists", http.StatusInternalServerError)
-		return
-	}
+	// NOTE: PlaylistGrid template removed - using GamePlaylistSelection instead
+	// This method is deprecated, use playlist_handler.GetGamePlaylists instead
+	http.Error(w, "deprecated endpoint - use /api/game/playlists instead", http.StatusGone)
 }
 
 // POST /game/start - Start a new game

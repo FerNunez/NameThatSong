@@ -88,6 +88,12 @@ type SpotifyAlbumArtist struct {
 	ArtistID string
 }
 
+type SpotifyAlbumTrack struct {
+	AlbumID  string
+	TrackID  string
+	Position int32
+}
+
 type SpotifyArtist struct {
 	ID             string
 	Name           string
@@ -118,8 +124,7 @@ type SpotifyPlaylistTrack struct {
 	PlaylistID string
 	TrackID    string
 	Position   int32
-	AddedAt    sql.NullTime
-	AddedBy    sql.NullString
+	UpdatedAt  time.Time
 }
 
 type SpotifyToken struct {

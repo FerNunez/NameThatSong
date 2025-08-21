@@ -29,8 +29,9 @@ func NewSimpleSearchHandler(ss spotify.SpotifyService) *SimpleSearchHandler {
 
 // ServeHTTP handles the search API endpoint
 func (h *SimpleSearchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
 	// Get the search query
-	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	query := strings.TrimSpace(r.URL.Query().Get("query"))
 
 	// If query is empty or too short, return empty state
 	if query == "" {
@@ -175,20 +176,7 @@ renderResults:
 	component.Render(r.Context(), w)
 }
 
-// SearchPageHandler serves the main search page
-type SearchPageHandler struct{}
-
-// NewSearchPageHandler creates a new search page handler
-func NewSearchPageHandler() *SearchPageHandler {
-	return &SearchPageHandler{}
-}
-
-// ServeHTTP serves the main search page
-func (h *SearchPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	component := templates.SimpleSearchLayout()
-	layoutComponent := templates.Layout(component, "Music Search")
-	layoutComponent.Render(r.Context(), w)
-}
+// SearchPageHandler removed - search is now integrated into modern UI sidebar
 
 // Action handlers for the buttons (placeholder implementations)
 type ActionHandler struct {
@@ -234,7 +222,6 @@ func (h *ActionHandler) PlayTrackHandler(w http.ResponseWriter, r *http.Request)
 
 	w.Header().Set("HX-Trigger", "track-playing")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Playing track %s", trackID)
 }
 
 // AddAlbumHandler handles adding an album to playlist

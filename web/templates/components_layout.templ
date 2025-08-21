@@ -92,35 +92,69 @@ templ UserAvatar(avatarURL string) {
 	</div>
 }
 
-templ Sidebar() {
+templ Sidebar(user *User) {
 	<aside class="w-80 bg-forest-400 border-r border-forest-100 overflow-auto h-full">
-		<!-- Local Playlists -->
-		<section class="px-4 pb-4">
-			<h3 class="text-lg font-bold mb-4 text-white">Local Playlists</h3>
-			<div
-				id="local-playlists"
-				class="space-y-2"
-				hx-get="/api/local-playlists"
-				hx-trigger="load, refreshLocalPlaylists from:body"
-				hx-target="this"
-			>
-				@PlaylistsLoading()
-			</div>
-		</section>
-		<!-- Spotify Playlists -->
-		<section class="px-4 pb-6">
-			<h3 class="text-lg font-bold mb-4 text-white">Spotify Playlists</h3>
-			<div
-				id="spotify-playlists"
-				class="space-y-2"
-				hx-get="/api/spotify-playlists"
-				hx-trigger="load"
-				hx-target="this"
-			>
-				@PlaylistsLoading()
-			</div>
-		</section>
+		if user != nil {
+			<!-- Local Playlists - Only for authenticated users -->
+			<section class="px-4 pb-4 pt-4">
+				<h3 class="text-lg font-bold mb-4 text-white">Local Playlists</h3>
+				<div
+					id="local-playlists"
+					class="space-y-2"
+					hx-get="/api/local-playlists"
+					hx-trigger="load, refreshLocalPlaylists from:body"
+					hx-target="this"
+				>
+					@PlaylistsLoading()
+				</div>
+			</section>
+			<!-- Spotify Playlists - Only for authenticated users -->
+			<section class="px-4 pb-6">
+				<h3 class="text-lg font-bold mb-4 text-white">Spotify Playlists</h3>
+				<div
+					id="spotify-playlists"
+					class="space-y-2"
+					hx-get="/api/spotify-playlists"
+					hx-trigger="load"
+					hx-target="this"
+				>
+					@PlaylistsLoading()
+				</div>
+			</section>
+		} else {
+			<!-- Login Prompt for Unauthenticated Users -->
+			@LoginPromptSidebar()
+		}
 	</aside>
+}
+
+templ LoginPromptSidebar() {
+	<div class="h-full flex items-center justify-center p-6">
+		<div class="text-center">
+			<div class="w-16 h-16 mx-auto mb-6 text-forest-50 opacity-50">
+				<svg fill="currentColor" viewBox="0 0 24 24">
+					<path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path>
+				</svg>
+			</div>
+			<h3 class="text-lg font-semibold text-white mb-3">Welcome to NameThatSong</h3>
+			<p class="text-forest-50 text-sm mb-6">Sign in to access your playlists and start playing music games!</p>
+			<div class="space-y-3">
+				<a
+					href="/login"
+					class="block w-full px-4 py-3 bg-accent text-forest-400 font-bold rounded-lg hover:bg-opacity-90 transition-colors text-center"
+				>
+					🎵 Sign In
+				</a>
+				<a
+					href="/register"
+					class="block w-full px-4 py-3 bg-forest-300 text-white font-medium rounded-lg hover:bg-forest-200 transition-colors text-center"
+				>
+					Create Account
+				</a>
+			</div>
+			<p class="text-forest-100 text-xs mt-4">Connect your Spotify account to access your music library</p>
+		</div>
+	</div>
 }
 
 templ LibraryItem(label, iconType, href string) {
@@ -156,7 +190,7 @@ templ ModernLayout(contents templ.Component, title string) {
 		<body class="h-full bg-forest-400 text-white overflow-hidden">
 			@Header(nil)
 			<div class="flex h-full pt-16">
-				@Sidebar()
+				@Sidebar(nil)
 				<main id="main-content" class="flex-1 overflow-auto bg-forest-400">
 					<div class="animate-slide-up">
 						@contents
@@ -183,7 +217,7 @@ templ ModernLayoutWithUser(contents templ.Component, title string, user *User) {
 		<body class="h-full bg-forest-400 text-white overflow-hidden">
 			@Header(user)
 			<div class="flex h-full pt-16">
-				@Sidebar()
+				@Sidebar(user)
 				<main id="main-content" class="flex-1 overflow-auto bg-forest-400">
 					<div class="animate-slide-up">
 						@contents
@@ -336,7 +370,7 @@ templ LocalPlaylistsList(playlists []UserPlaylist) {
 	if len(playlists) == 0 {
 		@NoLocalPlaylistsFound()
 	}
-	<div class="pt-3 border-t border-forest-200">
+	<div class="pb-3 border-b border-forest-200">
 		<button
 			class="w-full text-accent text-sm hover:text-green-400 transition-colors p-2 rounded font-medium"
 			hx-get="/api/playlist/create-form"
@@ -344,13 +378,6 @@ templ LocalPlaylistsList(playlists []UserPlaylist) {
 			hx-swap="innerHTML"
 		>
 			+ Create New Playlist
-		</button>
-		<button
-			class="w-full text-forest-50 text-sm hover:text-white transition-colors p-2 rounded mt-1"
-			hx-get="/api/import-spotify-playlists"
-			hx-target="#local-playlists"
-		>
-			📥 Import from Spotify
 		</button>
 	</div>
 }
@@ -441,4 +468,25 @@ templ NoSpotifyPlaylistsFound() {
 			Refresh from Spotify
 		</button>
 	</div>
+}
+
+templ AuthLayout(contents templ.Component, title string) {
+	<html class="h-full bg-forest-400 font-sans">
+		<head>
+			<title>{ title }</title>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<link rel="preconnect" href="https://fonts.googleapis.com"/>
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+			<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+			<link rel="stylesheet" href="/static/css/style.min.css"/>
+		</head>
+		<body class="h-full bg-forest-400 text-white">
+			<main class="h-full">
+				@contents
+			</main>
+			<script src="https://unpkg.com/htmx.org@2.0.3"></script>
+			<script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+		</body>
+	</html>
 }

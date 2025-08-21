@@ -130,28 +130,58 @@ func (s *Spotify) FetchArtist(ctx context.Context, userID, artistID string) (m.A
 }
 
 // FetchPlaylist fetches a playlist using three-tier strategy: Cache → Database → API
-func (s *Spotify) FetchPlaylist(ctx context.Context, userID, playlistID string) (m.PlaylistData, error) {
-	// Tier 1: Check Redis cache first
+func (s *Spotify) FetchPlaylist(ctx context.Context, userID, playlistID string) (m.PlaylistData, []string, []string, error) {
+	// // Tier 1: Check Redis cache first
 	if cachedPlaylist, found := s.cache.GetPlaylist(playlistID); found {
-		return cachedPlaylist, nil
+		trackIDs, _ := s.cache.GetPlaylistTracks(playlistID)
+		albumIDs, _ := s.cache.GetPlaylistAlbums(playlistID)
+		return cachedPlaylist, trackIDs, albumIDs, nil
 	}
 
 	// Tier 2: Check database for persistent storage
 	if dbPlaylist, err := s.dataStore.GetPlaylist(ctx, playlistID); err == nil && dbPlaylist != nil {
+		trackIDs, _ := s.dataStore.GetPlaylistTracks(ctx, playlistID)
+
+		albumIDs := make([]string, 0, len(trackIDs))
+		for _, trackID := range trackIDs {
+			albumID, err := s.dataStore.GetAlbumByTrackID(ctx, trackID)
+			if err != nil {
+				return m.PlaylistData{}, []string{}, []string{}, err
+			}
+			albumIDs = append(albumIDs, albumID)
+		}
+
 		// Found in database, update cache and return
 		s.cache.SetPlaylist(playlistID, *dbPlaylist)
-		return *dbPlaylist, nil
+		s.cache.SetPlaylistTracks(playlistID, trackIDs)
+		s.cache.SetPlaylistAlbums(playlistID, albumIDs)
+		return *dbPlaylist, trackIDs, albumIDs, nil
 	}
-
+	//
 	// Tier 3: Fetch from Spotify API as last resort
 	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
-		return m.PlaylistData{}, fmt.Errorf("failed to get access token: %v", err)
+		return m.PlaylistData{}, []string{}, []string{}, fmt.Errorf("failed to get access token: %v", err)
 	}
 
-	playlist, err := s.fetchPlaylistFromAPI(ctx, accessToken, playlistID)
+	// Fetch from API
+	playlist, trackIDs, albumIDs, err := s.fetchPlaylistFromAPI(ctx, accessToken, playlistID)
+
+	for _, trackID := range trackIDs {
+		_, err := s.FetchTrack(ctx, userID, trackID)
+		if err != nil {
+			return m.PlaylistData{}, []string{}, []string{}, err
+		}
+	}
+	for _, albumID := range albumIDs {
+		_, err := s.FetchAlbum(ctx, userID, albumID)
+		if err != nil {
+			return m.PlaylistData{}, []string{}, []string{}, err
+		}
+	}
+
 	if err != nil {
-		return m.PlaylistData{}, err
+		return m.PlaylistData{}, []string{}, []string{}, err
 	}
 
 	// Store in database for persistence (async to avoid blocking)
@@ -160,11 +190,24 @@ func (s *Spotify) FetchPlaylist(ctx context.Context, userID, playlistID string) 
 			// Log error but don't fail the request
 			fmt.Printf("Warning: failed to store playlist %s in database: %v\n", playlistID, err)
 		}
+
+		if err := s.dataStore.UpsertPlaylistTracks(context.Background(), playlistID, trackIDs); err != nil {
+			// Log error but don't fail the request
+			fmt.Printf("Warning: failed to store playlist tracks %s in database: %v\n", playlistID, err)
+		}
+
+		for idx, albumID := range albumIDs {
+			if err := s.dataStore.UpsertAlbumTracks(context.Background(), albumID, []string{trackIDs[idx]}); err != nil {
+				// Log error but don't fail the request
+				fmt.Printf("Warning: failed to store playlist tracks %s in database: %v\n", playlistID, err)
+			}
+		}
 	}()
 
 	// Cache the result for fast future access
 	s.cache.SetPlaylist(playlistID, playlist)
-	return playlist, nil
+	s.cache.SetPlaylistTracks(playlistID, trackIDs)
+	return playlist, trackIDs, albumIDs, nil
 }
 
 // Private API fetch methods
@@ -261,7 +304,7 @@ func (s *Spotify) fetchTrackFromAPI(ctx context.Context, accessToken, trackID st
 		if len(fetchTrackResponse.Album.Images) > 0 {
 			albumImageURL = fetchTrackResponse.Album.Images[0].URL
 		}
-		
+
 		// Extract album artists
 		albumArtists := make([]m.ArtistData, len(fetchTrackResponse.Album.Artists))
 		for i, artist := range fetchTrackResponse.Album.Artists {
@@ -270,7 +313,7 @@ func (s *Spotify) fetchTrackFromAPI(ctx context.Context, accessToken, trackID st
 				Name: artist.Name,
 			}
 		}
-		
+
 		albumData = &m.AlbumData{
 			ID:                   fetchTrackResponse.Album.ID,
 			Name:                 fetchTrackResponse.Album.Name,
@@ -284,7 +327,7 @@ func (s *Spotify) fetchTrackFromAPI(ctx context.Context, accessToken, trackID st
 			UpdatedAt:            time.Now(),
 		}
 	}
-	
+
 	// Extract track artists
 	trackArtists := make([]m.TrackArtist, len(fetchTrackResponse.Artists))
 	for i, artist := range fetchTrackResponse.Artists {
@@ -296,7 +339,7 @@ func (s *Spotify) fetchTrackFromAPI(ctx context.Context, accessToken, trackID st
 			IsPrimary: i == 0, // First artist is considered primary
 		}
 	}
-	
+
 	// Handle preview URL (can be null)
 	previewURL := ""
 	if fetchTrackResponse.PreviewURL != nil {
@@ -516,55 +559,86 @@ func (s *Spotify) fetchArtistFromAPI(ctx context.Context, accessToken, artistID 
 	}, nil
 }
 
-func (s *Spotify) fetchPlaylistFromAPI(ctx context.Context, accessToken, playlistID string) (m.PlaylistData, error) {
+func (s *Spotify) fetchPlaylistFromAPI(ctx context.Context, accessToken, playlistID string) (m.PlaylistData, []string, []string, error) {
 	baseURL := s.config.GetAPIBaseURL() + "/playlists/" + playlistID
+	fmt.Println(baseURL)
 	u, err := url.Parse(baseURL)
 	if err != nil {
-		return m.PlaylistData{}, err
+		return m.PlaylistData{}, []string{}, []string{}, err
 	}
 	q := u.Query()
-	q.Set("fields", "id,name,description,public,followers(total),images(url)")
+	//q.Set("fields", "id,name,description,public,followers(total),images(url)")
 	u.RawQuery = q.Encode()
 
 	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
 	if err != nil {
-		return m.PlaylistData{}, err
+		return m.PlaylistData{}, []string{}, []string{}, err
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return m.PlaylistData{}, err
+		return m.PlaylistData{}, []string{}, []string{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return m.PlaylistData{}, fmt.Errorf("unexpected status code: %v", resp.StatusCode)
+		return m.PlaylistData{}, []string{}, []string{}, fmt.Errorf("unexpected status code: %v", resp.StatusCode)
 	}
 
 	type FetchPlaylistResponse struct {
-		Description string `json:"description"`
-		Followers   struct {
-			Href  any `json:"href"`
-			Total int `json:"total"`
+		Collaborative bool   `json:"collaborative"`
+		Description   string `json:"description"`
+		ExternalUrls  struct {
+			Spotify string `json:"spotify"`
+		} `json:"external_urls"`
+		Followers struct {
+			Href  interface{} `json:"href"`
+			Total int         `json:"total"`
 		} `json:"followers"`
+		Href   string `json:"href"`
 		ID     string `json:"id"`
 		Images []struct {
-			Height any    `json:"height"`
+			Height int    `json:"height"`
 			URL    string `json:"url"`
-			Width  any    `json:"width"`
+			Width  int    `json:"width"`
 		} `json:"images"`
-		Name   string `json:"name"`
-		Public bool   `json:"public"`
-		Tracks struct {
+		Name  string `json:"name"`
+		Owner struct {
+			DisplayName  string `json:"display_name"`
+			ExternalUrls struct {
+				Spotify string `json:"spotify"`
+			} `json:"external_urls"`
+			Href string `json:"href"`
+			ID   string `json:"id"`
+			Type string `json:"type"`
+			URI  string `json:"uri"`
+		} `json:"owner"`
+		PrimaryColor interface{} `json:"primary_color"`
+		Public       bool        `json:"public"`
+		SnapshotID   string      `json:"snapshot_id"`
+		Tracks       struct {
+			Href  string `json:"href"`
 			Items []struct {
-				Track struct {
-					PreviewURL       any      `json:"preview_url"`
-					AvailableMarkets []string `json:"available_markets"`
-					Explicit         bool     `json:"explicit"`
-					Type             string   `json:"type"`
-					Episode          bool     `json:"episode"`
-					Track            bool     `json:"track"`
+				AddedAt time.Time `json:"added_at"`
+				AddedBy struct {
+					ExternalUrls struct {
+						Spotify string `json:"spotify"`
+					} `json:"external_urls"`
+					Href string `json:"href"`
+					ID   string `json:"id"`
+					Type string `json:"type"`
+					URI  string `json:"uri"`
+				} `json:"added_by"`
+				IsLocal      bool        `json:"is_local"`
+				PrimaryColor interface{} `json:"primary_color"`
+				Track        struct {
+					PreviewURL       interface{} `json:"preview_url"`
+					AvailableMarkets []string    `json:"available_markets"`
+					Explicit         bool        `json:"explicit"`
+					Type             string      `json:"type"`
+					Episode          bool        `json:"episode"`
+					Track            bool        `json:"track"`
 					Album            struct {
 						AvailableMarkets []string `json:"available_markets"`
 						Type             string   `json:"type"`
@@ -580,11 +654,31 @@ func (s *Spotify) fetchPlaylistFromAPI(ctx context.Context, accessToken, playlis
 						ReleaseDate          string `json:"release_date"`
 						ReleaseDatePrecision string `json:"release_date_precision"`
 						URI                  string `json:"uri"`
-						ExternalUrls         struct {
+						Artists              []struct {
+							ExternalUrls struct {
+								Spotify string `json:"spotify"`
+							} `json:"external_urls"`
+							Href string `json:"href"`
+							ID   string `json:"id"`
+							Name string `json:"name"`
+							Type string `json:"type"`
+							URI  string `json:"uri"`
+						} `json:"artists"`
+						ExternalUrls struct {
 							Spotify string `json:"spotify"`
 						} `json:"external_urls"`
 						TotalTracks int `json:"total_tracks"`
 					} `json:"album"`
+					Artists []struct {
+						ExternalUrls struct {
+							Spotify string `json:"spotify"`
+						} `json:"external_urls"`
+						Href string `json:"href"`
+						ID   string `json:"id"`
+						Name string `json:"name"`
+						Type string `json:"type"`
+						URI  string `json:"uri"`
+					} `json:"artists"`
 					DiscNumber  int `json:"disc_number"`
 					TrackNumber int `json:"track_number"`
 					DurationMs  int `json:"duration_ms"`
@@ -601,13 +695,22 @@ func (s *Spotify) fetchPlaylistFromAPI(ctx context.Context, accessToken, playlis
 					URI        string `json:"uri"`
 					IsLocal    bool   `json:"is_local"`
 				} `json:"track"`
+				VideoThumbnail struct {
+					URL interface{} `json:"url"`
+				} `json:"video_thumbnail"`
 			} `json:"items"`
+			Limit    int         `json:"limit"`
+			Next     interface{} `json:"next"`
+			Offset   int         `json:"offset"`
+			Previous interface{} `json:"previous"`
+			Total    int         `json:"total"`
 		} `json:"tracks"`
+		Type string `json:"type"`
+		URI  string `json:"uri"`
 	}
-
 	var fetchPlaylistResponse FetchPlaylistResponse
 	if err := json.NewDecoder(resp.Body).Decode(&fetchPlaylistResponse); err != nil {
-		return m.PlaylistData{}, err
+		return m.PlaylistData{}, []string{}, []string{}, err
 	}
 
 	imageUrl := ""
@@ -615,20 +718,29 @@ func (s *Spotify) fetchPlaylistFromAPI(ctx context.Context, accessToken, playlis
 		imageUrl = fetchPlaylistResponse.Images[len(fetchPlaylistResponse.Images)-1].URL
 	}
 
+	trackIDs := make([]string, 0, len(fetchPlaylistResponse.Tracks.Items))
+	for _, item := range fetchPlaylistResponse.Tracks.Items {
+		trackIDs = append(trackIDs, item.Track.ID)
+	}
+	albumIDs := make([]string, 0, len(fetchPlaylistResponse.Tracks.Items))
+	for _, item := range fetchPlaylistResponse.Tracks.Items {
+		albumIDs = append(albumIDs, item.Track.Album.ID)
+	}
+
 	return m.PlaylistData{
 		ID:               playlistID,
 		Name:             fetchPlaylistResponse.Name,
 		Description:      fetchPlaylistResponse.Description,
-		OwnerID:          "", // Not available in this API response
-		OwnerDisplayName: "", // Not available in this API response
+		OwnerID:          fetchPlaylistResponse.Owner.ID,
+		OwnerDisplayName: fetchPlaylistResponse.Owner.DisplayName,
 		Public:           fetchPlaylistResponse.Public,
-		Collaborative:    false, // Not available in this API response
-		FollowersTotal:   fetchPlaylistResponse.Followers.Total,
-		TotalTracks:      0, // Will be set when tracks are fetched separately
+		Collaborative:    fetchPlaylistResponse.Collaborative,
+		FollowersTotal:   0,
+		TotalTracks:      fetchPlaylistResponse.Tracks.Total,
 		ImageURL:         imageUrl,
 		CachedAt:         time.Now(),
 		UpdatedAt:        time.Now(),
-	}, nil
+	}, trackIDs, albumIDs, nil
 }
 
 // FetchAlbumsFromArtist fetches album IDs from an artist

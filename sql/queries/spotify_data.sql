@@ -86,6 +86,7 @@ ON CONFLICT (id) DO UPDATE SET
     updated_at = EXCLUDED.updated_at
 RETURNING *;
 
+
 -- =============================================================================
 -- RELATIONSHIP OPERATIONS
 -- =============================================================================
@@ -107,7 +108,33 @@ ON CONFLICT (track_id, artist_id) DO UPDATE SET
 -- name: ClearTrackArtists :exec
 DELETE FROM spotify_track_artists WHERE track_id = $1;
 
+-- ALBUMS
+-- name: UpsertAlbumTrack :exec
+INSERT INTO spotify_album_tracks (album_id, track_id, position)
+VALUES ($1, $2, $3)
+ON CONFLICT (album_id, track_id) DO UPDATE SET
+    position  = EXCLUDED.position;
+-- name: GetAlbumTracks :many
+SELECT * FROM spotify_album_tracks WHERE album_id = $1;
+-- name: GetAlbumByTrackID :one
+SELECT album_id FROM spotify_album_tracks WHERE track_id = $1;
+-- name: ClearAlbumTracks :exec
+DELETE FROM spotify_album_tracks WHERE album_id = $1;
 
+-- PLAYLISTS 
+-- name: UpsertPlaylistTracks :exec
+INSERT INTO spotify_playlist_tracks (
+    playlist_id, track_id, position, updated_at
+)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (playlist_id, track_id) DO UPDATE SET
+    position  = EXCLUDED.position;
+-- name: GetPlaylistTracks :many
+SELECT * FROM spotify_playlist_tracks WHERE playlist_id = $1;
+-- name: DeletePlaylistTrack :exec
+DELETE FROM spotify_playlist_tracks WHERE track_id = $1;
+-- name: ClearPlaylistTracks :exec
+DELETE FROM spotify_playlist_tracks WHERE playlist_id = $1;
 
 -- =============================================================================
 -- CACHE MANAGEMENT OPERATIONS

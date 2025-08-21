@@ -28,6 +28,16 @@ type SpotifyDataStore interface {
 	GetPlaylist(ctx context.Context, playlistID string) (*models.PlaylistData, error)
 	StorePlaylist(ctx context.Context, playlist *models.PlaylistData) error
 
+	// Relations
+	UpsertPlaylistTracks(ctx context.Context, playlistID string, trackIDs []string) error
+	GetPlaylistTracks(ctx context.Context, playlistID string) ([]string, error)
+	DeletePaylistTrack(ctx context.Context, playlistID string) error
+
+	UpsertAlbumTracks(ctx context.Context, albumID string, trackID []string) error
+	GetAlbumTracks(ctx context.Context, albumID string) ([]string, error)
+	GetAlbumByTrackID(ctx context.Context, trackID string) (string, error)
+	ClearAlbumTracks(ctx context.Context, albumID string) error
+
 	// Cache management
 	CleanupOldCacheData(ctx context.Context, olderThan time.Duration) error
 	GetCacheStats(ctx context.Context) (map[string]int64, error)
@@ -231,6 +241,77 @@ func (s *SQLSpotifyDataStore) StorePlaylist(ctx context.Context, playlist *model
 		ImageUrl:         nullStringFromString(playlist.ImageURL),
 	})
 	return err
+}
+
+// =============================================================================
+// RELATIONS
+// =============================================================================
+
+func (s *SQLSpotifyDataStore) UpsertPlaylistTracks(ctx context.Context, playlistID string, trackIDs []string) error {
+
+	for idx, trackID := range trackIDs {
+		err := s.db.UpsertPlaylistTracks(ctx, database.UpsertPlaylistTracksParams{
+			PlaylistID: playlistID,
+			TrackID:    trackID,
+			Position:   int32(idx),
+		})
+
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (s *SQLSpotifyDataStore) GetPlaylistTracks(ctx context.Context, playlistID string) ([]string, error) {
+	trackIDDBs, err := s.db.GetPlaylistTracks(ctx, playlistID)
+	if err != nil {
+		return []string{}, err
+	}
+
+	trackIDs := make([]string, 0, len(trackIDDBs))
+	for _, trackIDDB := range trackIDDBs {
+		trackIDs = append(trackIDs, trackIDDB.TrackID)
+	}
+	return trackIDs, nil
+}
+func (s *SQLSpotifyDataStore) DeletePaylistTrack(ctx context.Context, trackID string) error {
+	err := s.db.DeletePlaylistTrack(ctx, trackID)
+	return err
+}
+func (s *SQLSpotifyDataStore) UpsertAlbumTracks(ctx context.Context, albumID string, trackIDs []string) error {
+	for idx, trackID := range trackIDs {
+		err := s.db.UpsertAlbumTrack(ctx, database.UpsertAlbumTrackParams{
+			AlbumID:  albumID,
+			TrackID:  trackID,
+			Position: int32(idx + 1),
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (s *SQLSpotifyDataStore) GetAlbumTracks(ctx context.Context, albumID string) ([]string, error) {
+	trackDBs, err := s.db.GetAlbumTracks(ctx, albumID)
+	if err != nil {
+		return []string{}, err
+	}
+
+	trackIDs := make([]string, 0, len(trackDBs))
+	for _, trackDB := range trackDBs {
+		trackIDs = append(trackIDs, trackDB.TrackID)
+	}
+	return trackIDs, nil
+}
+func (s *SQLSpotifyDataStore) GetAlbumByTrackID(ctx context.Context, trackID string) (string, error) {
+	albumID, err := s.db.GetAlbumByTrackID(ctx, trackID)
+	if err != nil {
+		return "", err
+	}
+	return albumID, nil
+}
+func (s *SQLSpotifyDataStore) ClearAlbumTracks(ctx context.Context, albumID string) error {
+	return s.db.ClearAlbumTracks(ctx, albumID)
 }
 
 // =============================================================================

@@ -23,7 +23,7 @@ type SpotifyService interface {
 	FetchTrack(ctx context.Context, userID, trackID string) (m.TrackData, error)
 	FetchAlbum(ctx context.Context, userID, albumID string) (m.AlbumData, error)
 	FetchArtist(ctx context.Context, userID, artistID string) (m.ArtistData, error)
-	FetchPlaylist(ctx context.Context, userID, playlistID string) (m.PlaylistData, error)
+	FetchPlaylist(ctx context.Context, userID, playlistID string) (m.PlaylistData, []string, []string, error)
 	FetchAlbumsFromArtist(ctx context.Context, userID, artistID string) ([]string, error)
 	FetchTracksFromAlbum(ctx context.Context, userID, albumID string) ([]string, error)
 	FetchTracksFromPlaylist(ctx context.Context, userID, playlistID string) ([]string, error)
@@ -39,4 +39,3 @@ type SpotifyService interface {
 	AddTracksToPlaylist(ctx context.Context, userID, playlistID string, trackIDs []string) error
 	RemoveTracksFromPlaylist(ctx context.Context, userID, playlistID string, trackIDs []string) error
 }
-

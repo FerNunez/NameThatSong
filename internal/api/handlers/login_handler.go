@@ -20,7 +20,7 @@ func NewGetLoginHandler() *GetLoginHandler {
 func (h GetLoginHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 
 	t := templates.Login("Login")
-	err := templates.Layout(t, "NameThanSong").Render(r.Context(), w)
+	err := templates.AuthLayout(t, "Login - NameThatSong").Render(r.Context(), w)
 
 	if err != nil {
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)

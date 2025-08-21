@@ -8,16 +8,16 @@ import (
 
 // Business domain models following existing patterns
 type Playlist struct {
-	ID                uuid.UUID  `json:"id"`
-	UserID            uuid.UUID  `json:"user_id"`
-	Name              string     `json:"name"`
-	Description       string     `json:"description"`
-	SpotifyPlaylistID *string    `json:"spotify_playlist_id"`
-	IsPublic          bool       `json:"is_public"`
-	SyncWithSpotify   bool       `json:"sync_with_spotify"`
-	LastSyncedAt      *time.Time `json:"last_synced_at"`
-	CreatedAt         time.Time  `json:"created_at"`
-	UpdatedAt         time.Time  `json:"updated_at"`
+	ID                uuid.UUID      `json:"id"`
+	UserID            uuid.UUID      `json:"user_id"`
+	Name              string         `json:"name"`
+	Description       string         `json:"description"`
+	SpotifyPlaylistID *string        `json:"spotify_playlist_id"`
+	IsPublic          bool           `json:"is_public"`
+	SyncWithSpotify   bool           `json:"sync_with_spotify"`
+	LastSyncedAt      *time.Time     `json:"last_synced_at"`
+	CreatedAt         time.Time      `json:"created_at"`
+	UpdatedAt         time.Time      `json:"updated_at"`
 	Songs             []PlaylistSong `json:"songs,omitempty"`
 }
 
@@ -29,6 +29,7 @@ type PlaylistSong struct {
 	TrackName      string    `json:"track_name"`
 	ArtistName     string    `json:"artist_name"`
 	AlbumName      string    `json:"album_name"`
+	AlbumURL       string    `json:"album_url"`
 	DurationMs     int       `json:"duration_ms"`
 	AddedAt        time.Time `json:"added_at"`
 }
@@ -66,3 +67,4 @@ type AddSongRequest struct {
 type ReorderSongsRequest struct {
 	SongOrder []uuid.UUID `json:"song_order"`
 }
+

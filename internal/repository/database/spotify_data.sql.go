@@ -62,6 +62,24 @@ func (q *Queries) ClearAlbumArtists(ctx context.Context, albumID string) error {
 	return err
 }
 
+const clearAlbumTracks = `-- name: ClearAlbumTracks :exec
+DELETE FROM spotify_album_tracks WHERE album_id = $1
+`
+
+func (q *Queries) ClearAlbumTracks(ctx context.Context, albumID string) error {
+	_, err := q.db.ExecContext(ctx, clearAlbumTracks, albumID)
+	return err
+}
+
+const clearPlaylistTracks = `-- name: ClearPlaylistTracks :exec
+DELETE FROM spotify_playlist_tracks WHERE playlist_id = $1
+`
+
+func (q *Queries) ClearPlaylistTracks(ctx context.Context, playlistID string) error {
+	_, err := q.db.ExecContext(ctx, clearPlaylistTracks, playlistID)
+	return err
+}
+
 const clearTrackArtists = `-- name: ClearTrackArtists :exec
 DELETE FROM spotify_track_artists WHERE track_id = $1
 `
@@ -69,6 +87,53 @@ DELETE FROM spotify_track_artists WHERE track_id = $1
 func (q *Queries) ClearTrackArtists(ctx context.Context, trackID string) error {
 	_, err := q.db.ExecContext(ctx, clearTrackArtists, trackID)
 	return err
+}
+
+const deletePlaylistTrack = `-- name: DeletePlaylistTrack :exec
+DELETE FROM spotify_playlist_tracks WHERE track_id = $1
+`
+
+func (q *Queries) DeletePlaylistTrack(ctx context.Context, trackID string) error {
+	_, err := q.db.ExecContext(ctx, deletePlaylistTrack, trackID)
+	return err
+}
+
+const getAlbumByTrackID = `-- name: GetAlbumByTrackID :one
+SELECT album_id FROM spotify_album_tracks WHERE track_id = $1
+`
+
+func (q *Queries) GetAlbumByTrackID(ctx context.Context, trackID string) (string, error) {
+	row := q.db.QueryRowContext(ctx, getAlbumByTrackID, trackID)
+	var album_id string
+	err := row.Scan(&album_id)
+	return album_id, err
+}
+
+const getAlbumTracks = `-- name: GetAlbumTracks :many
+SELECT album_id, track_id, position FROM spotify_album_tracks WHERE album_id = $1
+`
+
+func (q *Queries) GetAlbumTracks(ctx context.Context, albumID string) ([]SpotifyAlbumTrack, error) {
+	rows, err := q.db.QueryContext(ctx, getAlbumTracks, albumID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SpotifyAlbumTrack
+	for rows.Next() {
+		var i SpotifyAlbumTrack
+		if err := rows.Scan(&i.AlbumID, &i.TrackID, &i.Position); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getCacheStats = `-- name: GetCacheStats :one
@@ -96,6 +161,38 @@ func (q *Queries) GetCacheStats(ctx context.Context) (GetCacheStatsRow, error) {
 		&i.PlaylistsCount,
 	)
 	return i, err
+}
+
+const getPlaylistTracks = `-- name: GetPlaylistTracks :many
+SELECT playlist_id, track_id, position, updated_at FROM spotify_playlist_tracks WHERE playlist_id = $1
+`
+
+func (q *Queries) GetPlaylistTracks(ctx context.Context, playlistID string) ([]SpotifyPlaylistTrack, error) {
+	rows, err := q.db.QueryContext(ctx, getPlaylistTracks, playlistID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SpotifyPlaylistTrack
+	for rows.Next() {
+		var i SpotifyPlaylistTrack
+		if err := rows.Scan(
+			&i.PlaylistID,
+			&i.TrackID,
+			&i.Position,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getSpotifyAlbum = `-- name: GetSpotifyAlbum :one
@@ -398,6 +495,52 @@ type UpsertAlbumArtistParams struct {
 // =============================================================================
 func (q *Queries) UpsertAlbumArtist(ctx context.Context, arg UpsertAlbumArtistParams) error {
 	_, err := q.db.ExecContext(ctx, upsertAlbumArtist, arg.AlbumID, arg.ArtistID)
+	return err
+}
+
+const upsertAlbumTrack = `-- name: UpsertAlbumTrack :exec
+INSERT INTO spotify_album_tracks (album_id, track_id, position)
+VALUES ($1, $2, $3)
+ON CONFLICT (album_id, track_id) DO UPDATE SET
+    position  = EXCLUDED.position
+`
+
+type UpsertAlbumTrackParams struct {
+	AlbumID  string
+	TrackID  string
+	Position int32
+}
+
+// ALBUMS
+func (q *Queries) UpsertAlbumTrack(ctx context.Context, arg UpsertAlbumTrackParams) error {
+	_, err := q.db.ExecContext(ctx, upsertAlbumTrack, arg.AlbumID, arg.TrackID, arg.Position)
+	return err
+}
+
+const upsertPlaylistTracks = `-- name: UpsertPlaylistTracks :exec
+INSERT INTO spotify_playlist_tracks (
+    playlist_id, track_id, position, updated_at
+)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (playlist_id, track_id) DO UPDATE SET
+    position  = EXCLUDED.position
+`
+
+type UpsertPlaylistTracksParams struct {
+	PlaylistID string
+	TrackID    string
+	Position   int32
+	UpdatedAt  time.Time
+}
+
+// PLAYLISTS
+func (q *Queries) UpsertPlaylistTracks(ctx context.Context, arg UpsertPlaylistTracksParams) error {
+	_, err := q.db.ExecContext(ctx, upsertPlaylistTracks,
+		arg.PlaylistID,
+		arg.TrackID,
+		arg.Position,
+		arg.UpdatedAt,
+	)
 	return err
 }
 
