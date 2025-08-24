@@ -5,7 +5,7 @@ import (
 	"strconv"
 )
 
-templ ModernIndexPage() {
+templ IndexPage() {
 	<div class="h-full flex">
 		<!-- Main Content - Playlist Songs Section -->
 		<div class="flex-1 p-3 bg-forest-400 border-r border-forest-200 overflow-hidden">
@@ -73,14 +73,6 @@ templ WelcomeIndexPage() {
 	</div>
 }
 
-templ FeatureCard(icon, title, description string) {
-	<div class="text-center p-6 bg-forest-300 rounded-xl border border-forest-200 hover:border-forest-100 transition-colors">
-		<div class="text-4xl mb-4">{ icon }</div>
-		<h3 class="text-xl font-semibold mb-3 text-white">{ title }</h3>
-		<p class="text-forest-50 leading-relaxed">{ description }</p>
-	</div>
-}
-
 templ MusicSearchSidebar() {
 	<div class="h-full flex flex-col p-4">
 		<div class="border-b border-forest-200 pb-4 mb-4">
@@ -119,70 +111,6 @@ templ MusicSearchEmpty() {
 		</div>
 		<p class="text-forest-50 text-sm">Search for music</p>
 		<p class="text-forest-100 text-xs mt-1">Type to find songs, artists, or albums</p>
-	</div>
-}
-
-templ MusicSearchResults(results []SearchResult) {
-	<div class="space-y-2">
-		for _, result := range results {
-			@MusicSearchResultItem(result)
-		}
-	</div>
-}
-
-type SearchResult struct {
-	ID       string
-	Type     string // "track", "artist", "album"
-	Title    string
-	Artist   string
-	Album    string
-	Duration string
-	ImageURL string
-}
-
-templ MusicSearchResultItem(result SearchResult) {
-	<div class="flex items-center gap-3 p-3 rounded-lg hover:bg-forest-300 transition-colors group cursor-pointer">
-		<!-- Cover Art -->
-		<div class="w-10 h-10 bg-forest-200 rounded flex-shrink-0 overflow-hidden">
-			if result.ImageURL != "" {
-				<img src={ result.ImageURL } alt={ result.Title } class="w-full h-full object-cover"/>
-			} else {
-				<div class="w-full h-full flex items-center justify-center">
-					@MusicIcon()
-				</div>
-			}
-		</div>
-		<!-- Track Info -->
-		<div class="flex-1 min-w-0">
-			<p class="font-medium text-white text-sm truncate">{ result.Title }</p>
-			<p class="text-forest-50 text-xs truncate">
-				{ result.Artist }
-				if result.Album != "" {
-					• { result.Album }
-				}
-			</p>
-		</div>
-		<!-- Action Button -->
-		<button
-			class="p-1.5 text-forest-50 hover:text-accent hover:bg-forest-100 rounded transition-colors opacity-0 group-hover:opacity-100"
-			title="Add to current playlist"
-			hx-post="/api/add-to-current-playlist"
-			hx-vals={ `{"trackId": "` + result.ID + `"}` }
-		>
-			@PlusIcon()
-		</button>
-	</div>
-}
-
-templ QuickSearch() {
-	<div class="h-80 overflow-y-auto border border-forest-200 rounded-lg bg-forest-300 p-4">
-		<h3 class="text-2xl font-bold mb-6 text-white">Quick Search</h3>
-		<div class="max-w-2xl mx-auto">
-			@SearchInput("Search for songs, artists, or albums...", "main-search")
-		</div>
-		<div id="search-results" class="mt-8">
-			<!-- Search results will appear here -->
-		</div>
 	</div>
 }
 

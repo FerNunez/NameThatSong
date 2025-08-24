@@ -176,34 +176,7 @@ templ LibraryItem(label, iconType, href string) {
 	</a>
 }
 
-templ ModernLayout(contents templ.Component, title string) {
-	<html class="h-full bg-forest-400 font-sans">
-		<head>
-			<title>{ title }</title>
-			<meta charset="UTF-8"/>
-			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<link rel="preconnect" href="https://fonts.googleapis.com"/>
-			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-			<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-			<link rel="stylesheet" href="/static/css/style.min.css"/>
-		</head>
-		<body class="h-full bg-forest-400 text-white overflow-hidden">
-			@Header(nil)
-			<div class="flex h-full pt-16">
-				@Sidebar(nil)
-				<main id="main-content" class="flex-1 overflow-auto bg-forest-400">
-					<div class="animate-slide-up">
-						@contents
-					</div>
-				</main>
-			</div>
-			<script src="https://unpkg.com/htmx.org@2.0.3"></script>
-			<script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
-		</body>
-	</html>
-}
-
-templ ModernLayoutWithUser(contents templ.Component, title string, user *User) {
+templ LayoutWithUser(contents templ.Component, title string, user *User) {
 	<html class="h-full bg-forest-400 font-sans">
 		<head>
 			<title>{ title }</title>
