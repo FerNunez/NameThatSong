@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/FerNunez/NameThatSong/internal/models"
 	"github.com/FerNunez/NameThatSong/internal/services/spotify"
 	"github.com/FerNunez/NameThatSong/internal/services/user"
+	"github.com/FerNunez/NameThatSong/internal/utils"
 	"github.com/FerNunez/NameThatSong/web/templates"
 )
 
@@ -28,14 +30,14 @@ func (h GetRegisterHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 type PostRegisterHandler struct {
 	UserService    user.UserService
 	SpotifyService spotify.SpotifyService
-	// GameManager    *game.GameManager
+	SessionName    string
 }
 
-func NewPostRegisterHandler(userService user.UserService, spotifyService spotify.SpotifyService) *PostRegisterHandler {
+func NewPostRegisterHandler(userService user.UserService, spotifyService spotify.SpotifyService, sessionName string) *PostRegisterHandler {
 	return &PostRegisterHandler{
 		UserService:    userService,
 		SpotifyService: spotifyService,
-		// GameManager:    gm,
+		SessionName:    sessionName,
 	}
 }
 
@@ -61,12 +63,27 @@ func (h PostRegisterHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c := templates.RegisterSuccess()
-	err = c.Render(r.Context(), w)
+	// Create login request
+	loginReq := models.LoginRequest{
+		Email:    email,
+		Password: password,
+	}
+	// Login user through service
+	loginResp, err := h.UserService.Login(r.Context(), loginReq)
 	if err != nil {
-		http.Error(w, "error rendering template", http.StatusInternalServerError)
+		fmt.Println("login failed:", err)
+		w.WriteHeader(http.StatusUnauthorized)
+		c := templates.LoginError()
+		c.Render(r.Context(), w)
 		return
 	}
 
-	// TODO: add here redirect to main page?
+	// Clear any existing session cookie first and set new
+	clearCookie := utils.ClearCookie(h.SessionName)
+	http.SetCookie(w, &clearCookie)
+	newCookie := utils.GenerateCookie(loginResp.SessionID, loginResp.User.ID.String(), h.SessionName, loginResp.ExpiresAt)
+	http.SetCookie(w, &newCookie)
+
+	// redirect to connect to spotify
+	http.Redirect(w, r, "/connect-spotify", http.StatusFound)
 }

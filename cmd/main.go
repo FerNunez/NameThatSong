@@ -99,17 +99,13 @@ func main() {
 		return
 	}
 
-	// SpotifyService now handles token management internally
-
 	// Playlist service
 	playlistService := playlist.NewPlaylistService(playlistStore, spotifyService)
-
 	// Game handler
 	gameHandler := handlers.NewGameHandler(playlistService)
 
 	// Create new router
 	r := chi.NewRouter()
-
 	cookieName := "CookieName"
 	authMiddleware := m.NewAuthMiddleware(userService, cookieName)
 	r.Group(func(r chi.Router) {
@@ -124,7 +120,7 @@ func main() {
 
 		// User: register, Login & Auth
 		r.Get("/register", handlers.NewGetRegisterHandler().ServeHttp)
-		r.Post("/register", handlers.NewPostRegisterHandler(userService, spotifyService).ServeHttp)
+		r.Post("/register", handlers.NewPostRegisterHandler(userService, spotifyService, cookieName).ServeHttp)
 		r.Get("/login", handlers.NewGetLoginHandler().ServeHttp)
 		r.Post("/login", handlers.NewPostLoginHandler(userService, spotifyService, cookieName).ServeHttp)
 		r.Post("/logout", handlers.NewPostLogoutHandler(userService, cookieName).ServeHTTP)

@@ -1,13 +1,13 @@
 package handlers
 
 import (
-	"encoding/base64"
 	"fmt"
 	"net/http"
 
 	"github.com/FerNunez/NameThatSong/internal/models"
 	"github.com/FerNunez/NameThatSong/internal/services/spotify"
 	"github.com/FerNunez/NameThatSong/internal/services/user"
+	"github.com/FerNunez/NameThatSong/internal/utils"
 	"github.com/FerNunez/NameThatSong/web/templates"
 )
 
@@ -66,48 +66,11 @@ func (h PostLoginHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Game integration will be added later
-	// Create/recreate game for user if needed
-	// if _, err := h.GameManager.GetGame(r.Context()); err != nil {
-	// 	fmt.Println("[PostLoginHandler] ServeHttp: Recreating game for user", loginResp.User.ID.String())
-	//
-	// 	// Check for existing Spotify token using SpotifyService
-	// 	_, err := h.SpotifyService.GetValidToken(r.Context(), loginResp.User.ID.String())
-	// 	if err != nil {
-	// 		fmt.Println("[PostLoginHandler] ServeHttp: Spotify token not found for", loginResp.User.ID.String())
-	// 	}
-	//
-	// 	// Create game with SpotifyService
-	// 	err = h.GameManager.CreateGame(loginResp.User.ID, h.SpotifyService.GetTokenStore())
-	// 	if err != nil {
-	// 		fmt.Println("could not create game:", err)
-	// 	}
-	// }
-
-	// Clear any existing session cookie first
-	clearCookie := http.Cookie{
-		Name:     h.SessionName,
-		Value:    "",
-		MaxAge:   -1, // Delete immediately
-		Path:     "/",
-		HttpOnly: true,
-		SameSite: http.SameSiteNoneMode,
-		Secure:   true,
-	}
+	// Clear any existing session cookie first and set new
+	clearCookie := utils.ClearCookie(h.SessionName)
 	http.SetCookie(w, &clearCookie)
-
-	// Set new session cookie
-	cookieValue := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", loginResp.SessionID, loginResp.User.ID.String())))
-	cookie := http.Cookie{
-		Name:     h.SessionName,
-		Value:    cookieValue,
-		Expires:  loginResp.ExpiresAt,
-		Path:     "/",
-		HttpOnly: true,
-		SameSite: http.SameSiteNoneMode,
-		Secure:   true,
-	}
-	http.SetCookie(w, &cookie)
+	newCookie := utils.GenerateCookie(loginResp.SessionID, loginResp.User.ID.String(), h.SessionName, loginResp.ExpiresAt)
+	http.SetCookie(w, &newCookie)
 
 	w.Header().Set("HX-Redirect", "/")
 	w.WriteHeader(http.StatusOK)
