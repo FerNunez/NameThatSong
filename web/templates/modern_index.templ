@@ -589,7 +589,7 @@ templ NoResultsFound(query string) {
 	</div>
 }
 
-templ SimpleSearchResults(tracks []m.TrackSearch, albums []m.AlbumSearch, artists []m.ArtistSearch, playlists []m.PlaylistSearch, query string) {
+templ SearchResults(tracks []m.TrackSearch, albums []m.AlbumSearch, artists []m.ArtistSearch, playlists []m.PlaylistSearch, query string) {
 	if len(tracks) == 0 && len(albums) == 0 && len(artists) == 0 && len(playlists) == 0 {
 		@NoResultsFound(query)
 	} else {
@@ -599,7 +599,7 @@ templ SimpleSearchResults(tracks []m.TrackSearch, albums []m.AlbumSearch, artist
 					<h3 class="text-sm font-semibold text-forest-50 mb-2">🎵 Tracks</h3>
 					<div class="space-y-1">
 						for _, track := range tracks {
-							@SimpleTrackSearchItem(track)
+							@TrackSearchItem(track)
 						}
 					</div>
 				</div>
@@ -609,7 +609,7 @@ templ SimpleSearchResults(tracks []m.TrackSearch, albums []m.AlbumSearch, artist
 					<h3 class="text-sm font-semibold text-forest-50 mb-2">💿 Albums</h3>
 					<div class="space-y-1">
 						for _, album := range albums {
-							@SimpleAlbumSearchItem(album)
+							@AlbumSearchItem(album)
 						}
 					</div>
 				</div>
@@ -619,7 +619,7 @@ templ SimpleSearchResults(tracks []m.TrackSearch, albums []m.AlbumSearch, artist
 					<h3 class="text-sm font-semibold text-forest-50 mb-2">🎤 Artists</h3>
 					<div class="space-y-1">
 						for _, artist := range artists {
-							@SimpleArtistSearchItem(artist)
+							@ArtistSearchItem(artist)
 						}
 					</div>
 				</div>
@@ -629,7 +629,7 @@ templ SimpleSearchResults(tracks []m.TrackSearch, albums []m.AlbumSearch, artist
 }
 
 // Using models.TrackSearch, models.AlbumSearch, etc. instead of redefining types
-templ SimpleTrackSearchItem(track m.TrackSearch) {
+templ TrackSearchItem(track m.TrackSearch) {
 	<div class="flex items-center gap-3 p-2 rounded hover:bg-forest-300 transition-colors group">
 		<div class="w-8 h-8 bg-forest-200 rounded flex-shrink-0 overflow-hidden">
 			if track.AlbumImageURL != "" {
@@ -655,7 +655,7 @@ templ SimpleTrackSearchItem(track m.TrackSearch) {
 	</div>
 }
 
-templ SimpleAlbumSearchItem(album m.AlbumSearch) {
+templ AlbumSearchItem(album m.AlbumSearch) {
 	<div class="flex items-center gap-3 p-2 rounded hover:bg-forest-300 transition-colors group">
 		<div class="w-8 h-8 bg-forest-200 rounded flex-shrink-0 overflow-hidden">
 			if album.ImageURL != "" {
@@ -671,17 +671,19 @@ templ SimpleAlbumSearchItem(album m.AlbumSearch) {
 			<p class="text-forest-50 text-xs truncate">{ TruncateAndJoin(50, album.ArtistNames) }</p>
 		</div>
 		<button
-			class="p-1.5 text-forest-50 hover:text-accent hover:bg-forest-100 rounded transition-colors opacity-0 group-hover:opacity-100"
-			title="Add album to current playlist"
-			hx-post="/api/add-album-to-current-playlist"
-			hx-vals={ `{"albumId": "` + album.ID + `"}` }
+			class="p-1.5 text-forest-50 hover:text-blue-400 hover:bg-forest-100 rounded transition-colors opacity-0 group-hover:opacity-100"
+			title="View artist"
+			hx-get={ "/api/search/album/" + album.ID }
+			hx-target="#music-search-results"
 		>
-			@PlusIcon()
+			<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+				<path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
+			</svg>
 		</button>
 	</div>
 }
 
-templ SimpleArtistSearchItem(artist m.ArtistSearch) {
+templ ArtistSearchItem(artist m.ArtistSearch) {
 	<div class="flex items-center gap-3 p-2 rounded hover:bg-forest-300 transition-colors group">
 		<div class="w-8 h-8 bg-forest-200 rounded-full flex-shrink-0 overflow-hidden">
 			if artist.ImageURL != "" {
@@ -699,7 +701,7 @@ templ SimpleArtistSearchItem(artist m.ArtistSearch) {
 		<button
 			class="p-1.5 text-forest-50 hover:text-blue-400 hover:bg-forest-100 rounded transition-colors opacity-0 group-hover:opacity-100"
 			title="View artist"
-			hx-get={ "/api/artist/" + artist.ID }
+			hx-get={ "/api/search/artist/" + artist.ID }
 			hx-target="#music-search-results"
 		>
 			<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -708,5 +710,3 @@ templ SimpleArtistSearchItem(artist m.ArtistSearch) {
 		</button>
 	</div>
 }
-
-// TruncateAndJoin function is defined in helper.go

@@ -168,6 +168,10 @@ func main() {
 			// Utility endpoints
 			r.Get("/api/playlist-songs-empty", playlistHandler.ShowPlaylistSongsEmpty)
 			r.Get("/api/playlist/{id}/songs", playlistHandler.GetPlaylistSongsView)
+
+			searchHandler := handlers.NewSearchHandler(spotifyService)
+			r.Get("/api/search/artist/{id}", searchHandler.GetArtistItems)
+			r.Get("/api/search/album/{id}", searchHandler.GetAlbumItems)
 		})
 
 	})

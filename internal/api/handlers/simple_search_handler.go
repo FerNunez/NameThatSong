@@ -172,7 +172,7 @@ renderResults:
 		logger.F("playlists", len(playlists)))
 
 	// Render the search results
-	component := templates.SimpleSearchResults(tracks, albums, artists, playlists, query)
+	component := templates.SearchResults(tracks, albums, artists, playlists, query)
 	component.Render(r.Context(), w)
 }
 
