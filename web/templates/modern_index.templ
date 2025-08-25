@@ -148,7 +148,13 @@ templ PlaylistSongsWithData(songs []PlaylistSong) {
 }
 
 templ PlaylistDetailsView(playlist PlaylistInfo, songs []PlaylistSong) {
-	<div class="h-full flex flex-col">
+	<div 
+		class="h-full flex flex-col"
+		hx-trigger="trackAdded from:body"
+		hx-get={"/api/playlist/" + playlist.ID + "/songs"}
+		hx-target="#playlist-songs-container"
+		hx-swap="innerHTML"
+	>
 		<!-- Set playlist context for search -->
 		<div
 			hx-trigger="load"
@@ -313,6 +319,7 @@ templ PlaylistSongItem(song PlaylistSong, index int) {
 				class="p-2 text-forest-50 hover:text-white hover:bg-forest-100 rounded transition-colors"
 				title="Play song"
 				hx-post="/api/play-track"
+				hx-swap="none"
 				hx-vals={ `{"trackId": "` + song.ID + `"}` }
 			>
 				@PlayIcon()

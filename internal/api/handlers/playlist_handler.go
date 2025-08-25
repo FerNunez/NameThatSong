@@ -60,10 +60,18 @@ func (h *PlaylistHandler) GetLocalPlaylists(w http.ResponseWriter, r *http.Reque
 		if playlist.SpotifyPlaylistID != nil {
 			spotifyID = *playlist.SpotifyPlaylistID
 		}
+		
+		// Use GetPlaylistWithSongs to get accurate song count
+		playlistWithSongs, err := h.playlistService.GetPlaylistWithSongs(r.Context(), playlist.ID, user.ID)
+		songCount := 0
+		if err == nil {
+			songCount = len(playlistWithSongs.Songs)
+		}
+		
 		templatePlaylists = append(templatePlaylists, templates.UserPlaylist{
 			ID:         playlist.ID.String(),
 			Name:       playlist.Name,
-			TrackCount: len(playlist.Songs), // This might need to be fetched separately
+			TrackCount: songCount,
 			IsSpotify:  playlist.SpotifyPlaylistID != nil,
 			SpotifyID:  spotifyID,
 		})
@@ -450,7 +458,7 @@ func (h *PlaylistHandler) SetPlaylistContext(w http.ResponseWriter, r *http.Requ
 		http.Error(w, "Missing playlist ID", http.StatusBadRequest)
 		return
 	}
-	
+
 	w.Header().Set("Content-Type", "text/html")
 	fmt.Fprintf(w, `<input type="hidden" name="currentPlaylistId" id="current-playlist-context" value="%s"/>`, playlistID)
 }
@@ -471,12 +479,12 @@ func (h *PlaylistHandler) AddToCurrentPlaylist(w http.ResponseWriter, r *http.Re
 
 	trackID := r.FormValue("trackId")
 	playlistIDStr := r.FormValue("playlistId")
-	
+
 	if trackID == "" {
 		http.Error(w, "Missing track ID", http.StatusBadRequest)
 		return
 	}
-	
+
 	if playlistIDStr == "" {
 		logger.Info(r.Context(), "no playlist context provided for track addition",
 			logger.F("track_id", trackID),
@@ -499,7 +507,7 @@ func (h *PlaylistHandler) AddToCurrentPlaylist(w http.ResponseWriter, r *http.Re
 	// Add track to playlist
 	err = h.playlistService.AddSongToPlaylist(r.Context(), playlistID, user.ID, req)
 	if err != nil {
-		logger.Error(r.Context(), "failed to add track to playlist", 
+		logger.Error(r.Context(), "failed to add track to playlist",
 			logger.F("error", err),
 			logger.F("track_id", trackID),
 			logger.F("playlist_id", playlistIDStr),

@@ -167,6 +167,9 @@ func (s *Spotify) FetchPlaylist(ctx context.Context, userID, playlistID string) 
 
 	// Fetch from API
 	playlist, trackIDs, albumIDs, err := s.fetchPlaylistFromAPI(ctx, accessToken, playlistID)
+	if err != nil {
+		return m.PlaylistData{}, []string{}, []string{}, err
+	}
 
 	for _, trackID := range trackIDs {
 		_, err := s.FetchTrack(ctx, userID, trackID)
@@ -179,10 +182,6 @@ func (s *Spotify) FetchPlaylist(ctx context.Context, userID, playlistID string) 
 		if err != nil {
 			return m.PlaylistData{}, []string{}, []string{}, err
 		}
-	}
-
-	if err != nil {
-		return m.PlaylistData{}, []string{}, []string{}, err
 	}
 
 	// Store in database for persistence (async to avoid blocking)
@@ -208,6 +207,7 @@ func (s *Spotify) FetchPlaylist(ctx context.Context, userID, playlistID string) 
 	// Cache the result for fast future access
 	s.cache.SetPlaylist(playlistID, playlist)
 	s.cache.SetPlaylistTracks(playlistID, trackIDs)
+	s.cache.SetPlaylistAlbums(playlistID, albumIDs)
 	return playlist, trackIDs, albumIDs, nil
 }
 

@@ -102,7 +102,7 @@ templ Sidebar(user *User) {
 					id="local-playlists"
 					class="space-y-2"
 					hx-get="/api/local-playlists"
-					hx-trigger="load, refreshLocalPlaylists from:body"
+					hx-trigger="load, refreshLocalPlaylists from:body, trackAdded from:body"
 					hx-target="this"
 				>
 					@PlaylistsLoading()
