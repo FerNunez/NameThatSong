@@ -41,12 +41,13 @@ func (s *Spotify) FetchTrack(ctx context.Context, userID, trackID string) (m.Tra
 	}
 
 	// Store in database for persistence (async to avoid blocking)
-	go func() {
-		if err := s.dataStore.StoreTrack(context.Background(), &track); err != nil {
-			// Log error but don't fail the request
-			fmt.Printf("Warning: failed to store track %s in database: %v\n", trackID, err)
-		}
-	}()
+	// Async removed cause track db is needed for playlit relations :(
+	// go func() {
+	if err := s.dataStore.StoreTrack(context.Background(), &track); err != nil {
+		// Log error but don't fail the request
+		fmt.Printf("Warning: failed to store track %s in database: %v\n", trackID, err)
+	}
+	// }()
 
 	// Cache the result for fast future access
 	s.cache.SetTrack(trackID, track)

@@ -12,30 +12,22 @@ CREATE TABLE local_playlists (
     updated_at TIMESTAMP NOT NULL
 );
 
--- Playlist songs table
-CREATE TABLE playlist_songs (
-    id UUID PRIMARY KEY,
-    playlist_id UUID NOT NULL REFERENCES local_playlists(id) ON DELETE CASCADE,
-    spotify_track_id TEXT NOT NULL,
-    spotify_album_id TEXT NOT NULL,
-    spotify_artist_id TEXT NOT NULL,       -- list of artists ID
-    track_name VARCHAR NOT NULL,
-    album_name VARCHAR NOT NULL,
-    artist_name TEXT NOT NULL,     -- list of artists names
-    position INT NOT NULL,
-    duration_ms INT NOT NULL,
-    added_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP NOT NULL,
-    UNIQUE(playlist_id, spotify_track_id)
+-- One-to-many: One playlist has many tracks
+CREATE TABLE local_playlist_tracks(
+    playlist_id UUID REFERENCES local_playlists(id) ON DELETE CASCADE,
+    spotify_track_id TEXT REFERENCES spotify_tracks(id) ON DELETE CASCADE,
+    position INTEGER NOT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (playlist_id, spotify_track_id),
+    UNIQUE(playlist_id, position)
 );
 
 -- Indexes for performance
 CREATE INDEX idx_playlists_user_id ON local_playlists(user_id);
 CREATE INDEX idx_playlists_spotify_id ON local_playlists(spotify_playlist_id);
-CREATE INDEX idx_playlist_songs_playlist_id ON playlist_songs(playlist_id);
-CREATE INDEX idx_playlist_songs_position ON playlist_songs(playlist_id, position);
-CREATE INDEX idx_playlist_songs_spotify_track ON playlist_songs(spotify_track_id);
+CREATE INDEX idx_local_playlist_tracks_position ON local_playlist_tracks(playlist_id, position);
+CREATE INDEX idx_local_playlist_tracks_spotify_track ON local_playlist_tracks(spotify_track_id);
 
 -- +goose Down
-DROP TABLE playlist_songs CASCADE;
+DROP TABLE local_playlist_tracks CASCADE;
 DROP TABLE local_playlists CASCADE;

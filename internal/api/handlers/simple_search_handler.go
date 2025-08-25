@@ -30,8 +30,9 @@ func NewSimpleSearchHandler(ss spotify.SpotifyService) *SimpleSearchHandler {
 // ServeHTTP handles the search API endpoint
 func (h *SimpleSearchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
-	// Get the search query
+	// Get the search query and playlist context
 	query := strings.TrimSpace(r.URL.Query().Get("query"))
+	currentPlaylistID := r.URL.Query().Get("currentPlaylistId")
 
 	// If query is empty or too short, return empty state
 	if query == "" {
@@ -172,7 +173,7 @@ renderResults:
 		logger.F("playlists", len(playlists)))
 
 	// Render the search results
-	component := templates.SearchResults(tracks, albums, artists, playlists, query)
+	component := templates.SearchResults(tracks, albums, artists, playlists, query, currentPlaylistID)
 	component.Render(r.Context(), w)
 }
 

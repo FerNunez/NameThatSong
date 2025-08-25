@@ -13,54 +13,32 @@ import (
 )
 
 const addSongToPlaylist = `-- name: AddSongToPlaylist :one
-INSERT INTO playlist_songs (id, playlist_id, spotify_track_id, position, track_name, artist_name, album_name, duration_ms, added_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
-RETURNING id, playlist_id, spotify_track_id, spotify_album_id, spotify_artist_id, track_name, album_name, artist_name, position, duration_ms, added_at, updated_at
+INSERT INTO local_playlist_tracks (playlist_id, spotify_track_id, position, updated_at)
+VALUES ($1, $2, $3, NOW())
+RETURNING playlist_id, spotify_track_id, position, updated_at
 `
 
 type AddSongToPlaylistParams struct {
-	ID             uuid.UUID
 	PlaylistID     uuid.UUID
 	SpotifyTrackID string
 	Position       int32
-	TrackName      string
-	ArtistName     string
-	AlbumName      string
-	DurationMs     int32
 }
 
 // Playlist songs operations
-func (q *Queries) AddSongToPlaylist(ctx context.Context, arg AddSongToPlaylistParams) (PlaylistSong, error) {
-	row := q.db.QueryRowContext(ctx, addSongToPlaylist,
-		arg.ID,
-		arg.PlaylistID,
-		arg.SpotifyTrackID,
-		arg.Position,
-		arg.TrackName,
-		arg.ArtistName,
-		arg.AlbumName,
-		arg.DurationMs,
-	)
-	var i PlaylistSong
+func (q *Queries) AddSongToPlaylist(ctx context.Context, arg AddSongToPlaylistParams) (LocalPlaylistTrack, error) {
+	row := q.db.QueryRowContext(ctx, addSongToPlaylist, arg.PlaylistID, arg.SpotifyTrackID, arg.Position)
+	var i LocalPlaylistTrack
 	err := row.Scan(
-		&i.ID,
 		&i.PlaylistID,
 		&i.SpotifyTrackID,
-		&i.SpotifyAlbumID,
-		&i.SpotifyArtistID,
-		&i.TrackName,
-		&i.AlbumName,
-		&i.ArtistName,
 		&i.Position,
-		&i.DurationMs,
-		&i.AddedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const clearPlaylistSongs = `-- name: ClearPlaylistSongs :exec
-DELETE FROM playlist_songs WHERE playlist_id = $1
+DELETE FROM local_playlist_tracks WHERE playlist_id = $1
 `
 
 func (q *Queries) ClearPlaylistSongs(ctx context.Context, playlistID uuid.UUID) error {
@@ -126,7 +104,7 @@ func (q *Queries) DeletePlaylist(ctx context.Context, arg DeletePlaylistParams) 
 }
 
 const getMaxSongPosition = `-- name: GetMaxSongPosition :one
-SELECT COALESCE(MAX(position), 0)::INT AS last_position FROM playlist_songs WHERE playlist_id = $1
+SELECT COALESCE(MAX(position), 0)::INT AS last_position FROM local_playlist_tracks WHERE playlist_id = $1
 `
 
 func (q *Queries) GetMaxSongPosition(ctx context.Context, playlistID uuid.UUID) (int32, error) {
@@ -186,59 +164,43 @@ func (q *Queries) GetPlaylistByUserIDAndID(ctx context.Context, arg GetPlaylistB
 }
 
 const getPlaylistSongByID = `-- name: GetPlaylistSongByID :one
-SELECT id, playlist_id, spotify_track_id, spotify_album_id, spotify_artist_id, track_name, album_name, artist_name, position, duration_ms, added_at, updated_at FROM playlist_songs WHERE id = $1 AND playlist_id = $2
+SELECT playlist_id, spotify_track_id, position, updated_at FROM local_playlist_tracks WHERE playlist_id = $1 AND spotify_track_id = $2
 `
 
 type GetPlaylistSongByIDParams struct {
-	ID         uuid.UUID
-	PlaylistID uuid.UUID
+	PlaylistID     uuid.UUID
+	SpotifyTrackID string
 }
 
-func (q *Queries) GetPlaylistSongByID(ctx context.Context, arg GetPlaylistSongByIDParams) (PlaylistSong, error) {
-	row := q.db.QueryRowContext(ctx, getPlaylistSongByID, arg.ID, arg.PlaylistID)
-	var i PlaylistSong
+func (q *Queries) GetPlaylistSongByID(ctx context.Context, arg GetPlaylistSongByIDParams) (LocalPlaylistTrack, error) {
+	row := q.db.QueryRowContext(ctx, getPlaylistSongByID, arg.PlaylistID, arg.SpotifyTrackID)
+	var i LocalPlaylistTrack
 	err := row.Scan(
-		&i.ID,
 		&i.PlaylistID,
 		&i.SpotifyTrackID,
-		&i.SpotifyAlbumID,
-		&i.SpotifyArtistID,
-		&i.TrackName,
-		&i.AlbumName,
-		&i.ArtistName,
 		&i.Position,
-		&i.DurationMs,
-		&i.AddedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getPlaylistSongs = `-- name: GetPlaylistSongs :many
-SELECT id, playlist_id, spotify_track_id, spotify_album_id, spotify_artist_id, track_name, album_name, artist_name, position, duration_ms, added_at, updated_at FROM playlist_songs WHERE playlist_id = $1 ORDER BY position
+SELECT playlist_id, spotify_track_id, position, updated_at FROM local_playlist_tracks WHERE playlist_id = $1 ORDER BY position
 `
 
-func (q *Queries) GetPlaylistSongs(ctx context.Context, playlistID uuid.UUID) ([]PlaylistSong, error) {
+func (q *Queries) GetPlaylistSongs(ctx context.Context, playlistID uuid.UUID) ([]LocalPlaylistTrack, error) {
 	rows, err := q.db.QueryContext(ctx, getPlaylistSongs, playlistID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []PlaylistSong
+	var items []LocalPlaylistTrack
 	for rows.Next() {
-		var i PlaylistSong
+		var i LocalPlaylistTrack
 		if err := rows.Scan(
-			&i.ID,
 			&i.PlaylistID,
 			&i.SpotifyTrackID,
-			&i.SpotifyAlbumID,
-			&i.SpotifyArtistID,
-			&i.TrackName,
-			&i.AlbumName,
-			&i.ArtistName,
 			&i.Position,
-			&i.DurationMs,
-			&i.AddedAt,
 			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
@@ -293,16 +255,16 @@ func (q *Queries) GetPlaylistsByUserID(ctx context.Context, userID uuid.UUID) ([
 }
 
 const removeSongFromPlaylist = `-- name: RemoveSongFromPlaylist :exec
-DELETE FROM playlist_songs WHERE id = $1 AND playlist_id = $2
+DELETE FROM local_playlist_tracks WHERE playlist_id = $1 AND spotify_track_id = $2
 `
 
 type RemoveSongFromPlaylistParams struct {
-	ID         uuid.UUID
-	PlaylistID uuid.UUID
+	PlaylistID     uuid.UUID
+	SpotifyTrackID string
 }
 
 func (q *Queries) RemoveSongFromPlaylist(ctx context.Context, arg RemoveSongFromPlaylistParams) error {
-	_, err := q.db.ExecContext(ctx, removeSongFromPlaylist, arg.ID, arg.PlaylistID)
+	_, err := q.db.ExecContext(ctx, removeSongFromPlaylist, arg.PlaylistID, arg.SpotifyTrackID)
 	return err
 }
 
@@ -350,15 +312,15 @@ func (q *Queries) UpdatePlaylistSyncTime(ctx context.Context, arg UpdatePlaylist
 }
 
 const updateSongPosition = `-- name: UpdateSongPosition :exec
-UPDATE playlist_songs SET position = $2 WHERE id = $1
+UPDATE local_playlist_tracks SET position = $2 WHERE spotify_track_id = $1
 `
 
 type UpdateSongPositionParams struct {
-	ID       uuid.UUID
-	Position int32
+	SpotifyTrackID string
+	Position       int32
 }
 
 func (q *Queries) UpdateSongPosition(ctx context.Context, arg UpdateSongPositionParams) error {
-	_, err := q.db.ExecContext(ctx, updateSongPosition, arg.ID, arg.Position)
+	_, err := q.db.ExecContext(ctx, updateSongPosition, arg.SpotifyTrackID, arg.Position)
 	return err
 }

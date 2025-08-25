@@ -442,3 +442,78 @@ func (h *PlaylistHandler) GetPlaylistSongsView(w http.ResponseWriter, r *http.Re
 	w.Header().Set("Content-Type", "text/html")
 	templates.PlaylistDetailsView(playlistInfo, templateSongs).Render(r.Context(), w)
 }
+
+// GET /api/set-playlist-context - Set current playlist context for search
+func (h *PlaylistHandler) SetPlaylistContext(w http.ResponseWriter, r *http.Request) {
+	playlistID := r.URL.Query().Get("playlistId")
+	if playlistID == "" {
+		http.Error(w, "Missing playlist ID", http.StatusBadRequest)
+		return
+	}
+	
+	w.Header().Set("Content-Type", "text/html")
+	fmt.Fprintf(w, `<input type="hidden" name="currentPlaylistId" id="current-playlist-context" value="%s"/>`, playlistID)
+}
+
+// POST /api/add-to-current-playlist - Add track to specified playlist
+func (h *PlaylistHandler) AddToCurrentPlaylist(w http.ResponseWriter, r *http.Request) {
+	user, ok := middleware.GetUser(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Parse form data
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	trackID := r.FormValue("trackId")
+	playlistIDStr := r.FormValue("playlistId")
+	
+	if trackID == "" {
+		http.Error(w, "Missing track ID", http.StatusBadRequest)
+		return
+	}
+	
+	if playlistIDStr == "" {
+		logger.Info(r.Context(), "no playlist context provided for track addition",
+			logger.F("track_id", trackID),
+			logger.F("user_id", user.ID))
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	playlistID, err := uuid.Parse(playlistIDStr)
+	if err != nil {
+		http.Error(w, "Invalid playlist ID", http.StatusBadRequest)
+		return
+	}
+
+	// Create add song request
+	req := models.AddSongRequest{
+		SpotifyTrackID: trackID,
+	}
+
+	// Add track to playlist
+	err = h.playlistService.AddSongToPlaylist(r.Context(), playlistID, user.ID, req)
+	if err != nil {
+		logger.Error(r.Context(), "failed to add track to playlist", 
+			logger.F("error", err),
+			logger.F("track_id", trackID),
+			logger.F("playlist_id", playlistIDStr),
+			logger.F("user_id", user.ID))
+		http.Error(w, "Failed to add track to playlist", http.StatusInternalServerError)
+		return
+	}
+
+	logger.Info(r.Context(), "successfully added track to playlist",
+		logger.F("track_id", trackID),
+		logger.F("playlist_id", playlistIDStr),
+		logger.F("user_id", user.ID))
+
+	// Return success response with optional playlist refresh trigger
+	w.Header().Set("HX-Trigger", fmt.Sprintf(`{"trackAdded": {"trackId": "%s", "playlistId": "%s"}}`, trackID, playlistIDStr))
+	w.WriteHeader(http.StatusOK)
+}

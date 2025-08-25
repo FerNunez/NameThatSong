@@ -172,6 +172,10 @@ func main() {
 			searchHandler := handlers.NewSearchHandler(spotifyService)
 			r.Get("/api/search/artist/{id}", searchHandler.GetArtistItems)
 			r.Get("/api/search/album/{id}", searchHandler.GetAlbumItems)
+			
+			// Playlist context and track addition routes
+			r.Get("/api/set-playlist-context", playlistHandler.SetPlaylistContext)
+			r.Post("/api/add-to-current-playlist", playlistHandler.AddToCurrentPlaylist)
 		})
 
 	})

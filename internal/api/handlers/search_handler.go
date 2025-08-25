@@ -52,7 +52,7 @@ func (h *SearchHandler) GetArtistItems(w http.ResponseWriter, r *http.Request) {
 		Name: "TEST",
 	})
 
-	component := templates.SearchResults(tracks, albums, []models.ArtistSearch{}, []models.PlaylistSearch{}, searchArtistIDStr)
+	component := templates.SearchResults(tracks, albums, []models.ArtistSearch{}, []models.PlaylistSearch{}, searchArtistIDStr, "")
 	component.Render(r.Context(), w)
 }
 
@@ -82,6 +82,6 @@ func (h *SearchHandler) GetAlbumItems(w http.ResponseWriter, r *http.Request) {
 		Name: "TEST",
 	})
 
-	component := templates.SearchResults(tracks, []models.AlbumSearch{}, []models.ArtistSearch{}, []models.PlaylistSearch{}, searchAlbumIDStr)
+	component := templates.SearchResults(tracks, []models.AlbumSearch{}, []models.ArtistSearch{}, []models.PlaylistSearch{}, searchAlbumIDStr, "")
 	component.Render(r.Context(), w)
 }

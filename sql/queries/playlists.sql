@@ -28,24 +28,25 @@ DELETE FROM local_playlists WHERE id = $1 AND user_id = $2;
 
 -- Playlist songs operations
 -- name: AddSongToPlaylist :one
-INSERT INTO playlist_songs (id, playlist_id, spotify_track_id, position, track_name, artist_name, album_name, duration_ms, added_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+INSERT INTO local_playlist_tracks (playlist_id, spotify_track_id, position, updated_at)
+VALUES ($1, $2, $3, NOW())
 RETURNING *;
 
+
 -- name: GetPlaylistSongs :many
-SELECT * FROM playlist_songs WHERE playlist_id = $1 ORDER BY position;
+SELECT * FROM local_playlist_tracks WHERE playlist_id = $1 ORDER BY position;
 
 -- name: GetPlaylistSongByID :one
-SELECT * FROM playlist_songs WHERE id = $1 AND playlist_id = $2;
+SELECT * FROM local_playlist_tracks WHERE playlist_id = $1 AND spotify_track_id = $2;
 
 -- name: RemoveSongFromPlaylist :exec
-DELETE FROM playlist_songs WHERE id = $1 AND playlist_id = $2;
+DELETE FROM local_playlist_tracks WHERE playlist_id = $1 AND spotify_track_id = $2;
 
 -- name: UpdateSongPosition :exec
-UPDATE playlist_songs SET position = $2 WHERE id = $1;
+UPDATE local_playlist_tracks SET position = $2 WHERE spotify_track_id = $1;
 
 -- name: GetMaxSongPosition :one
-SELECT COALESCE(MAX(position), 0)::INT AS last_position FROM playlist_songs WHERE playlist_id = $1;
+SELECT COALESCE(MAX(position), 0)::INT AS last_position FROM local_playlist_tracks WHERE playlist_id = $1;
 
 -- name: ClearPlaylistSongs :exec
-DELETE FROM playlist_songs WHERE playlist_id = $1;
+DELETE FROM local_playlist_tracks WHERE playlist_id = $1;

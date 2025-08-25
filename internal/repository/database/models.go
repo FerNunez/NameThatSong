@@ -45,6 +45,13 @@ type LocalPlaylist struct {
 	UpdatedAt         time.Time
 }
 
+type LocalPlaylistTrack struct {
+	PlaylistID     uuid.UUID
+	SpotifyTrackID string
+	Position       int32
+	UpdatedAt      time.Time
+}
+
 type PasswordResetToken struct {
 	ID        uuid.UUID
 	UserID    uuid.UUID
@@ -52,21 +59,6 @@ type PasswordResetToken struct {
 	ExpiresAt time.Time
 	UsedAt    sql.NullTime
 	CreatedAt time.Time
-}
-
-type PlaylistSong struct {
-	ID              uuid.UUID
-	PlaylistID      uuid.UUID
-	SpotifyTrackID  string
-	SpotifyAlbumID  string
-	SpotifyArtistID string
-	TrackName       string
-	AlbumName       string
-	ArtistName      string
-	Position        int32
-	DurationMs      int32
-	AddedAt         time.Time
-	UpdatedAt       time.Time
 }
 
 type SpotifyAlbum struct {

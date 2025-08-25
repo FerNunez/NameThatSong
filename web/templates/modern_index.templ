@@ -77,7 +77,7 @@ templ MusicSearchSidebar() {
 	<div class="h-full flex flex-col p-4">
 		<div class="border-b border-forest-200 pb-4 mb-4">
 			<h3 class="text-xl font-bold text-white mb-4">Search Music</h3>
-			<div class="relative">
+			<form class="relative">
 				<input
 					type="text"
 					placeholder="Search songs, artists, albums..."
@@ -85,14 +85,16 @@ templ MusicSearchSidebar() {
 					hx-get="/api/music-search"
 					hx-trigger="keyup changed delay:300ms"
 					hx-target="#music-search-results"
+					hx-include="[name='currentPlaylistId']"
 					name="query"
 				/>
+				<input type="hidden" name="currentPlaylistId" id="current-playlist-context" value=""/>
 				<div class="absolute left-3 top-1/2 transform -translate-y-1/2 text-forest-50">
 					<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
 						<path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
 					</svg>
 				</div>
-			</div>
+			</form>
 		</div>
 		<div class="flex-1 overflow-y-auto">
 			<div id="music-search-results" class="space-y-2">
@@ -147,6 +149,14 @@ templ PlaylistSongsWithData(songs []PlaylistSong) {
 
 templ PlaylistDetailsView(playlist PlaylistInfo, songs []PlaylistSong) {
 	<div class="h-full flex flex-col">
+		<!-- Set playlist context for search -->
+		<div
+			hx-trigger="load"
+			hx-get="/api/set-playlist-context"
+			hx-vals={ `{"playlistId": "` + playlist.ID + `"}` }
+			hx-target="#current-playlist-context"
+			hx-swap="outerHTML"
+		></div>
 		<!-- Playlist Header -->
 		<div class="mb-6 pb-6 border-b border-forest-200">
 			<div class="flex items-start gap-6">
@@ -589,7 +599,7 @@ templ NoResultsFound(query string) {
 	</div>
 }
 
-templ SearchResults(tracks []m.TrackSearch, albums []m.AlbumSearch, artists []m.ArtistSearch, playlists []m.PlaylistSearch, query string) {
+templ SearchResults(tracks []m.TrackSearch, albums []m.AlbumSearch, artists []m.ArtistSearch, playlists []m.PlaylistSearch, query string, currentPlaylistID string) {
 	if len(tracks) == 0 && len(albums) == 0 && len(artists) == 0 && len(playlists) == 0 {
 		@NoResultsFound(query)
 	} else {
@@ -599,7 +609,7 @@ templ SearchResults(tracks []m.TrackSearch, albums []m.AlbumSearch, artists []m.
 					<h3 class="text-sm font-semibold text-forest-50 mb-2">🎵 Tracks</h3>
 					<div class="space-y-1">
 						for _, track := range tracks {
-							@TrackSearchItem(track)
+							@TrackSearchItem(track, currentPlaylistID)
 						}
 					</div>
 				</div>
@@ -629,7 +639,7 @@ templ SearchResults(tracks []m.TrackSearch, albums []m.AlbumSearch, artists []m.
 }
 
 // Using models.TrackSearch, models.AlbumSearch, etc. instead of redefining types
-templ TrackSearchItem(track m.TrackSearch) {
+templ TrackSearchItem(track m.TrackSearch, currentPlaylistID string) {
 	<div class="flex items-center gap-3 p-2 rounded hover:bg-forest-300 transition-colors group">
 		<div class="w-8 h-8 bg-forest-200 rounded flex-shrink-0 overflow-hidden">
 			if track.AlbumImageURL != "" {
@@ -644,14 +654,16 @@ templ TrackSearchItem(track m.TrackSearch) {
 			<p class="font-medium text-white text-sm truncate">{ track.Name }</p>
 			<p class="text-forest-50 text-xs truncate">{ TruncateAndJoin(50, track.ArtistNames) }</p>
 		</div>
-		<button
-			class="p-1.5 text-forest-50 hover:text-accent hover:bg-forest-100 rounded transition-colors opacity-0 group-hover:opacity-100"
-			title="Add to current playlist"
-			hx-post="/api/add-to-current-playlist"
-			hx-vals={ `{"trackId": "` + track.ID + `"}` }
-		>
-			@PlusIcon()
-		</button>
+		if currentPlaylistID != "" {
+			<button
+				class="p-1.5 text-forest-50 hover:text-accent hover:bg-forest-100 rounded transition-colors opacity-0 group-hover:opacity-100"
+				title="Add to current playlist"
+				hx-post="/api/add-to-current-playlist"
+				hx-vals={ `{"trackId": "` + track.ID + `", "playlistId": "` + currentPlaylistID + `"}` }
+			>
+				@PlusIcon()
+			</button>
+		}
 	</div>
 }
 
