@@ -23,4 +23,6 @@ SET access_token = $1,
     updated_at = NOW()
 WHERE user_id = $3;
 
-
+-- name: DeleteSpotifyToken :exec
+DELETE FROM spotify_tokens
+WHERE user_id = $1;

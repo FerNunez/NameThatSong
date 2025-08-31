@@ -5,21 +5,31 @@ import (
 )
 
 type SpotifyCache interface {
+	// Basic entity cache operations (cache-only, no API calls)
+	GetTrack(trackId string) (m.TrackData, bool)
+	SetTrack(trackId string, track m.TrackData)
+	GetAlbum(albumId string) (m.AlbumData, bool)
+	SetAlbum(albumId string, album m.AlbumData)
+	GetArtist(artistId string) (m.ArtistData, bool)
+	SetArtist(artistId string, artist m.ArtistData)
+	GetPlaylist(playlistId string) (m.PlaylistData, bool)
+	SetPlaylist(playlistId string, playlist m.PlaylistData)
+	GetPlaylistTracks(playlistId string) ([]string, bool)
+	SetPlaylistTracks(playlistId string, tracks []string)
+	GetPlaylistAlbums(playlistId string) ([]string, bool)
+	SetPlaylistAlbums(playlistId string, tracks []string)
 
-	// kind of internal
-	GetTrack(accessToken, trackId string) (m.TrackData, error)
-	GetAlbum(accessToken, albumId string) (m.AlbumData, error)
-	GetArtist(accessToken, artistId string) (m.ArtistData, error)
-	GetPlaylist(accessToken, playlistId string) (m.PlaylistData, error)
+	// Search cache operations (cache-only, no API calls)
+	GetSearchTracks(query string) ([]m.TrackSearch, bool)
+	SetSearchTracks(query string, tracks []m.TrackSearch)
+	GetSearchAlbums(query string) ([]m.AlbumSearch, bool)
+	SetSearchAlbums(query string, albums []m.AlbumSearch)
+	GetSearchArtists(query string) ([]m.ArtistSearch, bool)
+	SetSearchArtists(query string, artists []m.ArtistSearch)
+	GetSearchPlaylists(query string) ([]m.PlaylistSearch, bool)
+	SetSearchPlaylists(query string, playlists []m.PlaylistSearch)
 
-	// Get realtions
-	GetAlbumsFromArtist(accessToken, artistId string) ([]string, error)
-	GetTracksFromAlbum(accessToken, albumId string) ([]string, error)
-	GetTracksFromPlaylist(accessToken, playlistId string) ([]string, error)
-
-	// Search
-	SearchTracks(accessToken, query string) ([]m.TrackSearch, error)
-	SearchAlbums(accessToken, query string) ([]m.AlbumSearch, error)
-	SearchArtists(accessToken, query string) ([]m.ArtistSearch, error)
-	SearchPlaylists(accessToken, query string) ([]m.PlaylistSearch, error)
+	// OAuth state management
+	GetOAuthState(userID string) (string, bool)
+	SetOAuthState(userID, state string)
 }

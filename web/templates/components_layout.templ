@@ -1,0 +1,465 @@
+package templates
+
+import (
+	m "github.com/FerNunez/NameThatSong/internal/api/middleware"
+	"strconv"
+)
+
+type User struct {
+	Name      string
+	Email     string
+	AvatarURL string
+}
+
+type LayoutData struct {
+	Title string
+	User  *User
+}
+
+templ Header(user *User) {
+	<header
+		class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between 
+				   bg-forest-400 border-b border-forest-100 px-10 py-3"
+	>
+		<!-- Left: Logo + Navigation -->
+		<div class="flex items-center gap-8">
+			<div class="flex items-center gap-4">
+				@MusicIcon()
+				<h2 class="text-lg font-bold tracking-tight text-white">NameThatSong</h2>
+			</div>
+			<nav class="flex items-center gap-9">
+				<a href="/todo" class="text-sm font-medium text-forest-50 hover:text-white transition-colors">Game</a>
+			</nav>
+		</div>
+		<!-- Right: Search + Profile -->
+		<div class="flex items-center gap-8">
+			<!-- @SearchInput("Search songs, artists...", "header-search")
+			 @NotificationButton() -->
+			@UserProfile(user)
+		</div>
+	</header>
+}
+
+templ NotificationButton() {
+	<button class="relative p-2 text-forest-50 hover:text-white transition-colors">
+		@NotificationIcon()
+		<!-- Notification badge -->
+		<span class="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full"></span>
+	</button>
+}
+
+templ UserProfile(user *User) {
+	{{ _, ok := m.GetUser(ctx) }}
+	if ok && user != nil {
+		<div class="flex items-center gap-3">
+			<div class="text-right">
+				<p class="text-sm font-medium text-white">{ user.Email }</p>
+				<button
+					class="text-xs text-forest-50 hover:text-white transition-colors"
+					hx-post="/logout"
+					hx-target="body"
+					hx-swap="innerHTML"
+				>
+					Sign out
+				</button>
+			</div>
+			@UserAvatar(user.AvatarURL)
+		</div>
+	} else {
+		<div class="flex items-center gap-4">
+			<a href="/register" class="text-sm font-medium text-forest-50 hover:text-white transition-colors">Register</a>
+			<a
+				href="/login"
+				class="px-4 py-2 bg-accent text-forest-400 font-medium rounded-lg hover:bg-opacity-90 transition-colors"
+			>
+				Login
+			</a>
+		</div>
+	}
+}
+
+templ UserAvatar(avatarURL string) {
+	<div class="w-8 h-8 rounded-full overflow-hidden bg-forest-200 ring-2 ring-forest-100">
+		if avatarURL != "" {
+			<img src={ avatarURL } alt="User avatar" class="w-full h-full object-cover"/>
+		} else {
+			<div class="w-full h-full flex items-center justify-center text-forest-50">
+				<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+					<path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path>
+				</svg>
+			</div>
+		}
+	</div>
+}
+
+templ Sidebar(user *User) {
+	<aside class="w-80 bg-forest-400 border-r border-forest-100 overflow-auto h-full">
+		if user != nil {
+			<!-- Local Playlists - Only for authenticated users -->
+			<section class="px-4 pb-4 pt-4">
+				<h3 class="text-lg font-bold mb-4 text-white">Local Playlists</h3>
+				<div
+					id="local-playlists"
+					class="space-y-2"
+					hx-get="/api/local-playlists"
+					hx-trigger="load, refreshLocalPlaylists from:body, trackAdded from:body"
+					hx-target="this"
+				>
+					@PlaylistsLoading()
+				</div>
+			</section>
+			<!-- Spotify Playlists - Only for authenticated users -->
+			<section class="px-4 pb-6">
+				<h3 class="text-lg font-bold mb-4 text-white">Spotify Playlists</h3>
+				<div
+					id="spotify-playlists"
+					class="space-y-2"
+					hx-get="/api/spotify-playlists"
+					hx-trigger="load"
+					hx-target="this"
+				>
+					@PlaylistsLoading()
+				</div>
+			</section>
+		} else {
+			<!-- Login Prompt for Unauthenticated Users -->
+			@LoginPromptSidebar()
+		}
+	</aside>
+}
+
+templ LoginPromptSidebar() {
+	<div class="h-full flex items-center justify-center p-6">
+		<div class="text-center">
+			<div class="w-16 h-16 mx-auto mb-6 text-forest-50 opacity-50">
+				<svg fill="currentColor" viewBox="0 0 24 24">
+					<path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path>
+				</svg>
+			</div>
+			<h3 class="text-lg font-semibold text-white mb-3">Welcome to NameThatSong</h3>
+			<p class="text-forest-50 text-sm mb-6">Sign in to access your playlists and start playing music games!</p>
+			<div class="space-y-3">
+				<a
+					href="/login"
+					class="block w-full px-4 py-3 bg-accent text-forest-400 font-bold rounded-lg hover:bg-opacity-90 transition-colors text-center"
+				>
+					🎵 Sign In
+				</a>
+				<a
+					href="/register"
+					class="block w-full px-4 py-3 bg-forest-300 text-white font-medium rounded-lg hover:bg-forest-200 transition-colors text-center"
+				>
+					Create Account
+				</a>
+			</div>
+			<p class="text-forest-100 text-xs mt-4">Connect your Spotify account to access your music library</p>
+		</div>
+	</div>
+}
+
+templ LibraryItem(label, iconType, href string) {
+	<a
+		href={ templ.SafeURL(href) }
+		class="flex items-center gap-3 p-3 rounded-lg hover:bg-forest-300 transition-colors group"
+	>
+		<div class="w-10 h-10 bg-forest-200 rounded-lg flex items-center justify-center group-hover:bg-forest-100">
+			switch iconType {
+				case "playlist":
+					@MusicIcon()
+				case "heart":
+					@HeartIcon()
+				default:
+					@MusicIcon()
+			}
+		</div>
+		<span class="text-white font-medium">{ label }</span>
+	</a>
+}
+
+templ LayoutWithUser(contents templ.Component, title string, user *User) {
+	<html class="h-full bg-forest-400 font-sans">
+		<head>
+			<title>{ title }</title>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<link rel="preconnect" href="https://fonts.googleapis.com"/>
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+			<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+			<link rel="stylesheet" href="/static/css/style.min.css"/>
+		</head>
+		<body class="h-full bg-forest-400 text-white overflow-hidden">
+			@Header(user)
+			<div class="flex h-full pt-16">
+				@Sidebar(user)
+				<main id="main-content" class="flex-1 overflow-auto bg-forest-400">
+					<div class="animate-slide-up">
+						@contents
+					</div>
+				</main>
+			</div>
+			<script src="https://unpkg.com/htmx.org@2.0.3"></script>
+			<script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+		</body>
+	</html>
+}
+
+templ PlaylistsLoading() {
+	<div class="flex items-center justify-center py-4">
+		<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-accent"></div>
+		<span class="ml-2 text-forest-50 text-sm">Loading playlists...</span>
+	</div>
+}
+
+templ UserPlaylistsList(playlists []UserPlaylist) {
+	if len(playlists) > 0 {
+		for _, playlist := range playlists {
+			@PlaylistItem(playlist)
+		}
+	} else {
+		@NoPlaylistsFound()
+	}
+}
+
+type UserPlaylist struct {
+	ID         string
+	Name       string
+	TrackCount int
+	IsSpotify  bool
+	SpotifyID  string
+	ImageURL   string
+}
+
+templ PlaylistItem(playlist UserPlaylist) {
+	<a
+		href="#"
+		class="flex items-center gap-3 p-3 rounded-lg hover:bg-forest-300 transition-colors group cursor-pointer"
+		hx-get={ "/api/playlist/" + playlist.ID + "/songs" }
+		hx-target="#playlist-songs-container"
+		hx-swap="innerHTML"
+	>
+		<div class="w-10 h-10 bg-forest-200 rounded-lg flex items-center justify-center group-hover:bg-forest-100">
+			if playlist.IsSpotify {
+				@SpotifyIcon()
+			} else {
+				@MusicIcon()
+			}
+		</div>
+		<div class="flex-1 min-w-0">
+			<span class="text-white font-medium truncate block">{ playlist.Name }</span>
+			<span class="text-forest-50 text-sm">{ strconv.Itoa(playlist.TrackCount) } songs</span>
+		</div>
+	</a>
+}
+
+templ NoPlaylistsFound() {
+	<div class="text-center py-6">
+		<div class="w-12 h-12 mx-auto mb-3 text-forest-50 opacity-50">
+			@MusicIcon()
+		</div>
+		<p class="text-forest-50 text-sm">No playlists found</p>
+		<button
+			class="mt-2 text-accent text-sm hover:text-green-400 transition-colors"
+			hx-get="/api/import-spotify-playlists"
+			hx-target="#user-playlists"
+		>
+			Import from Spotify
+		</button>
+	</div>
+}
+
+templ SpotifyIcon() {
+	<svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 24 24">
+		<path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.42 1.56-.299.421-1.02.599-1.559.3z"></path>
+	</svg>
+}
+
+templ SpotifyImportError(errorMsg string) {
+	<div class="text-center py-6">
+		<div class="w-12 h-12 mx-auto mb-3 text-red-400">
+			<svg fill="currentColor" viewBox="0 0 20 20">
+				<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+			</svg>
+		</div>
+		<p class="text-red-400 text-sm">Error loading Spotify playlists</p>
+		<p class="text-forest-50 text-xs mt-1">{ errorMsg }</p>
+		<button
+			class="mt-3 text-accent text-sm hover:text-green-400 transition-colors"
+			hx-get="/api/import-spotify-playlists"
+			hx-target="#user-playlists"
+		>
+			Try Again
+		</button>
+	</div>
+}
+
+templ SpotifyImportList(playlists []UserPlaylist) {
+	<div class="space-y-2">
+		<div class="text-center pb-3 border-b border-forest-200">
+			<p class="text-forest-50 text-sm">Available Spotify Playlists</p>
+			<p class="text-forest-100 text-xs">Click to import</p>
+		</div>
+		for _, playlist := range playlists {
+			@SpotifyImportItem(playlist)
+		}
+		<div class="pt-3 border-t border-forest-200">
+			<button
+				class="w-full text-forest-50 text-sm hover:text-white transition-colors"
+				hx-get="/api/playlists"
+				hx-target="#user-playlists"
+			>
+				← Back to My Playlists
+			</button>
+		</div>
+	</div>
+}
+
+templ SpotifyImportItem(playlist UserPlaylist) {
+	<button
+		class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-forest-300 transition-colors group text-left"
+		hx-post="/api/playlists/import"
+		hx-vals={ `{"spotify_playlist_id": "` + playlist.SpotifyID + `", "sync_with_spotify": true}` }
+		hx-target="#local-playlists"
+		hx-swap="innerHTML"
+	>
+		<div class="w-10 h-10 bg-forest-200 rounded-lg flex items-center justify-center group-hover:bg-forest-100">
+			@SpotifyIcon()
+		</div>
+		<div class="flex-1 min-w-0">
+			<span class="text-white font-medium truncate block">{ playlist.Name }</span>
+			<span class="text-forest-50 text-sm">{ strconv.Itoa(playlist.TrackCount) } songs</span>
+		</div>
+		<div class="text-accent text-sm font-medium">
+			Import
+		</div>
+	</button>
+}
+
+templ LocalPlaylistsList(playlists []UserPlaylist) {
+	if len(playlists) > 0 {
+		for _, playlist := range playlists {
+			@LocalPlaylistItem(playlist)
+		}
+	}
+	if len(playlists) == 0 {
+		@NoLocalPlaylistsFound()
+	}
+	<div class="pb-3 border-b border-forest-200">
+		<button
+			class="w-full text-accent text-sm hover:text-green-400 transition-colors p-2 rounded font-medium"
+			hx-get="/api/playlist/create-form"
+			hx-target="#playlist-songs-container"
+			hx-swap="innerHTML"
+		>
+			+ Create New Playlist
+		</button>
+	</div>
+}
+
+templ LocalPlaylistItem(playlist UserPlaylist) {
+	<a
+		href="#"
+		class="flex items-center gap-3 p-3 rounded-lg hover:bg-forest-300 transition-colors group cursor-pointer"
+		hx-get={ "/api/playlist/" + playlist.ID + "/songs" }
+		hx-target="#playlist-songs-container"
+		hx-swap="innerHTML"
+	>
+		<div class="w-10 h-10 bg-forest-200 rounded-lg flex items-center justify-center group-hover:bg-forest-100">
+			@MusicIcon()
+		</div>
+		<div class="flex-1 min-w-0">
+			<span class="text-white font-medium truncate block">{ playlist.Name }</span>
+			<span class="text-forest-50 text-sm">{ strconv.Itoa(playlist.TrackCount) } songs</span>
+		</div>
+	</a>
+}
+
+templ NoLocalPlaylistsFound() {
+	<div class="text-center py-6">
+		<div class="w-12 h-12 mx-auto mb-3 text-forest-50 opacity-50">
+			@MusicIcon()
+		</div>
+		<p class="text-forest-50 text-sm">No local playlists found</p>
+		<p class="text-forest-100 text-xs mt-2">Create your first playlist to get started</p>
+	</div>
+}
+
+templ SpotifyPlaylistsList(playlists []UserPlaylist) {
+	if len(playlists) > 0 {
+		for _, playlist := range playlists {
+			@SpotifyPlaylistItem(playlist)
+		}
+		<div class="pt-3 border-t border-forest-200">
+			<button
+				class="w-full text-forest-50 text-sm hover:text-white transition-colors p-2 rounded"
+				hx-put="/api/spotify-playlists/refresh"
+				hx-target="#spotify-playlists"
+			>
+				🔄 Refresh All
+			</button>
+		</div>
+	} else {
+		@NoSpotifyPlaylistsFound()
+	}
+}
+
+templ SpotifyPlaylistItem(playlist UserPlaylist) {
+	<div class="flex items-center gap-3 p-3 rounded-lg hover:bg-forest-300 transition-colors group">
+		<div class="w-10 h-10 bg-forest-200 rounded-lg flex items-center justify-center group-hover:bg-forest-100">
+			<img src={ playlist.ImageURL } alt={ playlist.Name } class="w-full h-full object-cover"/>
+		</div>
+		<div
+			class="flex-1 min-w-0 cursor-pointer"
+			hx-get={ "/api/playlist/" + playlist.ID + "/songs" }
+			hx-target="#playlist-songs-container"
+			hx-swap="innerHTML"
+		>
+			<span class="text-white font-medium truncate block">{ playlist.Name }</span>
+			<span class="text-forest-50 text-sm">{ strconv.Itoa(playlist.TrackCount) } songs</span>
+		</div>
+		<button
+			class="px-3 py-1 bg-forest-200 text-white text-xs rounded hover:bg-forest-100 transition-colors"
+			hx-put={ "/api/spotify-playlists/" + playlist.SpotifyID + "/update" }
+			hx-target="#spotify-playlists"
+			title="Update from Spotify"
+		>
+			Update
+		</button>
+	</div>
+}
+
+templ NoSpotifyPlaylistsFound() {
+	<div class="text-center py-6">
+		<div class="w-12 h-12 mx-auto mb-3 text-green-500 opacity-50">
+			@SpotifyIcon()
+		</div>
+		<p class="text-forest-50 text-sm">No Spotify playlists found</p>
+		<button
+			class="mt-2 text-accent text-sm hover:text-green-400 transition-colors"
+			hx-get="/api/spotify-playlists"
+			hx-target="#spotify-playlists"
+		>
+			Refresh from Spotify
+		</button>
+	</div>
+}
+
+templ AuthLayout(contents templ.Component, title string) {
+	<html class="h-full bg-forest-400 font-sans">
+		<head>
+			<title>{ title }</title>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<link rel="preconnect" href="https://fonts.googleapis.com"/>
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+			<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+			<link rel="stylesheet" href="/static/css/style.min.css"/>
+		</head>
+		<body class="h-full bg-forest-400 text-white">
+			<main class="h-full">
+				@contents
+			</main>
+			<script src="https://unpkg.com/htmx.org@2.0.3"></script>
+			<script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+		</body>
+	</html>
+}

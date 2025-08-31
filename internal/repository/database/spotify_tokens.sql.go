@@ -59,6 +59,16 @@ func (q *Queries) CreateSpotifyToken(ctx context.Context, arg CreateSpotifyToken
 	return i, err
 }
 
+const deleteSpotifyToken = `-- name: DeleteSpotifyToken :exec
+DELETE FROM spotify_tokens
+WHERE user_id = $1
+`
+
+func (q *Queries) DeleteSpotifyToken(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, deleteSpotifyToken, userID)
+	return err
+}
+
 const getSpotifyTokenByID = `-- name: GetSpotifyTokenByID :one
 SELECT user_id, refresh_token, created_at, updated_at, access_token, token_type, scope, expires_at FROM spotify_tokens
 WHERE user_id = $1

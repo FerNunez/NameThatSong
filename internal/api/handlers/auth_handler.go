@@ -4,56 +4,105 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/FerNunez/NameThatSong/internal/services/game"
+	"github.com/FerNunez/NameThatSong/internal/api/middleware"
+	"github.com/FerNunez/NameThatSong/internal/pkg/logger"
+	"github.com/FerNunez/NameThatSong/internal/services/spotify"
+	"github.com/FerNunez/NameThatSong/internal/services/user"
 )
 
 type GetAuthHandler struct {
-	gm *game.GameManager
+	spotifyService spotify.SpotifyService
 }
 
-func NewGetAuthHandler(gm *game.GameManager) *GetAuthHandler {
-	return &GetAuthHandler{gm}
+func NewGetAuthHandler(ss spotify.SpotifyService) *GetAuthHandler {
+	return &GetAuthHandler{ss}
 
 }
 func (h *GetAuthHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
-	game, err := h.gm.GetGame(r.Context())
-	if err != nil {
-		fmt.Printf("[GetAuthHandler] could not retriever game: %v", err)
+	fmt.Println("HEEEEEEEEEY")
+	logger.Info(r.Context(), "spotify auth request initiated")
+
+	user, ok := middleware.GetUser(r.Context())
+	if !ok {
+		logger.Warn(r.Context(), "spotify auth request without authenticated user")
+		// TODO: add here a way to say "you need to log in"
 		return
 	}
-	urlString, err := game.RequestUserAuthoritazion()
+
+	logger.Info(r.Context(), "generating spotify auth URL",
+		logger.F("user_id", user.ID.String()))
+
+	urlString, err := h.spotifyService.AuthRequestURL(user.ID.String())
 	if err != nil {
-		fmt.Printf("[GetAuthHandler] error getting spotify auth: %v", err)
+		logger.Error(r.Context(), "failed to generate spotify auth URL",
+			logger.F("user_id", user.ID.String()),
+			logger.F("error", err))
+		http.Error(w, fmt.Sprintf("error generating the auth request url: %v", err), http.StatusBadRequest)
 		return
 	}
+
+	logger.Info(r.Context(), "redirecting to spotify auth",
+		logger.F("user_id", user.ID.String()),
+		logger.F("auth_url", urlString))
+
 	// Redirect to Spotify
 	w.Header().Set("HX-Redirect", urlString)
 }
 
 // //////////////////////////////////////
 type GetAuthCallbackHandler struct {
-	gm *game.GameManager
+	spotifyService spotify.SpotifyService
+	userService    user.UserService
 }
 
-func NewGetAuthCallbackHandler(gm *game.GameManager) *GetAuthCallbackHandler {
-	return &GetAuthCallbackHandler{gm}
-
+func NewGetAuthCallbackHandler(ss spotify.SpotifyService, us user.UserService) *GetAuthCallbackHandler {
+	return &GetAuthCallbackHandler{
+		spotifyService: ss,
+		userService:    us,
+	}
 }
 func (h *GetAuthCallbackHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
-	game, err := h.gm.GetGame(r.Context())
+	logger.Info(r.Context(), "spotify auth callback received")
+
+	user, ok := middleware.GetUser(r.Context())
+	if !ok {
+		logger.Warn(r.Context(), "spotify auth callback without authenticated user")
+		// TODO: add here a way to say "you need to log in"
+		return
+	}
+	state := r.URL.Query().Get("state")
+	code := r.URL.Query().Get("code")
+
+	logger.Info(r.Context(), "processing spotify token exchange",
+		logger.F("user_id", user.ID.String()),
+		logger.F("has_code", code != ""),
+		logger.F("has_state", state != ""))
+
+	tr, err := h.spotifyService.TokenExchange(r.Context(), user.ID.String(), code, state)
 	if err != nil {
-		fmt.Printf("error generating state: %v\n", err)
-		http.Error(w, "error generating state", http.StatusBadRequest)
+		logger.Error(r.Context(), "failed to exchange spotify token",
+			logger.F("user_id", user.ID.String()),
+			logger.F("error", err))
+		http.Error(w, "error exchanging spotify token", http.StatusBadRequest)
 		return
 	}
 
-	state := r.URL.Query().Get("state")
-	code := r.URL.Query().Get("code")
-	err = game.ExchangeToken(r.Context(), state, code)
+	logger.Info(r.Context(), "spotify token exchange successful",
+		logger.F("user_id", user.ID.String()),
+		logger.F("token_type", tr.TokenType),
+		logger.F("expires_in", tr.ExpiresIn),
+		logger.F("scope", tr.Scope))
+
+	// Mark user as Spotify connected
+	err = h.userService.MarkSpotifyConnected(r.Context(), user.ID)
 	if err != nil {
-		fmt.Printf("error exchanging token: %v\n", err)
-		http.Error(w, "error exchanging spotify token", http.StatusBadRequest)
-		return
+		logger.Error(r.Context(), "failed to mark user as spotify connected",
+			logger.F("user_id", user.ID.String()),
+			logger.F("error", err))
+		// Continue anyway since the token exchange was successful
+	} else {
+		logger.Info(r.Context(), "user marked as spotify connected",
+			logger.F("user_id", user.ID.String()))
 	}
 
 	http.Redirect(w, r, "/", http.StatusFound)

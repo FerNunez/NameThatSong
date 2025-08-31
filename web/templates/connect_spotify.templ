@@ -1,0 +1,45 @@
+package templates
+
+templ ConnectSpotifyPage() {
+	<div class="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-900 to-gray-800 px-4 sm:px-6 lg:px-8">
+		<div class="max-w-md w-full bg-gray-800 rounded-xl shadow-2xl p-8 space-y-6 border border-gray-700">
+			<div class="text-center">
+				<div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-6">
+					<svg class="h-8 w-8 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+						<path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.062 14.615c-.188.313-.563.406-.876.219-2.394-1.469-5.406-1.781-8.969-.984-.313.063-.625-.125-.688-.438-.062-.313.125-.625.438-.688 3.875-.875 7.219-.5 9.875 1.125.313.188.406.562.219.875zm1.25-2.781c-.219.375-.688.5-1.063.281-2.75-1.688-6.938-2.156-10.188-1.187-.375.094-.781-.125-.875-.5-.094-.375.125-.781.5-.875 3.75-1.094 8.406-.563 11.344 1.375.375.219.5.687.281 1.062zm.125-2.906c-3.281-1.938-8.719-2.125-11.844-1.172-.438.125-.906-.125-1.031-.563-.125-.438.125-.906.563-1.031 3.594-1.094 9.688-.875 13.469 1.359.406.25.531.781.281 1.188-.25.406-.781.531-1.188.281z"></path>
+					</svg>
+				</div>
+				<h1 class="text-center text-3xl font-bold tracking-tight text-white mb-6">
+					Connect to Spotifyy
+				</h1>
+				<p class="text-gray-300 mb-8 text-sm leading-relaxed">
+					To use NameThatSong, you need to connect your Spotify account. This allows us to access your playlists and enable the music guessing game.
+				</p>
+			</div>
+			<div class="space-y-4">
+				<div class="text-sm text-gray-400">
+					<p class="mb-2">We'll be able to:</p>
+					<ul class="list-disc list-inside space-y-1 text-xs">
+						<li>Read your playlists</li>
+						<li>Play music for the guessing game</li>
+						<li>Create and modify playlists</li>
+					</ul>
+				</div>
+				<button
+					type="button"
+					hx-post="/spotify-auth"
+					hx-trigger="click"
+					class="w-full py-3 px-4 rounded-lg bg-green-500 hover:bg-green-600 text-white font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer border-2 border-green-400 hover:border-green-300 hover:translate-y-0.5 hover:scale-105 flex items-center justify-center space-x-2"
+				>
+					<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+						<path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.062 14.615c-.188.313-.563.406-.876.219-2.394-1.469-5.406-1.781-8.969-.984-.313.063-.625-.125-.688-.438-.062-.313.125-.625.438-.688 3.875-.875 7.219-.5 9.875 1.125.313.188.406.562.219.875zm1.25-2.781c-.219.375-.688.5-1.063.281-2.75-1.688-6.938-2.156-10.188-1.187-.375.094-.781-.125-.875-.5-.094-.375.125-.781.5-.875 3.75-1.094 8.406-.563 11.344 1.375.375.219.5.687.281 1.062zm.125-2.906c-3.281-1.938-8.719-2.125-11.844-1.172-.438.125-.906-.125-1.031-.563-.125-.438.125-.906.563-1.031 3.594-1.094 9.688-.875 13.469 1.359.406.25.531.781.281 1.188-.25.406-.781.531-1.188.281z"></path>
+					</svg>
+					<span>Connect to Spotifyyy</span>
+				</button>
+				<p class="text-xs text-gray-500 text-center">
+					You'll be redirected to Spotify to authorize access
+				</p>
+			</div>
+		</div>
+	</div>
+}

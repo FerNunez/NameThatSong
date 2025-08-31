@@ -7,42 +7,281 @@ package database
 
 import (
 	"context"
+	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
 
+const cleanupExpiredEmailVerificationTokens = `-- name: CleanupExpiredEmailVerificationTokens :exec
+DELETE FROM email_verification_tokens WHERE expires_at < NOW()
+`
+
+func (q *Queries) CleanupExpiredEmailVerificationTokens(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, cleanupExpiredEmailVerificationTokens)
+	return err
+}
+
+const cleanupExpiredPasswordResetTokens = `-- name: CleanupExpiredPasswordResetTokens :exec
+DELETE FROM password_reset_tokens WHERE expires_at < NOW()
+`
+
+func (q *Queries) CleanupExpiredPasswordResetTokens(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, cleanupExpiredPasswordResetTokens)
+	return err
+}
+
+const cleanupExpiredSessions = `-- name: CleanupExpiredSessions :exec
+DELETE FROM user_sessions WHERE expires_at < NOW()
+`
+
+func (q *Queries) CleanupExpiredSessions(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, cleanupExpiredSessions)
+	return err
+}
+
+const createEmailVerificationTokens = `-- name: CreateEmailVerificationTokens :one
+INSERT INTO email_verification_tokens (id, user_id, token, expires_at, used_at, created_at)
+VALUES ( $1, $2, $3, $4, NULL, NOW())
+RETURNING id, user_id, token, expires_at, used_at, created_at
+`
+
+type CreateEmailVerificationTokensParams struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	Token     string
+	ExpiresAt time.Time
+}
+
+// Email verification token
+func (q *Queries) CreateEmailVerificationTokens(ctx context.Context, arg CreateEmailVerificationTokensParams) (EmailVerificationToken, error) {
+	row := q.db.QueryRowContext(ctx, createEmailVerificationTokens,
+		arg.ID,
+		arg.UserID,
+		arg.Token,
+		arg.ExpiresAt,
+	)
+	var i EmailVerificationToken
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Token,
+		&i.ExpiresAt,
+		&i.UsedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const createPasswordResetTokens = `-- name: CreatePasswordResetTokens :one
+INSERT INTO password_reset_tokens (id, user_id, token, expires_at, used_at, created_at)
+VALUES ( $1, $2, $3, $4, NULL, NOW())
+RETURNING id, user_id, token, expires_at, used_at, created_at
+`
+
+type CreatePasswordResetTokensParams struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	Token     string
+	ExpiresAt time.Time
+}
+
+// Password Reset Tokens
+func (q *Queries) CreatePasswordResetTokens(ctx context.Context, arg CreatePasswordResetTokensParams) (PasswordResetToken, error) {
+	row := q.db.QueryRowContext(ctx, createPasswordResetTokens,
+		arg.ID,
+		arg.UserID,
+		arg.Token,
+		arg.ExpiresAt,
+	)
+	var i PasswordResetToken
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Token,
+		&i.ExpiresAt,
+		&i.UsedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (id, created_at, updated_at, email, hashed_password)
-VALUES (
-  gen_random_uuid(),
-  NOW(),
-  NOW(),
-  $1,
-  $2
-)
-RETURNING id, created_at, updated_at, email, hashed_password
+INSERT INTO users (id, email, hashed_password, email_verified, display_name, avatar_url, spotify_connected, last_login_at, created_at, updated_at)
+VALUES ( $1, $2, $3, $4, $5, $6, FALSE, NULL, NOW(), NOW())
+RETURNING id, email, hashed_password, email_verified, display_name, avatar_url, spotify_connected, last_login_at, created_at, updated_at
 `
 
 type CreateUserParams struct {
+	ID             uuid.UUID
 	Email          string
 	HashedPassword string
+	EmailVerified  sql.NullBool
+	DisplayName    string
+	AvatarUrl      sql.NullString
 }
 
+// Users
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, createUser, arg.Email, arg.HashedPassword)
+	row := q.db.QueryRowContext(ctx, createUser,
+		arg.ID,
+		arg.Email,
+		arg.HashedPassword,
+		arg.EmailVerified,
+		arg.DisplayName,
+		arg.AvatarUrl,
+	)
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.Email,
 		&i.HashedPassword,
+		&i.EmailVerified,
+		&i.DisplayName,
+		&i.AvatarUrl,
+		&i.SpotifyConnected,
+		&i.LastLoginAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createUserSession = `-- name: CreateUserSession :one
+INSERT INTO user_sessions (id,  user_id, expires_at, revoked_at, created_at, updated_at)
+VALUES (
+  $1,
+  $2,
+  $3,
+  NULL,
+  NOW(),
+  NOW()
+)
+RETURNING id, user_id, expires_at, revoked_at, created_at, updated_at
+`
+
+type CreateUserSessionParams struct {
+	ID        string
+	UserID    uuid.UUID
+	ExpiresAt time.Time
+}
+
+// User Sessions
+func (q *Queries) CreateUserSession(ctx context.Context, arg CreateUserSessionParams) (UserSession, error) {
+	row := q.db.QueryRowContext(ctx, createUserSession, arg.ID, arg.UserID, arg.ExpiresAt)
+	var i UserSession
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.ExpiresAt,
+		&i.RevokedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const deletePasswordResetTokens = `-- name: DeletePasswordResetTokens :exec
+DELETE FROM password_reset_tokens WHERE id = $1
+`
+
+func (q *Queries) DeletePasswordResetTokens(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, deletePasswordResetTokens, id)
+	return err
+}
+
+const deleteUser = `-- name: DeleteUser :exec
+DELETE FROM users WHERE id = $1
+`
+
+func (q *Queries) DeleteUser(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, deleteUser, id)
+	return err
+}
+
+const deleteUserSessions = `-- name: DeleteUserSessions :exec
+DELETE FROM user_sessions WHERE id = $1
+`
+
+func (q *Queries) DeleteUserSessions(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, deleteUserSessions, id)
+	return err
+}
+
+const getEmailVerificationTokensByToken = `-- name: GetEmailVerificationTokensByToken :one
+SELECT id, user_id, token, expires_at, used_at, created_at FROM email_verification_tokens WHERE token = $1
+`
+
+func (q *Queries) GetEmailVerificationTokensByToken(ctx context.Context, token string) (EmailVerificationToken, error) {
+	row := q.db.QueryRowContext(ctx, getEmailVerificationTokensByToken, token)
+	var i EmailVerificationToken
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Token,
+		&i.ExpiresAt,
+		&i.UsedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getEmailVerificationTokensByUserID = `-- name: GetEmailVerificationTokensByUserID :one
+SELECT id, user_id, token, expires_at, used_at, created_at FROM email_verification_tokens WHERE user_id = $1
+`
+
+func (q *Queries) GetEmailVerificationTokensByUserID(ctx context.Context, userID uuid.UUID) (EmailVerificationToken, error) {
+	row := q.db.QueryRowContext(ctx, getEmailVerificationTokensByUserID, userID)
+	var i EmailVerificationToken
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Token,
+		&i.ExpiresAt,
+		&i.UsedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getPasswordResetTokensByToken = `-- name: GetPasswordResetTokensByToken :one
+SELECT id, user_id, token, expires_at, used_at, created_at FROM password_reset_tokens WHERE token = $1
+`
+
+func (q *Queries) GetPasswordResetTokensByToken(ctx context.Context, token string) (PasswordResetToken, error) {
+	row := q.db.QueryRowContext(ctx, getPasswordResetTokensByToken, token)
+	var i PasswordResetToken
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Token,
+		&i.ExpiresAt,
+		&i.UsedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getPasswordResetTokensByUserID = `-- name: GetPasswordResetTokensByUserID :one
+SELECT id, user_id, token, expires_at, used_at, created_at FROM password_reset_tokens WHERE user_id = $1
+`
+
+func (q *Queries) GetPasswordResetTokensByUserID(ctx context.Context, userID uuid.UUID) (PasswordResetToken, error) {
+	row := q.db.QueryRowContext(ctx, getPasswordResetTokensByUserID, userID)
+	var i PasswordResetToken
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Token,
+		&i.ExpiresAt,
+		&i.UsedAt,
+		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, created_at, updated_at, email, hashed_password FROM users WHERE email = $1
+SELECT id, email, hashed_password, email_verified, display_name, avatar_url, spotify_connected, last_login_at, created_at, updated_at FROM users WHERE email = $1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -50,27 +289,55 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.Email,
 		&i.HashedPassword,
+		&i.EmailVerified,
+		&i.DisplayName,
+		&i.AvatarUrl,
+		&i.SpotifyConnected,
+		&i.LastLoginAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const getUserById = `-- name: GetUserById :one
-SELECT id, created_at, updated_at, email, hashed_password FROM users WHERE id = $1
+const getUserByID = `-- name: GetUserByID :one
+SELECT id, email, hashed_password, email_verified, display_name, avatar_url, spotify_connected, last_login_at, created_at, updated_at FROM users WHERE id = $1
 `
 
-func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
-	row := q.db.QueryRowContext(ctx, getUserById, id)
+func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByID, id)
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.Email,
 		&i.HashedPassword,
+		&i.EmailVerified,
+		&i.DisplayName,
+		&i.AvatarUrl,
+		&i.SpotifyConnected,
+		&i.LastLoginAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserSession = `-- name: GetUserSession :one
+SELECT id, user_id, expires_at, revoked_at, created_at, updated_at FROM user_sessions WHERE id = $1
+`
+
+func (q *Queries) GetUserSession(ctx context.Context, id string) (UserSession, error) {
+	row := q.db.QueryRowContext(ctx, getUserSession, id)
+	var i UserSession
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.ExpiresAt,
+		&i.RevokedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -84,21 +351,177 @@ func (q *Queries) ResetUsers(ctx context.Context) error {
 	return err
 }
 
-const updateUserLoginByID = `-- name: UpdateUserLoginByID :exec
-UPDATE users
-SET email = $1,
-    hashed_password = $2,
+const revoke = `-- name: Revoke :exec
+UPDATE user_sessions
+SET revoked_at = NOW(),
     updated_at = NOW()
+WHERE id = $1
+`
+
+func (q *Queries) Revoke(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, revoke, id)
+	return err
+}
+
+const revokeUserSessionsByUserID = `-- name: RevokeUserSessionsByUserID :exec
+UPDATE user_sessions 
+SET revoked_at = NOW(), updated_at = NOW()
+WHERE user_id = $1
+RETURNING id, user_id, expires_at, revoked_at, created_at, updated_at
+`
+
+func (q *Queries) RevokeUserSessionsByUserID(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, revokeUserSessionsByUserID, userID)
+	return err
+}
+
+const updateEmailVerificationTokensUsedAtByToken = `-- name: UpdateEmailVerificationTokensUsedAtByToken :one
+UPDATE email_verification_tokens
+SET used_at = NOW()
+WHERE token = $1
+RETURNING id, user_id, token, expires_at, used_at, created_at
+`
+
+func (q *Queries) UpdateEmailVerificationTokensUsedAtByToken(ctx context.Context, token string) (EmailVerificationToken, error) {
+	row := q.db.QueryRowContext(ctx, updateEmailVerificationTokensUsedAtByToken, token)
+	var i EmailVerificationToken
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Token,
+		&i.ExpiresAt,
+		&i.UsedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateLastLogin = `-- name: UpdateLastLogin :exec
+UPDATE users
+SET last_login_at = $2, updated_at = $3
+WHERE id = $1
+RETURNING id, email, hashed_password, email_verified, display_name, avatar_url, spotify_connected, last_login_at, created_at, updated_at
+`
+
+type UpdateLastLoginParams struct {
+	ID          uuid.UUID
+	LastLoginAt sql.NullTime
+	UpdatedAt   time.Time
+}
+
+func (q *Queries) UpdateLastLogin(ctx context.Context, arg UpdateLastLoginParams) error {
+	_, err := q.db.ExecContext(ctx, updateLastLogin, arg.ID, arg.LastLoginAt, arg.UpdatedAt)
+	return err
+}
+
+const updatePasswordResetTokensUsedAtByToken = `-- name: UpdatePasswordResetTokensUsedAtByToken :one
+UPDATE password_reset_tokens
+SET used_at = NOW()
+WHERE token = $1
+RETURNING id, user_id, token, expires_at, used_at, created_at
+`
+
+func (q *Queries) UpdatePasswordResetTokensUsedAtByToken(ctx context.Context, token string) (PasswordResetToken, error) {
+	row := q.db.QueryRowContext(ctx, updatePasswordResetTokensUsedAtByToken, token)
+	var i PasswordResetToken
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Token,
+		&i.ExpiresAt,
+		&i.UsedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateSpotifyConnectionStatus = `-- name: UpdateSpotifyConnectionStatus :exec
+UPDATE users
+SET spotify_connected = $2, updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdateSpotifyConnectionStatusParams struct {
+	ID               uuid.UUID
+	SpotifyConnected sql.NullBool
+}
+
+func (q *Queries) UpdateSpotifyConnectionStatus(ctx context.Context, arg UpdateSpotifyConnectionStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateSpotifyConnectionStatus, arg.ID, arg.SpotifyConnected)
+	return err
+}
+
+const updateUserPassword = `-- name: UpdateUserPassword :exec
+UPDATE users
+SET hashed_password = $2, updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdateUserPasswordParams struct {
+	ID             uuid.UUID
+	HashedPassword string
+}
+
+func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {
+	_, err := q.db.ExecContext(ctx, updateUserPassword, arg.ID, arg.HashedPassword)
+	return err
+}
+
+const updateUserProfile = `-- name: UpdateUserProfile :exec
+UPDATE users
+SET display_name = $2, avatar_url = $3, updated_at = $4
+WHERE id = $1
+RETURNING id, email, hashed_password, email_verified, display_name, avatar_url, spotify_connected, last_login_at, created_at, updated_at
+`
+
+type UpdateUserProfileParams struct {
+	ID          uuid.UUID
+	DisplayName string
+	AvatarUrl   sql.NullString
+	UpdatedAt   time.Time
+}
+
+func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) error {
+	_, err := q.db.ExecContext(ctx, updateUserProfile,
+		arg.ID,
+		arg.DisplayName,
+		arg.AvatarUrl,
+		arg.UpdatedAt,
+	)
+	return err
+}
+
+const updateUserSession = `-- name: UpdateUserSession :exec
+UPDATE user_sessions
+SET revoked_at = $1,
+    updated_at = $2
 WHERE id = $3
 `
 
-type UpdateUserLoginByIDParams struct {
-	Email          string
-	HashedPassword string
-	ID             uuid.UUID
+type UpdateUserSessionParams struct {
+	RevokedAt sql.NullTime
+	UpdatedAt time.Time
+	ID        string
 }
 
-func (q *Queries) UpdateUserLoginByID(ctx context.Context, arg UpdateUserLoginByIDParams) error {
-	_, err := q.db.ExecContext(ctx, updateUserLoginByID, arg.Email, arg.HashedPassword, arg.ID)
+func (q *Queries) UpdateUserSession(ctx context.Context, arg UpdateUserSessionParams) error {
+	_, err := q.db.ExecContext(ctx, updateUserSession, arg.RevokedAt, arg.UpdatedAt, arg.ID)
+	return err
+}
+
+const verifyUserEmail = `-- name: VerifyUserEmail :exec
+UPDATE users
+SET email_verified = true, updated_at = $2
+WHERE id = $1
+RETURNING id, email, hashed_password, email_verified, display_name, avatar_url, spotify_connected, last_login_at, created_at, updated_at
+`
+
+type VerifyUserEmailParams struct {
+	ID        uuid.UUID
+	UpdatedAt time.Time
+}
+
+func (q *Queries) VerifyUserEmail(ctx context.Context, arg VerifyUserEmailParams) error {
+	_, err := q.db.ExecContext(ctx, verifyUserEmail, arg.ID, arg.UpdatedAt)
 	return err
 }

@@ -1,0 +1,110 @@
+package templates
+
+type SearchInputProps struct {
+	Placeholder string
+	ID          string
+	Value       string
+}
+
+templ SearchInput(placeholder, id string) {
+	<div class="flex w-full max-w-64 h-10">
+		<div class="flex w-full rounded-lg bg-forest-200 border border-forest-100 transition-colors hover:border-forest-50">
+			<!-- Search Icon -->
+			<div class="flex items-center justify-center ">
+				@SearchIcon()
+			</div>
+			<!-- Input Field -->
+			<input
+				type="text"
+				placeholder={ placeholder }
+				class="flex-1 bg-transparent border-none outline-none text-white 
+					   placeholder-forest-50 px-4 text-base focus:outline-none"
+				hx-get="/api/search"
+				hx-trigger="keyup changed delay:300ms"
+				hx-target="#search-results"
+				hx-include="[name='filter']"
+				name="q"
+				id={ id }
+			/>
+			<!-- Clear Button -->
+			if placeholder != "" {
+				<button
+					class="flex items-center justify-center pr-4 hover:text-forest-50 transition-colors"
+					hx-get="/api/clear-search"
+					hx-target="#search-results"
+				>
+					@ClearIcon()
+				</button>
+			}
+		</div>
+	</div>
+}
+
+templ FilterTag(label string, active bool) {
+	<button
+		class={ "h-8 px-4 rounded-lg text-sm font-medium transition-colors",
+			templ.KV("bg-accent text-forest-400", active),
+			templ.KV("bg-forest-200 text-white hover:bg-forest-100", !active) }
+		hx-get="/api/filter"
+		hx-vals={ `{"type": "` + label + `"}` }
+		hx-target="#search-results"
+		hx-include="[name='q']"
+		name="filter"
+		value={ label }
+	>
+		{ label }
+	</button>
+}
+
+templ ModernSearchResults(results []ModernSearchResult) {
+	<div id="search-results" class="animate-fade-in">
+		if len(results) > 0 {
+			<div class="space-y-2">
+				for _, result := range results {
+					@SearchResultItem(result)
+				}
+			</div>
+		} else {
+			<div class="text-center py-8 text-forest-50">
+				<p>No results found</p>
+			</div>
+		}
+	</div>
+}
+
+type ModernSearchResult struct {
+	ID       string
+	Title    string
+	Artist   string
+	AlbumArt string
+	Type     string // "song", "artist", "album"
+}
+
+templ SearchResultItem(result ModernSearchResult) {
+	<div
+		class="flex items-center gap-3 p-3 rounded-lg hover:bg-forest-300 transition-colors group cursor-pointer"
+		hx-get={ "/api/details/" + result.Type + "/" + result.ID }
+		hx-target="#main-content"
+		hx-push-url="true"
+	>
+		<!-- Album Art / Icon -->
+		<div class="w-12 h-12 bg-forest-200 rounded-lg flex-shrink-0 overflow-hidden">
+			if result.AlbumArt != "" {
+				<img src={ result.AlbumArt } alt={ result.Title } class="w-full h-full object-cover"/>
+			} else {
+				<div class="w-full h-full flex items-center justify-center">
+					@MusicIcon()
+				</div>
+			}
+		</div>
+		<!-- Content -->
+		<div class="flex-1 min-w-0">
+			<p class="font-medium text-white truncate">{ result.Title }</p>
+			<p class="text-forest-50 text-sm truncate">{ result.Artist }</p>
+		</div>
+		<!-- Type Badge -->
+		<div class="text-xs px-2 py-1 rounded bg-forest-200 text-forest-50 uppercase tracking-wide">
+			{ result.Type }
+		</div>
+	</div>
+}

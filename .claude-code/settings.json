@@ -1,0 +1,17 @@
+{
+  "allowed_commands": [
+    "go build",
+    "go test",
+    "go vet", 
+    "go mod tidy",
+    "go mod download",
+    "make dev",
+    "make build",
+    "make test", 
+    "make templ-generate",
+    "make tailwind-build",
+    "make templ-watch",
+    "make tailwind-watch",
+    "sqlc generate"
+  ]
+}

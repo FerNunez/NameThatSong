@@ -1,3 +1,4 @@
+*.rdb
 bin
 tmp
 *.db
@@ -11,4 +12,5 @@ static/css/style.css
 
 .env
 .private
+.claude-code/
 

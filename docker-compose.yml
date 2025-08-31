@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: nts-postgres
+    environment:
+      POSTGRES_DB: nts
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+#
+  redis:
+    image: redis:7
+    container_name: nts-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+#
+  mailhog:
+    image: mailhog/mailhog
+    container_name: nts-mailhog
+    ports:
+      - "1025:1025"  # SMTP port (matches your EMAIL_PORT)
+      - "8025:8025"  # Web UI for viewing emails
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8025"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+volumes:
+  postgres_data:
+  redis_data:
