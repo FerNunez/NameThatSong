@@ -43,7 +43,7 @@ SELECT * FROM local_playlist_tracks WHERE playlist_id = $1 AND spotify_track_id 
 DELETE FROM local_playlist_tracks WHERE playlist_id = $1 AND spotify_track_id = $2;
 
 -- name: UpdateSongPosition :exec
-UPDATE local_playlist_tracks SET position = $2 WHERE spotify_track_id = $1;
+UPDATE local_playlist_tracks SET position = $3 WHERE spotify_track_id = $2 AND playlist_id = $1;
 
 -- name: GetMaxSongPosition :one
 SELECT COALESCE(MAX(position), 0)::INT AS last_position FROM local_playlist_tracks WHERE playlist_id = $1;

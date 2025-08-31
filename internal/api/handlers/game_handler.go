@@ -10,25 +10,24 @@ import (
 	"github.com/FerNunez/NameThatSong/internal/pkg/logger"
 	"github.com/FerNunez/NameThatSong/internal/services/playlist"
 	"github.com/FerNunez/NameThatSong/web/templates"
-	"github.com/google/uuid"
 )
 
 // Temporary game state storage (in production, this would be in database/redis)
 var activeGames = make(map[string]*GameSession)
 
 type GameSession struct {
-	ID           string                `json:"id"`
-	UserID       string                `json:"user_id"`
-	PlaylistID   string                `json:"playlist_id"`
-	Difficulty   string                `json:"difficulty"`
-	TotalRounds  int                   `json:"total_rounds"`
-	CurrentRound int                   `json:"current_round"`
-	Score        int                   `json:"score"`
-	Status       string                `json:"status"`
-	TimeLeft     int                   `json:"time_left"`
-	Songs        []models.PlaylistSong `json:"songs"`
-	CurrentSong  *models.PlaylistSong  `json:"current_song"`
-	Answers      []GameAnswer          `json:"answers"`
+	ID           string        `json:"id"`
+	UserID       string        `json:"user_id"`
+	PlaylistID   string        `json:"playlist_id"`
+	Difficulty   string        `json:"difficulty"`
+	TotalRounds  int           `json:"total_rounds"`
+	CurrentRound int           `json:"current_round"`
+	Score        int           `json:"score"`
+	Status       string        `json:"status"`
+	TimeLeft     int           `json:"time_left"`
+	Songs        []models.Song `json:"songs"`
+	CurrentSong  *models.Song  `json:"current_song"`
+	Answers      []GameAnswer  `json:"answers"`
 }
 
 type GameAnswer struct {
@@ -41,10 +40,10 @@ type GameAnswer struct {
 }
 
 type GameHandler struct {
-	playlistService playlist.PlaylistService
+	playlistService playlist.Service
 }
 
-func NewGameHandler(ps playlist.PlaylistService) *GameHandler {
+func NewGameHandler(ps playlist.Service) *GameHandler {
 	return &GameHandler{
 		playlistService: ps,
 	}
@@ -117,75 +116,76 @@ func (h *GameHandler) StartGame(w http.ResponseWriter, r *http.Request) {
 		logger.F("rounds", rounds))
 
 	// Get playlist with songs
-	playlistWithSongs, err := h.playlistService.GetPlaylistWithSongs(r.Context(), uuid.MustParse(playlistID), user.ID)
-	if err != nil {
-		logger.Error(r.Context(), "failed to get playlist songs",
-			logger.F("error", err))
-		http.Error(w, "failed to get playlist songs", http.StatusInternalServerError)
-		return
-	}
-
-	if len(playlistWithSongs.Songs) < rounds {
-		http.Error(w, "playlist doesn't have enough songs", http.StatusBadRequest)
-		return
-	}
-
-	// Create game session
-	gameID := generateGameID()
-	game := &GameSession{
-		ID:           gameID,
-		UserID:       user.ID.String(),
-		PlaylistID:   playlistID,
-		Difficulty:   difficulty,
-		TotalRounds:  rounds,
-		CurrentRound: 1,
-		Score:        0,
-		Status:       "active",
-		TimeLeft:     getTimeLimit(difficulty),
-		Songs:        selectRandomSongs(playlistWithSongs.Songs, rounds),
-		Answers:      make([]GameAnswer, 0),
-	}
-
-	// Set current song
-	if len(game.Songs) > 0 {
-		game.CurrentSong = &game.Songs[0]
-	}
-
-	// Store game session
-	activeGames[gameID] = game
-
-	logger.Info(r.Context(), "game session created",
-		logger.F("game_id", gameID),
-		logger.F("user_id", user.ID.String()))
-
-	// Render game interface
-	gameState := templates.GameState{
-		ID:           game.ID,
-		CurrentRound: game.CurrentRound,
-		TotalRounds:  game.TotalRounds,
-		Score:        game.Score,
-		TimeLeft:     game.TimeLeft,
-		Status:       game.Status,
-		Difficulty:   game.Difficulty,
-	}
-
-	currentSong := templates.CurrentSong{
-		ID:         game.CurrentSong.SpotifyTrackID,
-		Title:      game.CurrentSong.TrackName,
-		Artist:     game.CurrentSong.ArtistName,
-		Album:      "", // TODO: Add album info to PlaylistSong
-		AlbumArt:   "", // TODO: Add album art to PlaylistSong
-		PreviewURL: "", // TODO: Add preview URL to PlaylistSong or fetch from Spotify
-		IsPlaying:  false,
-	}
-
-	component := templates.GameActivePage(gameState, currentSong)
-	if err := component.Render(r.Context(), w); err != nil {
-		logger.Error(r.Context(), "failed to render game page",
-			logger.F("error", err))
-		http.Error(w, "failed to render game", http.StatusInternalServerError)
-		return
-	}
+	// playlistWithSongs, err := h.playlistService.GetPlaylistWithSongs(r.Context(), uuid.MustParse(playlistID), user.ID)
+	// if err != nil {
+	// 	logger.Error(r.Context(), "failed to get playlist songs",
+	// 		logger.F("error", err))
+	// 	http.Error(w, "failed to get playlist songs", http.StatusInternalServerError)
+	// 	return
+	// }
+	//
+	// if len(playlistWithSongs.Songs) < rounds {
+	// 	http.Error(w, "playlist doesn't have enough songs", http.StatusBadRequest)
+	// 	return
+	// }
+	//
+	// // Create game session
+	// gameID := generateGameID()
+	// game := &GameSession{
+	// 	ID:           gameID,
+	// 	UserID:       user.ID.String(),
+	// 	PlaylistID:   playlistID,
+	// 	Difficulty:   difficulty,
+	// 	TotalRounds:  rounds,
+	// 	CurrentRound: 1,
+	// 	Score:        0,
+	// 	Status:       "active",
+	// 	TimeLeft:     getTimeLimit(difficulty),
+	// 	Songs:        selectRandomSongs(playlistWithSongs.Songs, rounds),
+	// 	Answers:      make([]GameAnswer, 0),
+	// }
+	//
+	// // Set current song
+	// if len(game.Songs) > 0 {
+	// 	game.CurrentSong = &game.Songs[0]
+	// }
+	//
+	// // Store game session
+	// activeGames[gameID] = game
+	//
+	// logger.Info(r.Context(), "game session created",
+	// 	logger.F("game_id", gameID),
+	// 	logger.F("user_id", user.ID.String()))
+	//
+	// // Render game interface
+	// gameState := templates.GameState{
+	// 	ID:           game.ID,
+	// 	CurrentRound: game.CurrentRound,
+	// 	TotalRounds:  game.TotalRounds,
+	// 	Score:        game.Score,
+	// 	TimeLeft:     game.TimeLeft,
+	// 	Status:       game.Status,
+	// 	Difficulty:   game.Difficulty,
+	// }
+	//
+	// currentSong := templates.CurrentSong{
+	// 	ID:         game.CurrentSong.SpotifyTrackID,
+	// 	Title:      game.CurrentSong.TrackName,
+	// 	Artist:     game.CurrentSong.ArtistName,
+	// 	Album:      "", // TODO: Add album info to PlaylistSong
+	// 	AlbumArt:   "", // TODO: Add album art to PlaylistSong
+	// 	PreviewURL: "", // TODO: Add preview URL to PlaylistSong or fetch from Spotify
+	// 	IsPlaying:  false,
+	// }
+	//
+	// component := templates.GameActivePage(gameState, currentSong)
+	// if err := component.Render(r.Context(), w); err != nil {
+	// 	logger.Error(r.Context(), "failed to render game page",
+	// 		logger.F("error", err))
+	// 	http.Error(w, "failed to render game", http.StatusInternalServerError)
+	// 	return
+	// }
+	http.Error(w, "failed to render game", http.StatusInternalServerError)
 }
 
 // POST /game/submit-answer - Submit an answer
@@ -389,7 +389,7 @@ func getTimeLimit(difficulty string) int {
 	}
 }
 
-func selectRandomSongs(songs []models.PlaylistSong, count int) []models.PlaylistSong {
+func selectRandomSongs(songs []models.Song, count int) []models.Song {
 	// Simple random selection - in production use proper shuffling
 	if len(songs) <= count {
 		return songs
@@ -435,4 +435,3 @@ func calculatePoints(isCorrect bool, difficulty string, timeLeft int) int {
 
 // Helper functions for future Spotify API integration
 // TODO: Implement these when we add full track metadata
-

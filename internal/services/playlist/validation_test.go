@@ -9,7 +9,7 @@ import (
 )
 
 func TestValidateCreatePlaylistRequest(t *testing.T) {
-	p := &Playlist{} // Create instance to call validation methods
+	p := &PlaylistProvider{} // Create instance to call validation methods
 
 	tests := []struct {
 		name        string
@@ -88,7 +88,7 @@ func TestValidateCreatePlaylistRequest(t *testing.T) {
 }
 
 func TestValidateUpdatePlaylistRequest(t *testing.T) {
-	p := &Playlist{}
+	p := &PlaylistProvider{}
 
 	tests := []struct {
 		name        string
@@ -135,7 +135,7 @@ func TestValidateUpdatePlaylistRequest(t *testing.T) {
 }
 
 func TestValidateImportPlaylistRequest(t *testing.T) {
-	p := &Playlist{}
+	p := &PlaylistProvider{}
 
 	tests := []struct {
 		name        string
@@ -187,7 +187,7 @@ func TestValidateImportPlaylistRequest(t *testing.T) {
 }
 
 func TestValidateExportPlaylistRequest(t *testing.T) {
-	p := &Playlist{}
+	p := &PlaylistProvider{}
 
 	validUUID := uuid.New()
 
@@ -244,7 +244,7 @@ func TestValidateExportPlaylistRequest(t *testing.T) {
 }
 
 func TestValidateAddSongRequest(t *testing.T) {
-	p := &Playlist{}
+	p := &PlaylistProvider{}
 
 	tests := []struct {
 		name        string
@@ -293,7 +293,7 @@ func TestValidateAddSongRequest(t *testing.T) {
 }
 
 func TestValidateReorderSongsRequest(t *testing.T) {
-	p := &Playlist{}
+	p := &PlaylistProvider{}
 
 	uuid1 := uuid.New()
 	uuid2 := uuid.New()
@@ -359,3 +359,4 @@ func TestValidateReorderSongsRequest(t *testing.T) {
 		})
 	}
 }
+

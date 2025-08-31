@@ -15,17 +15,17 @@ import (
 )
 
 type PlaylistHandler struct {
-	playlistService playlist.PlaylistService
+	playlistService playlist.Service
 	spotifyService  spotify.SpotifyService
 }
 
-func NewPlaylistHandler(playlistService playlist.PlaylistService) *PlaylistHandler {
+func NewPlaylistHandler(playlistService playlist.Service) *PlaylistHandler {
 	return &PlaylistHandler{
 		playlistService: playlistService,
 	}
 }
 
-func NewPlaylistHandlerWithSpotify(playlistService playlist.PlaylistService, spotifyService spotify.SpotifyService) *PlaylistHandler {
+func NewPlaylistHandlerWithSpotify(playlistService playlist.Service, spotifyService spotify.SpotifyService) *PlaylistHandler {
 	return &PlaylistHandler{
 		playlistService: playlistService,
 		spotifyService:  spotifyService,
@@ -60,14 +60,14 @@ func (h *PlaylistHandler) GetLocalPlaylists(w http.ResponseWriter, r *http.Reque
 		if playlist.SpotifyPlaylistID != nil {
 			spotifyID = *playlist.SpotifyPlaylistID
 		}
-		
+
 		// Use GetPlaylistWithSongs to get accurate song count
-		playlistWithSongs, err := h.playlistService.GetPlaylistWithSongs(r.Context(), playlist.ID, user.ID)
+		songs, err := h.playlistService.GetPlaylistSongs(r.Context(), user.ID.String(), playlist.ID)
 		songCount := 0
 		if err == nil {
-			songCount = len(playlistWithSongs.Songs)
+			songCount = len(songs)
 		}
-		
+
 		templatePlaylists = append(templatePlaylists, templates.UserPlaylist{
 			ID:         playlist.ID.String(),
 			Name:       playlist.Name,
@@ -331,58 +331,62 @@ func (h *PlaylistHandler) GetPlaylistSongsView(w http.ResponseWriter, r *http.Re
 	playlistIDStr := chi.URLParam(r, "id")
 
 	// Check if this is a Spotify playlist ID or local playlist UUID
-	var playlist *models.Playlist
+	var songs []*models.Song
 	var err error
 
 	if playlistID, uuidErr := uuid.Parse(playlistIDStr); uuidErr == nil {
 		// It's a UUID, get local playlist with songs
-		playlist, err = h.playlistService.GetPlaylistWithSongs(r.Context(), playlistID, user.ID)
+		songs, err = h.playlistService.GetPlaylistSongs(r.Context(), user.ID.String(), playlistID)
 	} else {
-		// It's likely a Spotify playlist ID, get it from Spotify service
-		spotifyPlaylist, trackIDs, albumIDs, spotifyErr := h.spotifyService.FetchPlaylist(r.Context(), user.ID.String(), playlistIDStr)
-		if spotifyErr != nil {
-			logger.Error(r.Context(), "failed to get spotify playlist",
-				logger.F("playlist_id", playlistIDStr),
-				logger.F("user_id", user.ID.String()),
-				logger.F("error", spotifyErr))
-			http.Error(w, "Playlist not found", http.StatusNotFound)
-			return
-		}
-		// Convert Spotify playlist to our playlist model
-		playlist = &models.Playlist{
-			ID:                uuid.New(), // Temporary ID for display
-			Name:              spotifyPlaylist.Name,
-			Description:       spotifyPlaylist.Description,
-			IsPublic:          spotifyPlaylist.Public,
-			SpotifyPlaylistID: &spotifyPlaylist.ID,
-			Songs:             []models.PlaylistSong{}, // Will be populated below
-		}
-
-		for idx, trackID := range trackIDs {
-			trackData, err := h.spotifyService.FetchTrack(r.Context(), user.ID.String(), trackID)
-			if err != nil {
-				logger.Error(r.Context(), "failed to get spotify track",
-					logger.F("trackID", trackID),
-					logger.F("error", err))
-				http.Error(w, "Track not found", http.StatusNotFound)
-				return
-			}
-
-			albumData, err := h.spotifyService.FetchAlbum(r.Context(), user.ID.String(), albumIDs[idx])
-			playlist.Songs = append(playlist.Songs, models.PlaylistSong{
-				ID:             uuid.New(), // Temporary ID
-				PlaylistID:     playlist.ID,
-				SpotifyTrackID: trackData.ID,
-				Position:       idx + 1,
-				TrackName:      trackData.Name,
-				ArtistName:     trackData.GetPrimaryArtistName(),
-				AlbumName:      albumData.Name,
-				AlbumURL:       albumData.ImageURL,
-				DurationMs:     trackData.DurationMs,
-			})
-		}
-
+		fmt.Println("Spotify playlist not yet implemented")
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 	}
+	// } else {
+	// 	// It's likely a Spotify playlist ID, get it from Spotify service
+	// 	spotifyPlaylist, trackIDs, albumIDs, spotifyErr := h.spotifyService.FetchPlaylist(r.Context(), user.ID.String(), playlistIDStr)
+	// 	if spotifyErr != nil {
+	// 		logger.Error(r.Context(), "failed to get spotify playlist",
+	// 			logger.F("playlist_id", playlistIDStr),
+	// 			logger.F("user_id", user.ID.String()),
+	// 			logger.F("error", spotifyErr))
+	// 		http.Error(w, "Playlist not found", http.StatusNotFound)
+	// 		return
+	// 	}
+	// 	// Convert Spotify playlist to our playlist model
+	// 	playlist = &models.Playlist{
+	// 		ID:                uuid.New(), // Temporary ID for display
+	// 		Name:              spotifyPlaylist.Name,
+	// 		Description:       spotifyPlaylist.Description,
+	// 		IsPublic:          spotifyPlaylist.Public,
+	// 		SpotifyPlaylistID: &spotifyPlaylist.ID,
+	// 		Songs:             []models.Song{}, // Will be populated below
+	// 	}
+	//
+	// 	for idx, trackID := range trackIDs {
+	// 		trackData, err := h.spotifyService.FetchTrack(r.Context(), user.ID.String(), trackID)
+	// 		if err != nil {
+	// 			logger.Error(r.Context(), "failed to get spotify track",
+	// 				logger.F("trackID", trackID),
+	// 				logger.F("error", err))
+	// 			http.Error(w, "Track not found", http.StatusNotFound)
+	// 			return
+	// 		}
+	//
+	// 		albumData, err := h.spotifyService.FetchAlbum(r.Context(), user.ID.String(), albumIDs[idx])
+	// 		playlist.Songs = append(playlist.Songs, models.Song{
+	// 			ID:             uuid.New(), // Temporary ID
+	// 			PlaylistID:     playlist.ID,
+	// 			SpotifyTrackID: trackData.ID,
+	// 			Position:       idx + 1,
+	// 			TrackName:      trackData.Name,
+	// 			ArtistName:     trackData.GetPrimaryArtistName(),
+	// 			AlbumName:      albumData.Name,
+	// 			AlbumURL:       albumData.ImageURL,
+	// 			DurationMs:     trackData.DurationMs,
+	// 		})
+	// 	}
+	//
+	// }
 
 	if err != nil {
 		logger.Error(r.Context(), "failed to get playlist",
@@ -396,27 +400,27 @@ func (h *PlaylistHandler) GetPlaylistSongsView(w http.ResponseWriter, r *http.Re
 	// Convert playlist to template format
 	playlistInfo := templates.PlaylistInfo{
 		ID:          playlistIDStr,
-		Name:        playlist.Name,
-		Description: playlist.Description,
-		IsSpotify:   playlist.SpotifyPlaylistID != nil,
+		Name:        "Playlist Name",
+		Description: "Playlist Descp",
+		IsSpotify:   false,
 	}
 
-	// Set image URL if available
-	if playlist.SpotifyPlaylistID != nil && h.spotifyService != nil {
-		if spotifyPlaylist, _, _, err := h.spotifyService.FetchPlaylist(r.Context(), user.ID.String(), *playlist.SpotifyPlaylistID); err == nil {
-			playlistInfo.ImageURL = spotifyPlaylist.ImageURL
-			playlistInfo.Owner = spotifyPlaylist.OwnerDisplayName
-		}
-	}
-
+	// // Set image URL if available
+	// if playlist.SpotifyPlaylistID != nil && h.spotifyService != nil {
+	// 	if spotifyPlaylist, _, _, err := h.spotifyService.FetchPlaylist(r.Context(), user.ID.String(), *playlist.SpotifyPlaylistID); err == nil {
+	// 		playlistInfo.ImageURL = spotifyPlaylist.ImageURL
+	// 		playlistInfo.Owner = spotifyPlaylist.OwnerDisplayName
+	// 	}
+	// }
+	//
 	// Convert songs to template format
 	var templateSongs []templates.PlaylistSong
-	for _, song := range playlist.Songs {
+	for _, song := range songs {
 		templateSong := templates.PlaylistSong{
 			ID:       song.SpotifyTrackID,
 			Title:    song.TrackName,
 			Artist:   song.ArtistName,
-			AlbumArt: song.AlbumURL, // Will need to fetch this from Spotify if needed
+			AlbumArt: song.SpotifyAlbumURL,
 		}
 
 		// Format duration
@@ -428,23 +432,6 @@ func (h *PlaylistHandler) GetPlaylistSongsView(w http.ResponseWriter, r *http.Re
 		}
 
 		templateSongs = append(templateSongs, templateSong)
-	}
-
-	// Calculate total duration
-	var totalMs int
-	for _, song := range playlist.Songs {
-		totalMs += song.DurationMs
-	}
-	if totalMs > 0 {
-		totalSeconds := totalMs / 1000
-		totalMinutes := totalSeconds / 60
-		hours := totalMinutes / 60
-		minutes := totalMinutes % 60
-		if hours > 0 {
-			playlistInfo.TotalDuration = fmt.Sprintf("%d hr %d min", hours, minutes)
-		} else {
-			playlistInfo.TotalDuration = fmt.Sprintf("%d min", minutes)
-		}
 	}
 
 	w.Header().Set("Content-Type", "text/html")
@@ -503,9 +490,13 @@ func (h *PlaylistHandler) AddToCurrentPlaylist(w http.ResponseWriter, r *http.Re
 	req := models.AddSongRequest{
 		SpotifyTrackID: trackID,
 	}
+	logger.Info(r.Context(), "adding track to playlist",
+		logger.F("track_id", trackID),
+		logger.F("playlist_id", playlistIDStr),
+		logger.F("user_id", user.ID))
 
 	// Add track to playlist
-	err = h.playlistService.AddSongToPlaylist(r.Context(), playlistID, user.ID, req)
+	err = h.playlistService.AddSongToPlaylist(r.Context(), user.ID.String(), playlistID, req)
 	if err != nil {
 		logger.Error(r.Context(), "failed to add track to playlist",
 			logger.F("error", err),

@@ -61,6 +61,20 @@ type PasswordResetToken struct {
 	CreatedAt time.Time
 }
 
+type Song struct {
+	SpotifyTrackID  string
+	SpotifyAlbumID  string
+	SpotifyArtistID string
+	TrackName       string
+	AlbumName       string
+	ArtistName      string
+	ArtistImageUrl  string
+	AlbumImageUrl   string
+	DurationMs      int32
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+}
+
 type SpotifyAlbum struct {
 	ID                   string
 	Name                 string

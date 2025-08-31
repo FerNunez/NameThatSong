@@ -14,6 +14,7 @@ import (
 
 	"github.com/FerNunez/NameThatSong/internal/api/handlers"
 	"github.com/FerNunez/NameThatSong/internal/services/playlist"
+	"github.com/FerNunez/NameThatSong/internal/services/songs"
 	"github.com/FerNunez/NameThatSong/internal/services/spotify"
 	"github.com/FerNunez/NameThatSong/internal/services/user"
 	"github.com/redis/go-redis/v9"
@@ -66,6 +67,7 @@ func main() {
 	passwordResetStore := repository.NewSQLPasswordResetStore(dbQueries)
 	sessionStore := repository.NewSQLSessionStore(dbQueries)
 	playlistStore := repository.NewSQLPlaylistStore(dbQueries)
+	songStore := repository.NewSQLSongStore(dbQueries)
 
 	// Email configuration and service
 	emailConfig, err := config.NewEmailConfig()
@@ -98,9 +100,10 @@ func main() {
 		fmt.Println("error creating spotify service:", err)
 		return
 	}
+	songService := songs.NewSongProvider(songStore, spotifyService)
 
 	// Playlist service
-	playlistService := playlist.NewPlaylistService(playlistStore, spotifyService)
+	playlistService := playlist.NewPlaylistService(playlistStore, songService, spotifyService)
 	// Game handler
 	gameHandler := handlers.NewGameHandler(playlistService)
 
@@ -172,7 +175,7 @@ func main() {
 			searchHandler := handlers.NewSearchHandler(spotifyService)
 			r.Get("/api/search/artist/{id}", searchHandler.GetArtistItems)
 			r.Get("/api/search/album/{id}", searchHandler.GetAlbumItems)
-			
+
 			// Playlist context and track addition routes
 			r.Get("/api/set-playlist-context", playlistHandler.SetPlaylistContext)
 			r.Post("/api/add-to-current-playlist", playlistHandler.AddToCurrentPlaylist)

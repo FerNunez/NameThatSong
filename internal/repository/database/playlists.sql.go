@@ -312,15 +312,16 @@ func (q *Queries) UpdatePlaylistSyncTime(ctx context.Context, arg UpdatePlaylist
 }
 
 const updateSongPosition = `-- name: UpdateSongPosition :exec
-UPDATE local_playlist_tracks SET position = $2 WHERE spotify_track_id = $1
+UPDATE local_playlist_tracks SET position = $3 WHERE spotify_track_id = $2 AND playlist_id = $1
 `
 
 type UpdateSongPositionParams struct {
+	PlaylistID     uuid.UUID
 	SpotifyTrackID string
 	Position       int32
 }
 
 func (q *Queries) UpdateSongPosition(ctx context.Context, arg UpdateSongPositionParams) error {
-	_, err := q.db.ExecContext(ctx, updateSongPosition, arg.SpotifyTrackID, arg.Position)
+	_, err := q.db.ExecContext(ctx, updateSongPosition, arg.PlaylistID, arg.SpotifyTrackID, arg.Position)
 	return err
 }

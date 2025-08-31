@@ -19,12 +19,10 @@ type PlaylistStore interface {
 	UpdatePlaylistSyncTime(ctx context.Context, id, userID uuid.UUID) error
 	DeletePlaylist(ctx context.Context, id, userID uuid.UUID) error
 
-	AddSongToPlaylist(ctx context.Context, song *models.PlaylistSong) error
-	GetPlaylistSongs(ctx context.Context, playlistID uuid.UUID) ([]*models.PlaylistSong, error)
-	GetPlaylistSongByID(ctx context.Context, songID, playlistID uuid.UUID) (*models.PlaylistSong, error)
-	RemoveSongFromPlaylist(ctx context.Context, songID, playlistID uuid.UUID) error
-	UpdateSongPosition(ctx context.Context, songID uuid.UUID, position int) error
-	GetMaxSongPosition(ctx context.Context, playlistID uuid.UUID) (int, error)
+	AddSongToPlaylist(ctx context.Context, playlistID uuid.UUID, trackID string, position int) error
+	GetPlaylistSongs(ctx context.Context, playlistID uuid.UUID) ([]string, []int, error)
+	RemoveSongFromPlaylist(ctx context.Context, playlistID uuid.UUID, songID string) error
+	//UpdateSongPosition(ctx context.Context, playlistID uuid.UUID, songID string, position int) error
 	ClearPlaylistSongs(ctx context.Context, playlistID uuid.UUID) error
 }
 
@@ -34,7 +32,7 @@ type SQLPlaylistStore struct {
 
 func NewSQLPlaylistStore(db *database.Queries) PlaylistStore {
 	return &SQLPlaylistStore{
-		db: db,
+		db,
 	}
 }
 
@@ -117,11 +115,11 @@ func (s *SQLPlaylistStore) DeletePlaylist(ctx context.Context, id, userID uuid.U
 }
 
 // Playlist song operations
-func (s *SQLPlaylistStore) AddSongToPlaylist(ctx context.Context, song *models.PlaylistSong) error {
+func (s *SQLPlaylistStore) AddSongToPlaylist(ctx context.Context, playlistID uuid.UUID, track_id string, position int) error {
 	_, err := s.db.AddSongToPlaylist(ctx, database.AddSongToPlaylistParams{
-		PlaylistID:     song.PlaylistID,
-		SpotifyTrackID: song.SpotifyTrackID,
-		Position:       int32(song.Position),
+		PlaylistID:     playlistID,
+		SpotifyTrackID: track_id,
+		Position:       int32(position),
 	})
 	if err != nil {
 		return err
@@ -130,41 +128,32 @@ func (s *SQLPlaylistStore) AddSongToPlaylist(ctx context.Context, song *models.P
 	return nil
 }
 
-func (s *SQLPlaylistStore) GetPlaylistSongs(ctx context.Context, playlistID uuid.UUID) ([]*models.PlaylistSong, error) {
+func (s *SQLPlaylistStore) GetPlaylistSongs(ctx context.Context, playlistID uuid.UUID) ([]string, []int, error) {
 	dbSongs, err := s.db.GetPlaylistSongs(ctx, playlistID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	songs := make([]*models.PlaylistSong, len(dbSongs))
+	songIDs := make([]string, len(dbSongs))
+	positions := make([]int, len(dbSongs))
 	for i, dbSong := range dbSongs {
-		songs[i] = convertDbPlaylistSongToModel(dbSong)
+		songIDs[i] = dbSong.SpotifyTrackID
+		positions[i] = int(dbSong.Position)
 	}
-	return songs, nil
+	return songIDs, positions, nil
 }
 
-func (s *SQLPlaylistStore) GetPlaylistSongByID(ctx context.Context, songID, playlistID uuid.UUID) (*models.PlaylistSong, error) {
-	dbSong, err := s.db.GetPlaylistSongByID(ctx, database.GetPlaylistSongByIDParams{
-		PlaylistID:     playlistID,
-		SpotifyTrackID: songID.String(),
-	})
-	if err != nil {
-		return nil, err
-	}
-	return convertDbPlaylistSongToModel(dbSong), nil
-}
-
-func (s *SQLPlaylistStore) RemoveSongFromPlaylist(ctx context.Context, songID, playlistID uuid.UUID) error {
+func (s *SQLPlaylistStore) RemoveSongFromPlaylist(ctx context.Context, playlistID uuid.UUID, spotify_track_id string) error {
 	return s.db.RemoveSongFromPlaylist(ctx, database.RemoveSongFromPlaylistParams{
-		SpotifyTrackID: songID.String(),
 		PlaylistID:     playlistID,
+		SpotifyTrackID: spotify_track_id,
 	})
 }
 
-func (s *SQLPlaylistStore) UpdateSongPosition(ctx context.Context, songID uuid.UUID, position int) error {
+func (s *SQLPlaylistStore) UpdateSongPosition(ctx context.Context, playlistID uuid.UUID, spotify_track_id string, position int) error {
 	return s.db.UpdateSongPosition(ctx, database.UpdateSongPositionParams{
-		SpotifyTrackID: songID.String(),
 		Position:       int32(position),
+		SpotifyTrackID: spotify_track_id,
 	})
 }
 
@@ -196,20 +185,6 @@ func convertDbPlaylistToModel(dbPlaylist database.LocalPlaylist) *models.Playlis
 	}
 }
 
-func convertDbPlaylistSongToModel(dbSong database.LocalPlaylistTrack) *models.PlaylistSong {
-	return &models.PlaylistSong{
-		ID:             uuid.New(),
-		PlaylistID:     dbSong.PlaylistID,
-		SpotifyTrackID: dbSong.SpotifyTrackID,
-		Position:       int(dbSong.Position),
-		TrackName:      "TODO",
-		ArtistName:     "TODO",
-		AlbumName:      "TODO",
-		DurationMs:     int(0),
-		AddedAt:        time.Now(),
-	}
-}
-
 // Helper functions for handling nullable types
 func nullStringFromStringPtr(s *string) sql.NullString {
 	if s == nil || *s == "" {
@@ -230,20 +205,6 @@ func stringFromNullString(ns sql.NullString) string {
 		return ""
 	}
 	return ns.String
-}
-
-func nullInt32FromIntPtr(i *int) sql.NullInt32 {
-	if i == nil {
-		return sql.NullInt32{Valid: false}
-	}
-	return sql.NullInt32{Int32: int32(*i), Valid: true}
-}
-
-func intFromNullInt32(ni sql.NullInt32) int {
-	if !ni.Valid {
-		return 0
-	}
-	return int(ni.Int32)
 }
 
 func timePtrFromNullTime(nt sql.NullTime) *time.Time {
