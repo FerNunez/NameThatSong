@@ -131,6 +131,9 @@ func (h *PlaylistHandler) GetSpotifyPlaylistsForImport(w http.ResponseWriter, r 
 		return
 	}
 
+	// h.playlistService.ImportPlaylistsFromSpotify()
+	// gets playlist info + all songs
+
 	// Get user's Spotify playlists
 	spotifyPlaylists, err := h.spotifyService.GetUserPlaylists(r.Context(), user.ID.String())
 	if err != nil {
@@ -138,6 +141,16 @@ func (h *PlaylistHandler) GetSpotifyPlaylistsForImport(w http.ResponseWriter, r 
 		w.WriteHeader(http.StatusOK)
 		templates.SpotifyImportError(err.Error()).Render(r.Context(), w)
 		return
+	}
+
+	for _, spotifyPlaylist := range spotifyPlaylists {
+		_, err := h.playlistService.ImportFromSpotify(r.Context(), user.ID, models.ImportPlaylistRequest{
+			SpotifyPlaylistID: spotifyPlaylist.ID,
+			SyncWithSpotify:   true,
+		})
+		if err != nil {
+			logger.Error(r.Context(), "Couldnt import playlist")
+		}
 	}
 
 	// Convert to template format - these are available for import
