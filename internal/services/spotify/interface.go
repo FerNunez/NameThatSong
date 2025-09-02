@@ -21,6 +21,7 @@ type SpotifyService interface {
 
 	// Fetch operations
 	FetchTrack(ctx context.Context, userID, trackID string) (m.TrackData, error)
+	FetchMultipleTracks(ctx context.Context, userID string, trackIDs []string) ([]m.TrackData, error)
 	FetchAlbum(ctx context.Context, userID, albumID string) (m.AlbumData, error)
 	FetchArtist(ctx context.Context, userID, artistID string) (m.ArtistData, error)
 	FetchPlaylist(ctx context.Context, userID, playlistID string) (m.PlaylistData, []string, []string, error)

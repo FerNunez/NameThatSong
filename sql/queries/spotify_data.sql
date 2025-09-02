@@ -160,6 +160,44 @@ SELECT
     (SELECT COUNT(*) FROM spotify_playlists) as playlists_count;
 
 -- =============================================================================
+-- BATCH OPERATIONS
+-- =============================================================================
+
+-- name: GetMultipleSpotifyTracks :many
+SELECT * FROM spotify_tracks 
+WHERE id = ANY($1::text[]);
+
+-- name: UpsertMultipleSpotifyTracksFromJSON :exec
+INSERT INTO spotify_tracks (
+    id, name, album_id, duration_ms, disc_number, track_number,
+    popularity, explicit, preview_url, is_local, updated_at
+)
+SELECT 
+    (track->>'id')::text,
+    (track->>'name')::text,
+    NULLIF(track->>'album_id', '')::text,
+    (track->>'duration_ms')::int,
+    (track->>'disc_number')::int,
+    (track->>'track_number')::int,
+    (track->>'popularity')::int,
+    (track->>'explicit')::boolean,
+    NULLIF(track->>'preview_url', ''),
+    (track->>'is_local')::boolean,
+    NOW()
+FROM jsonb_array_elements($1::jsonb) AS track
+ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    album_id = EXCLUDED.album_id,
+    duration_ms = EXCLUDED.duration_ms,
+    disc_number = EXCLUDED.disc_number,
+    track_number = EXCLUDED.track_number,
+    popularity = EXCLUDED.popularity,
+    explicit = EXCLUDED.explicit,
+    preview_url = EXCLUDED.preview_url,
+    is_local = EXCLUDED.is_local,
+    updated_at = EXCLUDED.updated_at;
+
+-- =============================================================================
 -- EFFICIENT SEARCH OPERATIONS
 -- =============================================================================
 

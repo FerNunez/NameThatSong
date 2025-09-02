@@ -8,6 +8,7 @@ package database
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"time"
 
 	"github.com/lib/pq"
@@ -161,6 +162,51 @@ func (q *Queries) GetCacheStats(ctx context.Context) (GetCacheStatsRow, error) {
 		&i.PlaylistsCount,
 	)
 	return i, err
+}
+
+const getMultipleSpotifyTracks = `-- name: GetMultipleSpotifyTracks :many
+
+SELECT id, name, album_id, duration_ms, disc_number, track_number, popularity, explicit, preview_url, is_local, cached_at, updated_at FROM spotify_tracks 
+WHERE id = ANY($1::text[])
+`
+
+// =============================================================================
+// BATCH OPERATIONS
+// =============================================================================
+func (q *Queries) GetMultipleSpotifyTracks(ctx context.Context, dollar_1 []string) ([]SpotifyTrack, error) {
+	rows, err := q.db.QueryContext(ctx, getMultipleSpotifyTracks, pq.Array(dollar_1))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SpotifyTrack
+	for rows.Next() {
+		var i SpotifyTrack
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.AlbumID,
+			&i.DurationMs,
+			&i.DiscNumber,
+			&i.TrackNumber,
+			&i.Popularity,
+			&i.Explicit,
+			&i.PreviewUrl,
+			&i.IsLocal,
+			&i.CachedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getPlaylistTracks = `-- name: GetPlaylistTracks :many
@@ -514,6 +560,42 @@ type UpsertAlbumTrackParams struct {
 // ALBUMS
 func (q *Queries) UpsertAlbumTrack(ctx context.Context, arg UpsertAlbumTrackParams) error {
 	_, err := q.db.ExecContext(ctx, upsertAlbumTrack, arg.AlbumID, arg.TrackID, arg.Position)
+	return err
+}
+
+const upsertMultipleSpotifyTracksFromJSON = `-- name: UpsertMultipleSpotifyTracksFromJSON :exec
+INSERT INTO spotify_tracks (
+    id, name, album_id, duration_ms, disc_number, track_number,
+    popularity, explicit, preview_url, is_local, updated_at
+)
+SELECT 
+    (track->>'id')::text,
+    (track->>'name')::text,
+    NULLIF(track->>'album_id', '')::text,
+    (track->>'duration_ms')::int,
+    (track->>'disc_number')::int,
+    (track->>'track_number')::int,
+    (track->>'popularity')::int,
+    (track->>'explicit')::boolean,
+    NULLIF(track->>'preview_url', ''),
+    (track->>'is_local')::boolean,
+    NOW()
+FROM jsonb_array_elements($1::jsonb) AS track
+ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    album_id = EXCLUDED.album_id,
+    duration_ms = EXCLUDED.duration_ms,
+    disc_number = EXCLUDED.disc_number,
+    track_number = EXCLUDED.track_number,
+    popularity = EXCLUDED.popularity,
+    explicit = EXCLUDED.explicit,
+    preview_url = EXCLUDED.preview_url,
+    is_local = EXCLUDED.is_local,
+    updated_at = EXCLUDED.updated_at
+`
+
+func (q *Queries) UpsertMultipleSpotifyTracksFromJSON(ctx context.Context, dollar_1 json.RawMessage) error {
+	_, err := q.db.ExecContext(ctx, upsertMultipleSpotifyTracksFromJSON, dollar_1)
 	return err
 }
 

@@ -54,6 +54,91 @@ func (s *Spotify) FetchTrack(ctx context.Context, userID, trackID string) (m.Tra
 	return track, nil
 }
 
+// FetchMultipleTracks fetches multiple tracks using three-tier strategy with batch processing
+func (s *Spotify) FetchMultipleTracks(ctx context.Context, userID string, trackIDs []string) ([]m.TrackData, error) {
+	if len(trackIDs) == 0 {
+		return []m.TrackData{}, nil
+	}
+
+	// Remove duplicates to avoid unnecessary processing
+	uniqueIDs := removeDuplicates(trackIDs)
+	results := make([]m.TrackData, 0, len(uniqueIDs))
+	remaining := uniqueIDs
+
+	// Tier 1: Check Redis cache with batch operation
+	cachedTracks, stillMissing := s.cache.GetMultipleTracks(remaining)
+	for _, track := range cachedTracks {
+		results = append(results, track)
+	}
+	remaining = stillMissing
+
+	if len(remaining) == 0 {
+		return results, nil
+	}
+
+	// Tier 2: Check database with batch operation
+	dbTracks, stillMissing, err := s.dataStore.GetMultipleTracks(ctx, remaining)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch tracks from database: %w", err)
+	}
+
+	// Update cache with database results and add to results
+	cacheMap := make(map[string]m.TrackData)
+	for trackID, track := range dbTracks {
+		results = append(results, *track)
+		cacheMap[trackID] = *track
+	}
+	if len(cacheMap) > 0 {
+		s.cache.SetMultipleTracks(cacheMap)
+	}
+	remaining = stillMissing
+
+	if len(remaining) == 0 {
+		return results, nil
+	}
+
+	// Tier 3: Fetch remaining tracks from Spotify API in batches of 50
+	accessToken, err := s.GetValidToken(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get access token: %w", err)
+	}
+
+	apiTracks, err := s.fetchMultipleTracksFromAPI(ctx, accessToken, remaining)
+	if err != nil {
+		// If we have some tracks from cache/database, return partial success
+		if len(results) > 0 {
+			fmt.Printf("Warning: API fetch failed but returning %d cached/database tracks: %v\n", len(results), err)
+			return results, nil
+		}
+		// If we have no tracks at all, return the error
+		return nil, fmt.Errorf("failed to fetch tracks from API: %w", err)
+	}
+
+	// Store API results in database and cache
+	if len(apiTracks) > 0 {
+		trackPointers := make([]*m.TrackData, len(apiTracks))
+		cacheMap := make(map[string]m.TrackData)
+		for i, track := range apiTracks {
+			trackPointers[i] = &track
+			cacheMap[track.ID] = track
+		}
+
+		// Store in database (async to avoid blocking)
+		go func() {
+			if err := s.dataStore.StoreMultipleTracks(context.Background(), trackPointers); err != nil {
+				fmt.Printf("Warning: failed to store batch tracks in database: %v\n", err)
+			}
+		}()
+
+		// Cache the results for fast future access
+		s.cache.SetMultipleTracks(cacheMap)
+
+		results = append(results, apiTracks...)
+	}
+
+	return results, nil
+}
+
 // FetchAlbum fetches an album using three-tier strategy: Cache → Database → API
 func (s *Spotify) FetchAlbum(ctx context.Context, userID, albumID string) (m.AlbumData, error) {
 	// Tier 1: Check Redis cache first
@@ -171,12 +256,13 @@ func (s *Spotify) FetchPlaylist(ctx context.Context, userID, playlistID string) 
 		return m.PlaylistData{}, []string{}, []string{}, err
 	}
 
-	for _, trackID := range trackIDs {
-		_, err := s.FetchTrack(ctx, userID, trackID)
-		if err != nil {
-			return m.PlaylistData{}, []string{}, []string{}, err
-		}
+	// Use batch fetching for tracks for better performance
+	_, err = s.FetchMultipleTracks(ctx, userID, trackIDs)
+	if err != nil {
+		return m.PlaylistData{}, []string{}, []string{}, err
 	}
+
+	// Albums still need individual fetching since we don't have batch album fetching yet
 	for _, albumID := range albumIDs {
 		_, err := s.FetchAlbum(ctx, userID, albumID)
 		if err != nil {
@@ -908,6 +994,231 @@ func (s *Spotify) FetchTracksFromAlbum(ctx context.Context, userID, albumID stri
 	}
 
 	return trackIDs, nil
+}
+
+// fetchMultipleTracksFromAPI fetches multiple tracks from Spotify API in batches of 50
+func (s *Spotify) fetchMultipleTracksFromAPI(ctx context.Context, accessToken string, trackIDs []string) ([]m.TrackData, error) {
+	if len(trackIDs) == 0 {
+		return []m.TrackData{}, nil
+	}
+
+	var allTracks []m.TrackData
+	const batchSize = 50 // Spotify API limit for tracks endpoint
+
+	// Process tracks in batches of 50
+	for i := 0; i < len(trackIDs); i += batchSize {
+		end := min(i+batchSize, len(trackIDs))
+
+		batch := trackIDs[i:end]
+		batchTracks, err := s.fetchTrackBatchFromAPI(ctx, accessToken, batch)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch batch %d-%d: %w", i, end-1, err)
+		}
+
+		allTracks = append(allTracks, batchTracks...)
+	}
+
+	return allTracks, nil
+}
+
+// fetchTrackBatchFromAPI fetches a single batch of tracks (up to 50) from Spotify API
+func (s *Spotify) fetchTrackBatchFromAPI(ctx context.Context, accessToken string, trackIDs []string) ([]m.TrackData, error) {
+	if len(trackIDs) == 0 {
+		return []m.TrackData{}, nil
+	}
+
+	// Join track IDs with comma and URL encode
+	idsParam := ""
+	for i, id := range trackIDs {
+		if i > 0 {
+			idsParam += ","
+		}
+		idsParam += url.QueryEscape(id)
+	}
+
+	requestURL := fmt.Sprintf("%s/tracks?ids=%s", s.config.GetAPIBaseURL(), idsParam)
+	req, err := http.NewRequestWithContext(ctx, "GET", requestURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	type BatchTracksResponse struct {
+		Tracks []*struct {
+			Album struct {
+				AlbumType string `json:"album_type"`
+				Artists   []struct {
+					ExternalUrls struct {
+						Spotify string `json:"spotify"`
+					} `json:"external_urls"`
+					Href string `json:"href"`
+					ID   string `json:"id"`
+					Name string `json:"name"`
+					Type string `json:"type"`
+					URI  string `json:"uri"`
+				} `json:"artists"`
+				AvailableMarkets []any `json:"available_markets"`
+				ExternalUrls     struct {
+					Spotify string `json:"spotify"`
+				} `json:"external_urls"`
+				Href   string `json:"href"`
+				ID     string `json:"id"`
+				Images []struct {
+					URL    string `json:"url"`
+					Width  int    `json:"width"`
+					Height int    `json:"height"`
+				} `json:"images"`
+				Name                 string `json:"name"`
+				ReleaseDate          string `json:"release_date"`
+				ReleaseDatePrecision string `json:"release_date_precision"`
+				TotalTracks          int    `json:"total_tracks"`
+				Type                 string `json:"type"`
+				URI                  string `json:"uri"`
+			} `json:"album"`
+			Artists []struct {
+				ExternalUrls struct {
+					Spotify string `json:"spotify"`
+				} `json:"external_urls"`
+				Href string `json:"href"`
+				ID   string `json:"id"`
+				Name string `json:"name"`
+				Type string `json:"type"`
+				URI  string `json:"uri"`
+			} `json:"artists"`
+			AvailableMarkets []any `json:"available_markets"`
+			DiscNumber       int   `json:"disc_number"`
+			DurationMs       int   `json:"duration_ms"`
+			Explicit         bool  `json:"explicit"`
+			ExternalIds      struct {
+				Isrc string `json:"isrc"`
+			} `json:"external_ids"`
+			ExternalUrls struct {
+				Spotify string `json:"spotify"`
+			} `json:"external_urls"`
+			Href        string      `json:"href"`
+			ID          string      `json:"id"`
+			IsLocal     bool        `json:"is_local"`
+			Name        string      `json:"name"`
+			Popularity  int         `json:"popularity"`
+			PreviewURL  interface{} `json:"preview_url"`
+			TrackNumber int         `json:"track_number"`
+			Type        string      `json:"type"`
+			URI         string      `json:"uri"`
+		} `json:"tracks"`
+	}
+
+	var batchResponse BatchTracksResponse
+	if err := json.NewDecoder(resp.Body).Decode(&batchResponse); err != nil {
+		return nil, err
+	}
+
+	tracks := make([]m.TrackData, 0, len(batchResponse.Tracks))
+	for _, trackData := range batchResponse.Tracks {
+		// Skip null tracks (can happen with invalid IDs)
+		if trackData == nil || trackData.ID == "" {
+			continue
+		}
+
+		// Extract album data
+		var albumData *m.AlbumData
+		if trackData.Album.ID != "" {
+			albumImageURL := ""
+			if len(trackData.Album.Images) > 0 {
+				albumImageURL = trackData.Album.Images[0].URL
+			}
+
+			// Extract album artists
+			albumArtists := make([]m.ArtistData, len(trackData.Album.Artists))
+			for i, artist := range trackData.Album.Artists {
+				albumArtists[i] = m.ArtistData{
+					ID:   artist.ID,
+					Name: artist.Name,
+				}
+			}
+
+			albumData = &m.AlbumData{
+				ID:                   trackData.Album.ID,
+				Name:                 trackData.Album.Name,
+				AlbumType:            trackData.Album.AlbumType,
+				ReleaseDate:          trackData.Album.ReleaseDate,
+				ReleaseDatePrecision: trackData.Album.ReleaseDatePrecision,
+				TotalTracks:          trackData.Album.TotalTracks,
+				ImageURL:             albumImageURL,
+				Artists:              albumArtists,
+				CachedAt:             time.Now(),
+				UpdatedAt:            time.Now(),
+			}
+		}
+
+		// Extract track artists
+		trackArtists := make([]m.TrackArtist, len(trackData.Artists))
+		for i, artist := range trackData.Artists {
+			trackArtists[i] = m.TrackArtist{
+				ArtistData: m.ArtistData{
+					ID:   artist.ID,
+					Name: artist.Name,
+				},
+				IsPrimary: i == 0, // First artist is considered primary
+			}
+		}
+
+		// Handle preview URL (can be null)
+		previewURL := ""
+		if trackData.PreviewURL != nil {
+			if url, ok := trackData.PreviewURL.(string); ok {
+				previewURL = url
+			}
+		}
+
+		track := m.TrackData{
+			ID:          trackData.ID,
+			Name:        trackData.Name,
+			Album:       albumData,
+			Artists:     trackArtists,
+			DurationMs:  trackData.DurationMs,
+			DiscNumber:  trackData.DiscNumber,
+			TrackNumber: trackData.TrackNumber,
+			Popularity:  trackData.Popularity,
+			Explicit:    trackData.Explicit,
+			PreviewURL:  previewURL,
+			IsLocal:     false, // Spotify API tracks are not local
+			CachedAt:    time.Now(),
+			UpdatedAt:   time.Now(),
+		}
+
+		tracks = append(tracks, track)
+	}
+
+	return tracks, nil
+}
+
+// removeDuplicates removes duplicate track IDs from a slice
+func removeDuplicates(trackIDs []string) []string {
+	if len(trackIDs) == 0 {
+		return []string{}
+	}
+
+	seen := make(map[string]bool)
+	unique := make([]string, 0, len(trackIDs))
+
+	for _, id := range trackIDs {
+		if !seen[id] {
+			seen[id] = true
+			unique = append(unique, id)
+		}
+	}
+
+	return unique
 }
 
 // FetchTracksFromPlaylist fetches track IDs from a playlist

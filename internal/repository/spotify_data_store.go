@@ -3,11 +3,22 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/FerNunez/NameThatSong/internal/models"
 	"github.com/FerNunez/NameThatSong/internal/repository/database"
+)
+
+// Batch operation configuration
+const (
+	// MaxBatchSize defines the maximum number of items to process in a single batch
+	// This prevents PostgreSQL parameter limits and memory issues
+	MaxBatchSize = 500
+
+	// DefaultBatchSize is the recommended batch size for optimal performance
+	DefaultBatchSize = 100
 )
 
 // SpotifyDataStore defines the interface for Spotify data persistence operations
@@ -23,6 +34,8 @@ type SpotifyDataStore interface {
 	// Track operations
 	GetTrack(ctx context.Context, trackID string) (*models.TrackData, error)
 	StoreTrack(ctx context.Context, track *models.TrackData) error
+	GetMultipleTracks(ctx context.Context, trackIDs []string) (map[string]*models.TrackData, []string, error)
+	StoreMultipleTracks(ctx context.Context, tracks []*models.TrackData) error
 
 	// Playlist cache operations
 	GetPlaylist(ctx context.Context, playlistID string) (*models.PlaylistData, error)
@@ -207,6 +220,144 @@ func (s *SQLSpotifyDataStore) StoreTrack(ctx context.Context, track *models.Trac
 			continue // Skip failed relationships
 		}
 	}
+
+	return nil
+}
+
+// Batch track operations
+// GetMultipleTracks efficiently fetches multiple tracks using chunked batch queries
+func (s *SQLSpotifyDataStore) GetMultipleTracks(ctx context.Context, trackIDs []string) (map[string]*models.TrackData, []string, error) {
+	if len(trackIDs) == 0 {
+		return make(map[string]*models.TrackData), []string{}, nil
+	}
+
+	found := make(map[string]*models.TrackData)
+	foundIDs := make(map[string]bool)
+
+	// Process tracks in chunks to avoid PostgreSQL parameter limits
+	for i := 0; i < len(trackIDs); i += MaxBatchSize {
+		end := i + MaxBatchSize
+		if end > len(trackIDs) {
+			end = len(trackIDs)
+		}
+
+		batch := trackIDs[i:end]
+		batchFound, err := s.getTrackBatch(ctx, batch)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to fetch batch %d-%d: %w", i, end-1, err)
+		}
+
+		// Merge batch results
+		for trackID, track := range batchFound {
+			found[trackID] = track
+			foundIDs[trackID] = true
+		}
+	}
+
+	// Identify missing tracks
+	var missing []string
+	for _, trackID := range trackIDs {
+		if !foundIDs[trackID] {
+			missing = append(missing, trackID)
+		}
+	}
+
+	return found, missing, nil
+}
+
+// getTrackBatch fetches a single batch of tracks using the ANY operator
+func (s *SQLSpotifyDataStore) getTrackBatch(ctx context.Context, trackIDs []string) (map[string]*models.TrackData, error) {
+	if len(trackIDs) == 0 {
+		return make(map[string]*models.TrackData), nil
+	}
+
+	dbTracks, err := s.db.GetMultipleSpotifyTracks(ctx, trackIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to batch fetch tracks: %w", err)
+	}
+
+	found := make(map[string]*models.TrackData)
+	for _, dbTrack := range dbTracks {
+		// Convert database model to domain model
+
+		track := convertDbTrackToModel(dbTrack)
+
+		// TODO: consider batch all related data (album, artists) in single query
+		// Currently loading album and artists separately - could be optimized
+		if dbTrack.AlbumID.Valid {
+			albumData, err := s.GetAlbum(ctx, dbTrack.AlbumID.String)
+			if err == nil && albumData != nil {
+				track.Album = albumData
+			}
+		}
+
+		found[dbTrack.ID] = track
+	}
+
+	return found, nil
+}
+
+// StoreMultipleTracks efficiently stores multiple tracks using JSON-based batch operations
+func (s *SQLSpotifyDataStore) StoreMultipleTracks(ctx context.Context, tracks []*models.TrackData) error {
+	if len(tracks) == 0 {
+		return nil
+	}
+
+	// Process tracks in chunks to avoid PostgreSQL memory limits and improve performance
+	for i := 0; i < len(tracks); i += MaxBatchSize {
+		end := min(i+MaxBatchSize, len(tracks))
+
+		batch := tracks[i:end]
+		if err := s.storeTrackBatchJSON(ctx, batch); err != nil {
+			return fmt.Errorf("failed to store batch %d-%d: %w", i, end-1, err)
+		}
+	}
+
+	return nil
+}
+
+// storeTrackBatchJSON stores a single batch of tracks using JSON approach
+func (s *SQLSpotifyDataStore) storeTrackBatchJSON(ctx context.Context, tracks []*models.TrackData) error {
+	if len(tracks) == 0 {
+		return nil
+	}
+
+	// Convert tracks to JSON format
+	jsonTracks := make([]map[string]any, len(tracks))
+	for i, track := range tracks {
+		albumID := ""
+		if track.Album != nil {
+			albumID = track.Album.ID
+		}
+
+		// TODO: ARTIST MISSING!
+		jsonTracks[i] = map[string]any{
+			"id":           track.ID,
+			"name":         track.Name,
+			"album_id":     albumID,
+			"duration_ms":  track.DurationMs,
+			"disc_number":  track.DiscNumber,
+			"track_number": track.TrackNumber,
+			"popularity":   track.Popularity,
+			"explicit":     track.Explicit,
+			"preview_url":  track.PreviewURL,
+			"is_local":     track.IsLocal,
+		}
+	}
+
+	// Marshal to JSON bytes
+	jsonBytes, err := json.Marshal(jsonTracks)
+	if err != nil {
+		return fmt.Errorf("failed to marshal tracks to JSON: %w", err)
+	}
+
+	// Execute batch upsert
+	if err := s.db.UpsertMultipleSpotifyTracksFromJSON(ctx, jsonBytes); err != nil {
+		return fmt.Errorf("failed to execute batch upsert: %w", err)
+	}
+
+	// TODO: consider batch all related data (albums, artists, relationships)
+	// Currently we only store track data - related entities need separate operations
 
 	return nil
 }
