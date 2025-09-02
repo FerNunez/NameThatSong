@@ -3,12 +3,14 @@ package cache
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 
 	m "github.com/FerNunez/NameThatSong/internal/models"
+	"github.com/FerNunez/NameThatSong/internal/pkg/logger"
 	"github.com/FerNunez/NameThatSong/internal/pkg/utils"
 )
 
@@ -60,6 +62,79 @@ func (r *RedisSpotifyCache) SetTrack(trackId string, track m.TrackData) {
 		return
 	}
 	r.client.Set(r.ctx, key, trackJson, r.ttl)
+}
+
+// Batch track operations
+func (r *RedisSpotifyCache) GetMultipleTracks(trackIDs []string) (map[string]m.TrackData, []string) {
+	if len(trackIDs) == 0 {
+		return make(map[string]m.TrackData), []string{}
+	}
+
+	// Build keys for pipeline operation
+	keys := make([]string, len(trackIDs))
+	for i, trackID := range trackIDs {
+		keys[i] = r.generateKey("track", trackID)
+	}
+
+	// Use Redis pipeline for batch GET
+	pipeline := r.client.Pipeline()
+	cmds := make([]*redis.StringCmd, len(keys))
+	for i, key := range keys {
+		cmds[i] = pipeline.Get(r.ctx, key)
+	}
+
+	if _, err := pipeline.Exec(r.ctx); err != nil {
+		logger.Error(r.ctx, "could not fetch batch all trackIDs")
+	}
+
+	// Process results
+	found := make(map[string]m.TrackData)
+	var missing []string
+
+	for i, cmd := range cmds {
+		trackID := trackIDs[i]
+
+		val, err := cmd.Result()
+		if err != nil {
+			if errors.Is(err, redis.Nil) {
+				// Key not found
+				missing = append(missing, trackID)
+			} else {
+				// Some other Redis error (e.g. WRONGTYPE)
+				missing = append(missing, trackID)
+			}
+			continue
+		}
+		var track m.TrackData
+		if err := json.Unmarshal([]byte(val), &track); err != nil {
+			// Failed to unmarshal, treat as missing
+			missing = append(missing, trackID)
+			continue
+		}
+
+		found[trackID] = track
+	}
+
+	return found, missing
+}
+
+func (r *RedisSpotifyCache) SetMultipleTracks(tracks map[string]m.TrackData) {
+	if len(tracks) == 0 {
+		return
+	}
+
+	// Use Redis pipeline for batch SET
+	pipeline := r.client.Pipeline()
+	for trackID, track := range tracks {
+		key := r.generateKey("track", trackID)
+		trackJson, err := json.Marshal(track)
+		if err != nil {
+			continue // Skip tracks that can't be marshaled
+		}
+		pipeline.Set(r.ctx, key, trackJson, r.ttl)
+	}
+
+	pipeline.Exec(r.ctx)
 }
 
 // Album cache operations

@@ -8,6 +8,8 @@ type SpotifyCache interface {
 	// Basic entity cache operations (cache-only, no API calls)
 	GetTrack(trackId string) (m.TrackData, bool)
 	SetTrack(trackId string, track m.TrackData)
+	GetMultipleTracks(trackIDs []string) (map[string]m.TrackData, []string)
+	SetMultipleTracks(tracks map[string]m.TrackData)
 	GetAlbum(albumId string) (m.AlbumData, bool)
 	SetAlbum(albumId string, album m.AlbumData)
 	GetArtist(artistId string) (m.ArtistData, bool)
