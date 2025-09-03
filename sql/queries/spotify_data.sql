@@ -262,7 +262,14 @@ SELECT
     NULLIF(artist->>'image_url', '')::text,
     (artist->>'popularity')::int,
     (artist->>'followers_total')::int,
-    string_to_array(NULLIF(artist->>'genres', ''), ',')::text[],-- this is a array of strings
+    -- Handle genres as either JSON array or comma-separated string
+    -- If JSON array: extract each element as text array
+    -- If string: split by comma (fallback for legacy data)
+    CASE 
+        WHEN jsonb_typeof(artist->'genres') = 'array' 
+        THEN ARRAY(SELECT jsonb_array_elements_text(artist->'genres'))
+        ELSE string_to_array(NULLIF(artist->>'genres', ''), ',')::text[]
+    END,
     NOW(),
     NOW()
 FROM jsonb_array_elements($1::jsonb) AS artist

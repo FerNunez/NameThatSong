@@ -62,7 +62,7 @@ func (s *SQLPlaylistStore) GetPlaylistByID(ctx context.Context, id uuid.UUID) (*
 	if err != nil {
 		return nil, err
 	}
-	return convertDbPlaylistToModel(dbPlaylist), nil
+	return convertDbLocalPlaylistToModel(dbPlaylist), nil
 }
 
 func (s *SQLPlaylistStore) GetPlaylistByUserIDAndID(ctx context.Context, id, userID uuid.UUID) (*models.Playlist, error) {
@@ -73,7 +73,7 @@ func (s *SQLPlaylistStore) GetPlaylistByUserIDAndID(ctx context.Context, id, use
 	if err != nil {
 		return nil, err
 	}
-	return convertDbPlaylistToModel(dbPlaylist), nil
+	return convertDbLocalPlaylistToModel(dbPlaylist), nil
 }
 
 func (s *SQLPlaylistStore) GetPlaylistsByUserID(ctx context.Context, userID uuid.UUID) ([]*models.Playlist, error) {
@@ -84,7 +84,7 @@ func (s *SQLPlaylistStore) GetPlaylistsByUserID(ctx context.Context, userID uuid
 
 	playlists := make([]*models.Playlist, len(dbPlaylists))
 	for i, dbPlaylist := range dbPlaylists {
-		playlists[i] = convertDbPlaylistToModel(dbPlaylist)
+		playlists[i] = convertDbLocalPlaylistToModel(dbPlaylist)
 	}
 	return playlists, nil
 }
@@ -170,7 +170,7 @@ func (s *SQLPlaylistStore) ClearPlaylistSongs(ctx context.Context, playlistID uu
 }
 
 // Helper functions for conversion
-func convertDbPlaylistToModel(dbPlaylist database.LocalPlaylist) *models.Playlist {
+func convertDbLocalPlaylistToModel(dbPlaylist database.LocalPlaylist) *models.Playlist {
 	return &models.Playlist{
 		ID:                dbPlaylist.ID,
 		UserID:            dbPlaylist.UserID,
