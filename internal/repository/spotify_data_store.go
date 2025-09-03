@@ -247,15 +247,25 @@ func (s *SQLSpotifyDataStore) GetMultipleTracks(ctx context.Context, trackIDs []
 		}
 
 		batch := trackIDs[i:end]
-		batchFound, err := s.getTrackBatch(ctx, batch)
+		dbTracks, err := s.db.GetMultipleSpotifyTracks(ctx, batch)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to fetch batch %d-%d: %w", i, end-1, err)
+			return nil, []string{}, fmt.Errorf("failed to batch fetch tracks: %w", err)
 		}
 
-		// Merge batch results
-		for trackID, track := range batchFound {
-			found[trackID] = track
-			foundIDs[trackID] = true
+		for _, dbTrack := range dbTracks {
+			// Convert database model to domain model
+			track := convertDbTrackToModel(dbTrack)
+
+			// TODO: consider batch all related data (album, artists) in single query
+			// Currently loading album and artists separately - could be optimized
+			if dbTrack.AlbumID.Valid {
+				albumData, err := s.GetAlbum(ctx, dbTrack.AlbumID.String)
+				if err == nil && albumData != nil {
+					track.Album = albumData
+				}
+			}
+			found[dbTrack.ID] = track
+			foundIDs[dbTrack.ID] = true
 		}
 	}
 
@@ -266,40 +276,7 @@ func (s *SQLSpotifyDataStore) GetMultipleTracks(ctx context.Context, trackIDs []
 			missing = append(missing, trackID)
 		}
 	}
-
 	return found, missing, nil
-}
-
-// getTrackBatch fetches a single batch of tracks using the ANY operator
-func (s *SQLSpotifyDataStore) getTrackBatch(ctx context.Context, trackIDs []string) (map[string]*models.TrackData, error) {
-	if len(trackIDs) == 0 {
-		return make(map[string]*models.TrackData), nil
-	}
-
-	dbTracks, err := s.db.GetMultipleSpotifyTracks(ctx, trackIDs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to batch fetch tracks: %w", err)
-	}
-
-	found := make(map[string]*models.TrackData)
-	for _, dbTrack := range dbTracks {
-		// Convert database model to domain model
-
-		track := convertDbTrackToModel(dbTrack)
-
-		// TODO: consider batch all related data (album, artists) in single query
-		// Currently loading album and artists separately - could be optimized
-		if dbTrack.AlbumID.Valid {
-			albumData, err := s.GetAlbum(ctx, dbTrack.AlbumID.String)
-			if err == nil && albumData != nil {
-				track.Album = albumData
-			}
-		}
-
-		found[dbTrack.ID] = track
-	}
-
-	return found, nil
 }
 
 // StoreMultipleTracks efficiently stores multiple tracks using JSON-based batch operations
