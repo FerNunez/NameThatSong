@@ -26,10 +26,14 @@ type SpotifyDataStore interface {
 	// Artist operations
 	GetArtist(ctx context.Context, artistID string) (*models.ArtistData, error)
 	StoreArtist(ctx context.Context, artist *models.ArtistData) error
+	GetMultipleArtists(ctx context.Context, artistIDs []string) (map[string]*models.ArtistData, []string, error)
+	StoreMultipleArtists(ctx context.Context, artists []*models.ArtistData) error
 
 	// Album operations
 	GetAlbum(ctx context.Context, albumID string) (*models.AlbumData, error)
 	StoreAlbum(ctx context.Context, album *models.AlbumData) error
+	GetMultipleAlbums(ctx context.Context, albumIDs []string) (map[string]*models.AlbumData, []string, error)
+	StoreMultipleAlbums(ctx context.Context, albums []*models.AlbumData) error
 
 	// Track operations
 	GetTrack(ctx context.Context, trackID string) (*models.TrackData, error)
@@ -40,6 +44,8 @@ type SpotifyDataStore interface {
 	// Playlist cache operations
 	GetPlaylist(ctx context.Context, playlistID string) (*models.PlaylistData, error)
 	StorePlaylist(ctx context.Context, playlist *models.PlaylistData) error
+	GetMultiplePlaylists(ctx context.Context, playlistIDs []string) (map[string]*models.PlaylistData, []string, error)
+	StoreMultiplePlaylists(ctx context.Context, playlists []*models.PlaylistData) error
 
 	// Relations
 	UpsertPlaylistTracks(ctx context.Context, playlistID string, trackIDs []string) error
@@ -90,7 +96,7 @@ func (s *SQLSpotifyDataStore) StoreArtist(ctx context.Context, artist *models.Ar
 		Name:           artist.Name,
 		ImageUrl:       nullStringFromString(artist.ImageURL),
 		Popularity:     nullInt32FromInt(artist.Popularity),
-		FollowersTotal: nullInt32FromInt(artist.FollowersTotal),
+		FollowersTotal: int32(artist.FollowersTotal),
 		Genres:         artist.Genres,
 	})
 	return err
@@ -119,11 +125,11 @@ func (s *SQLSpotifyDataStore) StoreAlbum(ctx context.Context, album *models.Albu
 		Name:                 album.Name,
 		AlbumType:            album.AlbumType,
 		ReleaseDate:          nullDateFromString(album.ReleaseDate),
-		ReleaseDatePrecision: nullStringFromString(album.ReleaseDatePrecision),
-		TotalTracks:          nullInt32FromInt(album.TotalTracks),
+		ReleaseDatePrecision: album.ReleaseDatePrecision,
+		TotalTracks:          int32(album.TotalTracks),
 		ImageUrl:             nullStringFromString(album.ImageURL),
 		Label:                nullStringFromString(album.Label),
-		Popularity:           nullInt32FromInt(album.Popularity),
+		Popularity:           int32(album.Popularity),
 	})
 	if err != nil {
 		return err
@@ -165,7 +171,6 @@ func (s *SQLSpotifyDataStore) GetTrack(ctx context.Context, trackID string) (*mo
 		}
 		return nil, err
 	}
-
 	return convertDbTrackToModel(dbTrack), nil
 }
 
@@ -362,6 +367,168 @@ func (s *SQLSpotifyDataStore) storeTrackBatchJSON(ctx context.Context, tracks []
 	return nil
 }
 
+// Albums
+// Takes slice of albums and does multiple batch fetching
+func (s *SQLSpotifyDataStore) GetMultipleAlbums(ctx context.Context, albumIDs []string) (map[string]*models.AlbumData, []string, error) {
+	if len(albumIDs) == 0 {
+		return make(map[string]*models.AlbumData), []string{}, nil
+	}
+
+	// Get albums by batches and mark what found
+	found := make(map[string]*models.AlbumData, len(albumIDs))
+	foundIDs := make(map[string]bool, len(albumIDs))
+	for i := 0; i < len(albumIDs); i += MaxBatchSize {
+		end := min(i+MaxBatchSize, len(albumIDs))
+
+		batch := albumIDs[i:end]
+		// Database batch get
+		dbAlbums, err := s.db.GetMultipleSpotifyAlbums(ctx, batch) // this will not return an error if some ID doenst exist. It return fewer results
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to fetch album batch %d-%d: %w", i, end-1, err)
+		}
+		found := make(map[string]*models.AlbumData)
+		for _, dbAlbum := range dbAlbums {
+			// Convert database model to domain model
+			found[dbAlbum.ID] = convertDbAlbumToModel(dbAlbum)
+			foundIDs[dbAlbum.ID] = true
+		}
+	}
+
+	// Check missing albums not found
+	var missing []string
+	for _, albumID := range albumIDs {
+		if !foundIDs[albumID] {
+			missing = append(missing, albumID)
+		}
+	}
+	return found, missing, nil
+}
+
+// StoreMultipleAlbums efficiently stores multiple albums using JSON-based batch operations
+func (s *SQLSpotifyDataStore) StoreMultipleAlbums(ctx context.Context, albums []*models.AlbumData) error {
+	if len(albums) == 0 {
+		return nil
+	}
+
+	for i := 0; i < len(albums); i += MaxBatchSize {
+		end := min(i+MaxBatchSize, len(albums))
+		batch := albums[i:end]
+
+		// Create json and store using upsert
+		jsonAlbums := make([]map[string]any, len(batch))
+		for i, album := range albums {
+			jsonAlbums[i] = map[string]any{
+				"id":                     album.ID,
+				"name":                   album.Name,
+				"album_type":             album.AlbumType,
+				"release_date":           album.ReleaseDate,
+				"release_date_precision": album.ReleaseDatePrecision,
+				"total_tracks":           album.TotalTracks,
+				"image_url":              album.ImageURL,
+				"label":                  album.Label,
+				"popularity":             album.Popularity,
+			}
+			// TODO: add artist data?
+		}
+
+		// Marshal to JSON bytes
+		jsonBytes, err := json.Marshal(jsonAlbums)
+		if err != nil {
+			return fmt.Errorf("failed to marshal albums to JSON: %w", err)
+		}
+
+		// Execute batch upsert
+		if err := s.db.UpsertMultipleSpotifyAlbumsFromJSON(ctx, jsonBytes); err != nil {
+			return fmt.Errorf("failed to execute batch upsert: %w", err)
+		}
+		if err != nil {
+			return fmt.Errorf("failed to store batch albums %d-%d: %w", i, end-1, err)
+		}
+	}
+	return nil
+}
+
+// Albums
+// Takes slice of albums and does multiple batch fetching
+func (s *SQLSpotifyDataStore) GetMultipleAlbums(ctx context.Context, albumIDs []string) (map[string]*models.AlbumData, []string, error) {
+	if len(albumIDs) == 0 {
+		return make(map[string]*models.AlbumData), []string{}, nil
+	}
+
+	// Get albums by batches and mark what found
+	found := make(map[string]*models.AlbumData, len(albumIDs))
+	foundIDs := make(map[string]bool, len(albumIDs))
+	for i := 0; i < len(albumIDs); i += MaxBatchSize {
+		end := min(i+MaxBatchSize, len(albumIDs))
+
+		batch := albumIDs[i:end]
+		// Database batch get
+		dbAlbums, err := s.db.GetMultipleSpotifyAlbums(ctx, batch) // this will not return an error if some ID doenst exist. It return fewer results
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to fetch album batch %d-%d: %w", i, end-1, err)
+		}
+		found := make(map[string]*models.AlbumData)
+		for _, dbAlbum := range dbAlbums {
+			// Convert database model to domain model
+			found[dbAlbum.ID] = convertDbAlbumToModel(dbAlbum)
+			foundIDs[dbAlbum.ID] = true
+		}
+	}
+
+	// Check missing albums not found
+	var missing []string
+	for _, albumID := range albumIDs {
+		if !foundIDs[albumID] {
+			missing = append(missing, albumID)
+		}
+	}
+	return found, missing, nil
+}
+
+// StoreMultipleAlbums efficiently stores multiple albums using JSON-based batch operations
+func (s *SQLSpotifyDataStore) StoreMultipleAlbums(ctx context.Context, albums []*models.AlbumData) error {
+	if len(albums) == 0 {
+		return nil
+	}
+
+	for i := 0; i < len(albums); i += MaxBatchSize {
+		end := min(i+MaxBatchSize, len(albums))
+		batch := albums[i:end]
+
+		// Create json and store using upsert
+		jsonAlbums := make([]map[string]any, len(batch))
+		for i, album := range albums {
+			jsonAlbums[i] = map[string]any{
+				"id":                     album.ID,
+				"name":                   album.Name,
+				"album_type":             album.AlbumType,
+				"release_date":           album.ReleaseDate,
+				"release_date_precision": album.ReleaseDatePrecision,
+				"total_tracks":           album.TotalTracks,
+				"image_url":              album.ImageURL,
+				"label":                  album.Label,
+				"popularity":             album.Popularity,
+			}
+			// TODO: add artist data?
+		}
+
+		// Marshal to JSON bytes
+		jsonBytes, err := json.Marshal(jsonAlbums)
+		if err != nil {
+			return fmt.Errorf("failed to marshal albums to JSON: %w", err)
+		}
+
+		// Execute batch upsert
+		if err := s.db.UpsertMultipleSpotifyAlbumsFromJSON(ctx, jsonBytes); err != nil {
+			return fmt.Errorf("failed to execute batch upsert: %w", err)
+		}
+		if err != nil {
+			return fmt.Errorf("failed to store batch albums %d-%d: %w", i, end-1, err)
+		}
+	}
+	return nil
+}
+
 // =============================================================================
 // PLAYLIST CACHE OPERATIONS
 // =============================================================================
@@ -517,7 +684,7 @@ func convertDbArtistToModel(dbArtist database.SpotifyArtist) *models.ArtistData 
 		Name:           dbArtist.Name,
 		ImageURL:       nullStringToString(dbArtist.ImageUrl),
 		Popularity:     nullInt32ToInt(dbArtist.Popularity),
-		FollowersTotal: nullInt32ToInt(dbArtist.FollowersTotal),
+		FollowersTotal: int(dbArtist.FollowersTotal),
 		Genres:         dbArtist.Genres,
 		CachedAt:       dbArtist.CachedAt,
 		UpdatedAt:      dbArtist.UpdatedAt,
@@ -530,11 +697,11 @@ func convertDbAlbumToModel(dbAlbum database.SpotifyAlbum) *models.AlbumData {
 		Name:                 dbAlbum.Name,
 		AlbumType:            dbAlbum.AlbumType,
 		ReleaseDate:          dbAlbum.ReleaseDate.Time.Format("2006-01-02"),
-		ReleaseDatePrecision: nullStringToString(dbAlbum.ReleaseDatePrecision),
-		TotalTracks:          nullInt32ToInt(dbAlbum.TotalTracks),
+		ReleaseDatePrecision: dbAlbum.ReleaseDatePrecision,
+		TotalTracks:          int(dbAlbum.TotalTracks),
 		ImageURL:             nullStringToString(dbAlbum.ImageUrl),
 		Label:                nullStringToString(dbAlbum.Label),
-		Popularity:           nullInt32ToInt(dbAlbum.Popularity),
+		Popularity:           int(dbAlbum.Popularity),
 		CachedAt:             dbAlbum.CachedAt,
 		UpdatedAt:            dbAlbum.UpdatedAt,
 	}
