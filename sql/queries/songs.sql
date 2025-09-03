@@ -27,3 +27,5 @@ RETURNING *;
 
 -- name: GetSongBySpotifyID :one
 SELECT * FROM songs WHERE spotify_track_id = $1;
+
+-- TODO: Upsert by batch?

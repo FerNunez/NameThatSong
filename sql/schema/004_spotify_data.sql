@@ -8,7 +8,7 @@ CREATE TABLE spotify_artists (
     name VARCHAR(255) NOT NULL,
     image_url TEXT,
     popularity INTEGER DEFAULT 0,
-    followers_total INTEGER DEFAULT 0,
+    followers_total INTEGER NOT NULL DEFAULT 0,
     genres TEXT[], -- PostgreSQL array for multiple genres
     cached_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
@@ -20,11 +20,11 @@ CREATE TABLE spotify_albums (
     name VARCHAR(255) NOT NULL,
     album_type VARCHAR(50) NOT NULL, -- album, single, compilation
     release_date DATE,
-    release_date_precision VARCHAR(10), -- year, month, day
-    total_tracks INTEGER DEFAULT 0,
+    release_date_precision VARCHAR(10) NOT NULL, -- year, month, day
+    total_tracks INTEGER NOT NULL DEFAULT 0,
     image_url TEXT,
     label VARCHAR(255),
-    popularity INTEGER DEFAULT 0,
+    popularity INTEGER NOT NULL DEFAULT 0 ,
     cached_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
@@ -78,7 +78,7 @@ CREATE TABLE spotify_track_artists (
     PRIMARY KEY (track_id, artist_id)
 );
 
--- -- One-to-many: Alums can have multiple tracks
+-- One-to-many: Albums can have multiple tracks
 CREATE TABLE spotify_album_tracks (
     album_id TEXT REFERENCES spotify_albums(id) ON DELETE CASCADE,
     track_id TEXT REFERENCES spotify_tracks(id) ON DELETE CASCADE,
@@ -113,7 +113,7 @@ CREATE INDEX idx_album_artists_artist ON spotify_album_artists(artist_id);
 CREATE INDEX idx_track_artists_artist ON spotify_track_artists(artist_id);
 CREATE INDEX idx_track_artists_primary ON spotify_track_artists(track_id, is_primary);
 CREATE INDEX idx_album_tracks_track ON spotify_album_tracks(track_id);
-CREATE INDEX idx_spotify_playlist_trackst_position ON spotify_playlist_tracks(playlist_id, position);
+CREATE INDEX idx_spotify_playlist_tracks_position ON spotify_playlist_tracks(playlist_id, position);
 
 -- Cache management indexes for TTL-based cleanup
 CREATE INDEX idx_spotify_artists_cached_at ON spotify_artists(cached_at);
@@ -122,11 +122,11 @@ CREATE INDEX idx_spotify_tracks_cached_at ON spotify_tracks(cached_at);
 CREATE INDEX idx_spotify_playlists_cached_at ON spotify_playlists(cached_at);
 
 -- +goose Down
+DROP TABLE spotify_playlist_tracks CASCADE;
+DROP TABLE spotify_album_tracks CASCADE;
 DROP TABLE spotify_track_artists CASCADE;
 DROP TABLE spotify_album_artists CASCADE;
-DROP TABLE spotify_playlists CASCADE;
 DROP TABLE spotify_tracks CASCADE;
 DROP TABLE spotify_albums CASCADE;
 DROP TABLE spotify_artists CASCADE;
-DROP TABLE spotify_playlist_tracks CASCADE;
-DROP TABLE spotify_album_tracks CASCADE;
+DROP TABLE spotify_playlists CASCADE;
