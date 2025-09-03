@@ -80,11 +80,11 @@ type SpotifyAlbum struct {
 	Name                 string
 	AlbumType            string
 	ReleaseDate          sql.NullTime
-	ReleaseDatePrecision sql.NullString
-	TotalTracks          sql.NullInt32
+	ReleaseDatePrecision string
+	TotalTracks          int32
 	ImageUrl             sql.NullString
 	Label                sql.NullString
-	Popularity           sql.NullInt32
+	Popularity           int32
 	CachedAt             time.Time
 	UpdatedAt            time.Time
 }
@@ -105,7 +105,7 @@ type SpotifyArtist struct {
 	Name           string
 	ImageUrl       sql.NullString
 	Popularity     sql.NullInt32
-	FollowersTotal sql.NullInt32
+	FollowersTotal int32
 	Genres         []string
 	CachedAt       time.Time
 	UpdatedAt      time.Time

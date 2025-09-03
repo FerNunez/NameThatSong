@@ -197,6 +197,131 @@ ON CONFLICT (id) DO UPDATE SET
     is_local = EXCLUDED.is_local,
     updated_at = EXCLUDED.updated_at;
 
+-- name: GetMultipleSpotifyAlbums :many
+SELECT * FROM spotify_albums 
+WHERE id = ANY($1::text[]);
+
+-- name: UpsertMultipleSpotifyAlbumsFromJSON :exec
+INSERT INTO spotify_albums (
+    id,
+    name,
+    album_type,
+    release_date,
+    release_date_precision,
+    total_tracks,
+    image_url,
+    label,
+    popularity,
+    cached_at,
+    updated_at
+)
+SELECT 
+    (album->>'id')::text,
+    (album->>'name')::text,
+    (album->>'album_type')::text,
+    NULLIF(album->>'release_date', '')::date,
+    (album->>'release_date_precision')::text,
+    (album->>'total_tracks')::int,
+    NULLIF(album->>'image_url','')::text,
+    NULLIF(album->>'label', '')::text,
+    (album->>'popularity')::int,
+    NOW(),
+    NOW()
+FROM jsonb_array_elements($1::jsonb) AS album
+ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    album_type = EXCLUDED.album_type,
+    release_date = EXCLUDED.release_date,
+    release_date_precision = EXCLUDED.release_date_precision,
+    total_tracks = EXCLUDED.total_tracks,
+    image_url = EXCLUDED.image_url,
+    label = EXCLUDED.label,
+    popularity = EXCLUDED.popularity,
+    cached_at = EXCLUDED.cached_at,
+    updated_at = EXCLUDED.updated_at;
+
+-- name: GetMultipleSpotifyArtists :many
+SELECT * FROM spotify_artists 
+WHERE id = ANY($1::text[]);
+
+
+-- name: UpsertMultipleSpotifyArtistsFromJSON :exec
+INSERT INTO spotify_artists (
+    id,
+    name,
+    image_url,
+    popularity,
+    followers_total,
+    genres,
+    cached_at,
+    updated_at
+)
+SELECT 
+    (artist->>'id')::text,
+    (artist->>'name')::text,
+    NULLIF(artist->>'image_url', '')::text,
+    (artist->>'popularity')::int,
+    (artist->>'followers_total')::int,
+    string_to_array(NULLIF(artist->>'genres', ''), ',')::text[],-- this is a array of strings
+    NOW(),
+    NOW()
+FROM jsonb_array_elements($1::jsonb) AS artist
+ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    image_url = EXCLUDED.image_url,
+    popularity = EXCLUDED.popularity,
+    followers_total = EXCLUDED.followers_total,
+    genres = EXCLUDED.genres,    
+    cached_at = EXCLUDED.cached_at,
+    updated_at = EXCLUDED.updated_at;
+
+-- name: GetMultipleSpotifyPlaylists :many
+SELECT * FROM spotify_playlists 
+WHERE id = ANY($1::text[]);
+
+-- name: UpsertMultipleSpotifyPlaylistsFromJSON :exec
+INSERT INTO spotify_playlists (
+    id,
+    name,
+    description,
+    owner_id,
+    owner_display_name,
+    public,
+    collaborative,
+    followers_total,
+    total_tracks,
+    image_url,
+    cached_at,
+    updated_at
+)
+SELECT 
+    (playlist->>'id')::text,
+    (playlist->>'name')::text,
+    NULLIF(playlist->>'description', '')::text,
+    (playlist->>'owner_id')::text,
+    NULLIF(playlist->>'owner_display_name', '')::text,
+    (playlist->>'public')::boolean,
+    (playlist->>'collaborative')::boolean,
+    (playlist->>'followers_total')::int,
+    (playlist->>'total_tracks')::int,
+    NULLIF(playlist->>'image_url', '')::text,
+    NOW(),
+    NOW()
+FROM jsonb_array_elements($1::jsonb) AS playlist
+ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    description = EXCLUDED.description,
+    owner_id = EXCLUDED.owner_id,
+    owner_display_name = EXCLUDED.owner_display_name,
+    public = EXCLUDED.public,
+    collaborative = EXCLUDED.collaborative,
+    followers_total = EXCLUDED.followers_total,
+    total_tracks = EXCLUDED.total_tracks,
+    image_url = EXCLUDED.image_url,
+    cached_at = EXCLUDED.cached_at,
+    updated_at = EXCLUDED.updated_at;
+
+
 -- =============================================================================
 -- EFFICIENT SEARCH OPERATIONS
 -- =============================================================================
