@@ -1,32 +1,34 @@
 -- =============================================================================
--- ARTIST OPERATIONS
+-- TRACK OPERATIONS
 -- =============================================================================
+-- name: GetSpotifyTrack :one
+SELECT * FROM spotify_tracks WHERE id = $1;
 
--- name: GetSpotifyArtist :one
-SELECT * FROM spotify_artists WHERE id = $1;
-
--- name: UpsertSpotifyArtist :one
-INSERT INTO spotify_artists (id, name, image_url, popularity, followers_total, genres, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, NOW())
+-- name: UpsertSpotifyTrack :one
+INSERT INTO spotify_tracks (id, name,  duration_ms, disc_number, track_number, popularity, explicit, is_local,album_id, artist_ids, cached_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
-    image_url = EXCLUDED.image_url,
+    duration_ms = EXCLUDED.duration_ms,
+    disc_number = EXCLUDED.disc_number,
+    track_number = EXCLUDED.track_number,
     popularity = EXCLUDED.popularity,
-    followers_total = EXCLUDED.followers_total,
-    genres = EXCLUDED.genres,
-    updated_at = EXCLUDED.updated_at
+    explicit = EXCLUDED.explicit,
+    is_local = EXCLUDED.is_local,
+    album_id = EXCLUDED.album_id,
+    artist_ids = EXCLUDED.artist_ids,
+    cached_at = EXCLUDED.cached_at
 RETURNING *;
 
 -- =============================================================================
 -- ALBUM OPERATIONS  
 -- =============================================================================
-
 -- name: GetSpotifyAlbum :one
 SELECT * FROM spotify_albums WHERE id = $1;
 
 -- name: UpsertSpotifyAlbum :one
-INSERT INTO spotify_albums (id, name, album_type, release_date, release_date_precision, total_tracks, image_url, label, popularity, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+INSERT INTO spotify_albums (id, name, album_type, release_date, release_date_precision, total_tracks, image_url, label, popularity, track_ids, artist_ids, cached_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
     album_type = EXCLUDED.album_type,
@@ -36,33 +38,28 @@ ON CONFLICT (id) DO UPDATE SET
     image_url = EXCLUDED.image_url,
     label = EXCLUDED.label,
     popularity = EXCLUDED.popularity,
-    updated_at = EXCLUDED.updated_at
+    track_ids = EXCLUDED.track_ids,
+    artist_ids= EXCLUDED.artist_ids,
+    cached_at = EXCLUDED.cached_at
 RETURNING *;
 
 -- =============================================================================
--- TRACK OPERATIONS
+-- ARTIST OPERATIONS
 -- =============================================================================
+-- name: GetSpotifyArtist :one
+SELECT * FROM spotify_artists WHERE id = $1;
 
--- name: GetSpotifyTrack :one
-SELECT * FROM spotify_tracks WHERE id = $1;
-
--- name: UpsertSpotifyTrack :one
-INSERT INTO spotify_tracks (id, name, album_id, duration_ms, disc_number, track_number, popularity, explicit, preview_url, is_local, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+-- name: UpsertSpotifyArtist :one
+INSERT INTO spotify_artists (id, name, image_url, popularity, followers_total, genres, cached_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
-    album_id = EXCLUDED.album_id,
-    duration_ms = EXCLUDED.duration_ms,
-    disc_number = EXCLUDED.disc_number,
-    track_number = EXCLUDED.track_number,
+    image_url = EXCLUDED.image_url,
     popularity = EXCLUDED.popularity,
-    explicit = EXCLUDED.explicit,
-    preview_url = EXCLUDED.preview_url,
-    is_local = EXCLUDED.is_local,
-    updated_at = EXCLUDED.updated_at
+    followers_total = EXCLUDED.followers_total,
+    genres = EXCLUDED.genres,
+    cached_at = EXCLUDED.cached_at
 RETURNING *;
-
-
 -- =============================================================================
 -- PLAYLIST OPERATIONS
 -- =============================================================================
@@ -71,8 +68,8 @@ RETURNING *;
 SELECT * FROM spotify_playlists WHERE id = $1;
 
 -- name: UpsertSpotifyPlaylist :one
-INSERT INTO spotify_playlists (id, name, description, owner_id, owner_display_name, public, collaborative, followers_total, total_tracks, image_url, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+INSERT INTO spotify_playlists (id, name, description, owner_id, owner_display_name, public, collaborative, followers_total, total_tracks, image_url, track_ids, cached_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
     description = EXCLUDED.description,
@@ -83,58 +80,10 @@ ON CONFLICT (id) DO UPDATE SET
     followers_total = EXCLUDED.followers_total,
     total_tracks = EXCLUDED.total_tracks,
     image_url = EXCLUDED.image_url,
-    updated_at = EXCLUDED.updated_at
+    track_ids = EXCLUDED.track_ids,
+    cached_at = EXCLUDED.cached_at
 RETURNING *;
 
-
--- =============================================================================
--- RELATIONSHIP OPERATIONS
--- =============================================================================
-
--- name: UpsertAlbumArtist :exec
-INSERT INTO spotify_album_artists (album_id, artist_id)
-VALUES ($1, $2)
-ON CONFLICT (album_id, artist_id) DO NOTHING;
-
--- name: ClearAlbumArtists :exec
-DELETE FROM spotify_album_artists WHERE album_id = $1;
-
--- name: UpsertTrackArtist :exec
-INSERT INTO spotify_track_artists (track_id, artist_id, is_primary)
-VALUES ($1, $2, $3)
-ON CONFLICT (track_id, artist_id) DO UPDATE SET
-    is_primary = EXCLUDED.is_primary;
-
--- name: ClearTrackArtists :exec
-DELETE FROM spotify_track_artists WHERE track_id = $1;
-
--- ALBUMS
--- name: UpsertAlbumTrack :exec
-INSERT INTO spotify_album_tracks (album_id, track_id, position)
-VALUES ($1, $2, $3)
-ON CONFLICT (album_id, track_id) DO UPDATE SET
-    position  = EXCLUDED.position;
--- name: GetAlbumTracks :many
-SELECT * FROM spotify_album_tracks WHERE album_id = $1;
--- name: GetAlbumByTrackID :one
-SELECT album_id FROM spotify_album_tracks WHERE track_id = $1;
--- name: ClearAlbumTracks :exec
-DELETE FROM spotify_album_tracks WHERE album_id = $1;
-
--- PLAYLISTS 
--- name: UpsertPlaylistTracks :exec
-INSERT INTO spotify_playlist_tracks (
-    playlist_id, track_id, position, updated_at
-)
-VALUES ($1, $2, $3, $4)
-ON CONFLICT (playlist_id, track_id) DO UPDATE SET
-    position  = EXCLUDED.position;
--- name: GetPlaylistTracks :many
-SELECT * FROM spotify_playlist_tracks WHERE playlist_id = $1;
--- name: DeletePlaylistTrack :exec
-DELETE FROM spotify_playlist_tracks WHERE track_id = $1;
--- name: ClearPlaylistTracks :exec
-DELETE FROM spotify_playlist_tracks WHERE playlist_id = $1;
 
 -- =============================================================================
 -- CACHE MANAGEMENT OPERATIONS
@@ -162,7 +111,6 @@ SELECT
 -- =============================================================================
 -- BATCH OPERATIONS
 -- =============================================================================
-
 -- name: GetMultipleSpotifyTracks :many
 SELECT * FROM spotify_tracks 
 WHERE id = ANY($1::text[]);
@@ -170,20 +118,20 @@ WHERE id = ANY($1::text[]);
 -- name: UpsertMultipleSpotifyTracksFromJSON :exec
 INSERT INTO spotify_tracks (
     id, name, album_id, duration_ms, disc_number, track_number,
-    popularity, explicit, preview_url, is_local, updated_at
+    popularity, explicit, is_local, artist_ids, cached_at
 )
 SELECT 
     (track->>'id')::text,
     (track->>'name')::text,
-    NULLIF(track->>'album_id', '')::text,
+    (track->>'album_id')::text,
     (track->>'duration_ms')::int,
     (track->>'disc_number')::int,
     (track->>'track_number')::int,
     (track->>'popularity')::int,
     (track->>'explicit')::boolean,
-    NULLIF(track->>'preview_url', ''),
     (track->>'is_local')::boolean,
-    NOW()
+    ARRAY(SELECT jsonb_array_elements_text(track->'artist_ids'))::text[],
+    (track->>'cached_at')::timestamp
 FROM jsonb_array_elements($1::jsonb) AS track
 ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
@@ -193,9 +141,9 @@ ON CONFLICT (id) DO UPDATE SET
     track_number = EXCLUDED.track_number,
     popularity = EXCLUDED.popularity,
     explicit = EXCLUDED.explicit,
-    preview_url = EXCLUDED.preview_url,
     is_local = EXCLUDED.is_local,
-    updated_at = EXCLUDED.updated_at;
+    artist_ids = EXCLUDED.artist_ids,
+    cached_at = EXCLUDED.cached_at;
 
 -- name: GetMultipleSpotifyAlbums :many
 SELECT * FROM spotify_albums 
@@ -212,8 +160,9 @@ INSERT INTO spotify_albums (
     image_url,
     label,
     popularity,
-    cached_at,
-    updated_at
+    artist_ids,
+    track_ids,
+    cached_at
 )
 SELECT 
     (album->>'id')::text,
@@ -225,8 +174,9 @@ SELECT
     NULLIF(album->>'image_url','')::text,
     NULLIF(album->>'label', '')::text,
     (album->>'popularity')::int,
-    NOW(),
-    NOW()
+    ARRAY(SELECT jsonb_array_elements_text(album->'artist_ids'))::text[],
+    ARRAY(SELECT jsonb_array_elements_text(album->'track_ids'))::text[],
+    (album->>'cached_at')::timestamp
 FROM jsonb_array_elements($1::jsonb) AS album
 ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
@@ -237,8 +187,9 @@ ON CONFLICT (id) DO UPDATE SET
     image_url = EXCLUDED.image_url,
     label = EXCLUDED.label,
     popularity = EXCLUDED.popularity,
-    cached_at = EXCLUDED.cached_at,
-    updated_at = EXCLUDED.updated_at;
+    artist_ids = EXCLUDED.artist_ids,
+    track_ids = EXCLUDED.track_ids,
+    cached_at = EXCLUDED.cached_at;
 
 -- name: GetMultipleSpotifyArtists :many
 SELECT * FROM spotify_artists 
@@ -253,8 +204,7 @@ INSERT INTO spotify_artists (
     popularity,
     followers_total,
     genres,
-    cached_at,
-    updated_at
+    cached_at
 )
 SELECT 
     (artist->>'id')::text,
@@ -270,17 +220,15 @@ SELECT
         THEN ARRAY(SELECT jsonb_array_elements_text(artist->'genres'))
         ELSE string_to_array(NULLIF(artist->>'genres', ''), ',')::text[]
     END,
-    NOW(),
-    NOW()
+    (artist->>'cached_at')::timestamp
 FROM jsonb_array_elements($1::jsonb) AS artist
 ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
     image_url = EXCLUDED.image_url,
     popularity = EXCLUDED.popularity,
     followers_total = EXCLUDED.followers_total,
-    genres = EXCLUDED.genres,    
-    cached_at = EXCLUDED.cached_at,
-    updated_at = EXCLUDED.updated_at;
+    genres = EXCLUDED.genres,
+    cached_at = EXCLUDED.cached_at;
 
 -- name: GetMultipleSpotifyPlaylists :many
 SELECT * FROM spotify_playlists 
@@ -298,8 +246,8 @@ INSERT INTO spotify_playlists (
     followers_total,
     total_tracks,
     image_url,
-    cached_at,
-    updated_at
+    track_ids,
+    cached_at
 )
 SELECT 
     (playlist->>'id')::text,
@@ -312,8 +260,8 @@ SELECT
     (playlist->>'followers_total')::int,
     (playlist->>'total_tracks')::int,
     NULLIF(playlist->>'image_url', '')::text,
-    NOW(),
-    NOW()
+    ARRAY(SELECT jsonb_array_elements_text(playlist->'track_ids'))::text[],
+    (playlist->>'cached_at')::timestamp
 FROM jsonb_array_elements($1::jsonb) AS playlist
 ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
@@ -325,8 +273,8 @@ ON CONFLICT (id) DO UPDATE SET
     followers_total = EXCLUDED.followers_total,
     total_tracks = EXCLUDED.total_tracks,
     image_url = EXCLUDED.image_url,
-    cached_at = EXCLUDED.cached_at,
-    updated_at = EXCLUDED.updated_at;
+    track_ids = EXCLUDED.track_ids,
+    cached_at = EXCLUDED.cached_at;
 
 
 -- =============================================================================

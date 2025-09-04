@@ -1,18 +1,19 @@
 -- +goose Up
--- Spotify data caching and normalization schema
--- This implements the database layer of the 3-tier strategy: Cache -> Database -> API
-
--- Artists table: Core artist information from Spotify
-CREATE TABLE spotify_artists (
-    id TEXT PRIMARY KEY, -- Spotify artist ID
+-- Tracks table: Individual song data
+CREATE TABLE spotify_tracks (
+    id TEXT PRIMARY KEY, -- Spotify track ID
     name VARCHAR(255) NOT NULL,
-    image_url TEXT,
+    duration_ms INTEGER NOT NULL,
+    disc_number INTEGER DEFAULT 1,
+    track_number INTEGER DEFAULT 1,
     popularity INTEGER DEFAULT 0,
-    followers_total INTEGER NOT NULL DEFAULT 0,
-    genres TEXT[], -- PostgreSQL array for multiple genres
-    cached_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    explicit BOOLEAN DEFAULT FALSE,
+    is_local BOOLEAN DEFAULT FALSE,
+    album_id TEXT NOT NULL,
+    artist_ids TEXT[] NOT NULL,
+    cached_at TIMESTAMP NOT NULL,
 );
+
 
 -- Albums table: Album metadata with foreign key to primary artist
 CREATE TABLE spotify_albums (
@@ -25,25 +26,22 @@ CREATE TABLE spotify_albums (
     image_url TEXT,
     label VARCHAR(255),
     popularity INTEGER NOT NULL DEFAULT 0 ,
-    cached_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    artist_ids TEXT[] NOT NULL,
+    track_ids TEXT[] NOT NULL,
+    cached_at TIMESTAMP NOT NULL
 );
 
--- Tracks table: Individual song data
-CREATE TABLE spotify_tracks (
-    id TEXT PRIMARY KEY, -- Spotify track ID
+-- Artists table: Core artist information from Spotify
+CREATE TABLE spotify_artists (
+    id TEXT PRIMARY KEY, -- Spotify artist ID
     name VARCHAR(255) NOT NULL,
-    album_id TEXT REFERENCES spotify_albums(id) ON DELETE SET NULL,
-    duration_ms INTEGER NOT NULL,
-    disc_number INTEGER DEFAULT 1,
-    track_number INTEGER DEFAULT 1,
+    image_url TEXT,
     popularity INTEGER DEFAULT 0,
-    explicit BOOLEAN DEFAULT FALSE,
-    preview_url TEXT,
-    is_local BOOLEAN DEFAULT FALSE,
-    cached_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    followers_total INTEGER NOT NULL DEFAULT 0,
+    genres TEXT[], -- PostgreSQL array for multiple genres
+    cached_at TIMESTAMP NOT NULL
 );
+
 
 -- Spotify playlists: For caching Spotify playlist metadata (separate from user playlists)
 -- This is pure cache data - not owned by any user in our system
@@ -58,62 +56,9 @@ CREATE TABLE spotify_playlists (
     followers_total INTEGER DEFAULT 0,
     total_tracks INTEGER DEFAULT 0,
     image_url TEXT,
-    cached_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    track_ids TEXT[] NOT NULL,
+    cached_at TIMESTAMP NOT NULL
 );
-
--- RELATIONSHIPS
--- Many-to-many: Albums can have multiple artists (collaborations, compilations)
-CREATE TABLE spotify_album_artists (
-    album_id TEXT REFERENCES spotify_albums(id) ON DELETE CASCADE,
-    artist_id TEXT REFERENCES spotify_artists(id) ON DELETE CASCADE,
-    PRIMARY KEY (album_id, artist_id)
-);
-
--- Many-to-many: Tracks can have multiple artists (features, collaborations)
-CREATE TABLE spotify_track_artists (
-    track_id TEXT REFERENCES spotify_tracks(id) ON DELETE CASCADE,
-    artist_id TEXT REFERENCES spotify_artists(id) ON DELETE CASCADE,
-    is_primary BOOLEAN DEFAULT FALSE, -- To identify main artist for display
-    PRIMARY KEY (track_id, artist_id)
-);
-
--- One-to-many: Albums can have multiple tracks
-CREATE TABLE spotify_album_tracks (
-    album_id TEXT REFERENCES spotify_albums(id) ON DELETE CASCADE,
-    track_id TEXT REFERENCES spotify_tracks(id) ON DELETE CASCADE,
-    position INTEGER NOT NULL,
-    PRIMARY KEY (album_id, track_id)
-);
-
-
--- One-to-many: One spotify has many tracks
-CREATE TABLE spotify_playlist_tracks(
-    playlist_id TEXT REFERENCES spotify_playlists(id) ON DELETE CASCADE,
-    track_id TEXT REFERENCES spotify_tracks(id) ON DELETE CASCADE,
-    position INTEGER NOT NULL,
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (playlist_id, track_id),
-    UNIQUE(playlist_id, position)
-);
-
-
--- Performance indexes for common queries
-CREATE INDEX idx_spotify_artists_name ON spotify_artists(name);
-CREATE INDEX idx_spotify_artists_popularity ON spotify_artists(popularity DESC);
-CREATE INDEX idx_spotify_albums_name ON spotify_albums(name);
-CREATE INDEX idx_spotify_albums_release_date ON spotify_albums(release_date DESC);
-CREATE INDEX idx_spotify_tracks_name ON spotify_tracks(name);
-CREATE INDEX idx_spotify_tracks_album ON spotify_tracks(album_id);
-CREATE INDEX idx_spotify_tracks_duration ON spotify_tracks(duration_ms);
-CREATE INDEX idx_spotify_tracks_popularity ON spotify_tracks(popularity DESC);
-
--- Relationship indexes for efficient JOINs
-CREATE INDEX idx_album_artists_artist ON spotify_album_artists(artist_id);
-CREATE INDEX idx_track_artists_artist ON spotify_track_artists(artist_id);
-CREATE INDEX idx_track_artists_primary ON spotify_track_artists(track_id, is_primary);
-CREATE INDEX idx_album_tracks_track ON spotify_album_tracks(track_id);
-CREATE INDEX idx_spotify_playlist_tracks_position ON spotify_playlist_tracks(playlist_id, position);
 
 -- Cache management indexes for TTL-based cleanup
 CREATE INDEX idx_spotify_artists_cached_at ON spotify_artists(cached_at);
@@ -122,11 +67,7 @@ CREATE INDEX idx_spotify_tracks_cached_at ON spotify_tracks(cached_at);
 CREATE INDEX idx_spotify_playlists_cached_at ON spotify_playlists(cached_at);
 
 -- +goose Down
-DROP TABLE spotify_playlist_tracks CASCADE;
-DROP TABLE spotify_album_tracks CASCADE;
-DROP TABLE spotify_track_artists CASCADE;
-DROP TABLE spotify_album_artists CASCADE;
-DROP TABLE spotify_tracks CASCADE;
-DROP TABLE spotify_albums CASCADE;
-DROP TABLE spotify_artists CASCADE;
 DROP TABLE spotify_playlists CASCADE;
+DROP TABLE spotify_artists CASCADE;
+DROP TABLE spotify_albums CASCADE;
+DROP TABLE spotify_tracks CASCADE;

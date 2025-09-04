@@ -84,8 +84,8 @@ type AlbumData struct {
 	ImageURL             string      `json:"image_url"`
 	Label                string      `json:"label"`
 	Popularity           int         `json:"popularity"`
-	ArtistIDs            []SpotifyID `json:"artist_ids"` // IDs of artists in this album
 	TrackIDs             []SpotifyID `json:"track_ids"`  // IDs of artists in this album
+	ArtistIDs            []SpotifyID `json:"artist_ids"` // IDs of artists in this album
 	CachedAt             time.Time   `json:"cached_at"`  // when was this track last cached from spotify api
 }
 
