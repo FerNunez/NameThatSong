@@ -9,6 +9,7 @@ import (
 	"time"
 
 	m "github.com/FerNunez/NameThatSong/internal/models"
+	"github.com/FerNunez/NameThatSong/internal/pkg/logger"
 )
 
 // =============================================================================
@@ -17,18 +18,19 @@ import (
 
 // FetchTrack fetches a track using three-tier strategy: Cache → Database → API
 func (s *Spotify) FetchTrack(ctx context.Context, userID, trackID string) (m.TrackData, error) {
+	// Get
 	// Tier 1: Check Redis cache first
-	if cachedTrack, found := s.cache.GetTrack(trackID); found {
+	if cachedTrack, err := s.cache.GetTrack(trackID); err == nil {
 		return cachedTrack, nil
 	}
-
+	logger.Debug(ctx, "couldnt find track in cache", logger.F("track_id", trackID))
 	// Tier 2: Check database for persistent storage
 	if dbTrack, err := s.dataStore.GetTrack(ctx, trackID); err == nil && dbTrack != nil {
 		// Found in database, update cache and return
 		s.cache.SetTrack(trackID, *dbTrack)
 		return *dbTrack, nil
 	}
-
+	logger.Debug(ctx, "couldnt find track in db", logger.F("track_id", trackID))
 	// Tier 3: Fetch from Spotify API as last resort
 	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
@@ -40,17 +42,20 @@ func (s *Spotify) FetchTrack(ctx context.Context, userID, trackID string) (m.Tra
 		return m.TrackData{}, err
 	}
 
-	// Store in database for persistence (async to avoid blocking)
-	// Async removed cause track db is needed for playlit relations :(
-	// go func() {
-	if err := s.dataStore.StoreTrack(context.Background(), &track); err != nil {
+	// STORE
+	// go func() { // 	// Async removed cause track db is needed for playlit relations :(
+	if err := s.dataStore.StoreTrack(ctx, &track); err != nil {
 		// Log error but don't fail the request
-		fmt.Printf("Warning: failed to store track %s in database: %v\n", trackID, err)
+		logger.Warn(ctx, "Failed to store track in db", logger.F("track_id", trackID), logger.F("err", err))
 	}
 	// }()
 
 	// Cache the result for fast future access
-	s.cache.SetTrack(trackID, track)
+	go func() {
+		if err := s.cache.SetTrack(trackID, track); err != nil {
+			logger.Warn(ctx, "Failed to store track in cache", logger.F("track_id", trackID), logger.F("err", err))
+		}
+	}()
 	return track, nil
 }
 
@@ -72,6 +77,7 @@ func (s *Spotify) FetchMultipleTracks(ctx context.Context, userID string, trackI
 	}
 	remaining = stillMissing
 
+	// All getch
 	if len(remaining) == 0 {
 		return results, nil
 	}
@@ -384,71 +390,24 @@ func (s *Spotify) fetchTrackFromAPI(ctx context.Context, accessToken, trackID st
 		return m.TrackData{}, err
 	}
 
-	// Extract album data
-	var albumData *m.AlbumData
-	if fetchTrackResponse.Album.ID != "" {
-		albumImageURL := ""
-		if len(fetchTrackResponse.Album.Images) > 0 {
-			albumImageURL = fetchTrackResponse.Album.Images[0].URL
-		}
-
-		// Extract album artists
-		albumArtists := make([]m.ArtistData, len(fetchTrackResponse.Album.Artists))
-		for i, artist := range fetchTrackResponse.Album.Artists {
-			albumArtists[i] = m.ArtistData{
-				ID:   artist.ID,
-				Name: artist.Name,
-			}
-		}
-
-		albumData = &m.AlbumData{
-			ID:                   fetchTrackResponse.Album.ID,
-			Name:                 fetchTrackResponse.Album.Name,
-			AlbumType:            fetchTrackResponse.Album.AlbumType,
-			ReleaseDate:          fetchTrackResponse.Album.ReleaseDate,
-			ReleaseDatePrecision: fetchTrackResponse.Album.ReleaseDatePrecision,
-			TotalTracks:          fetchTrackResponse.Album.TotalTracks,
-			ImageURL:             albumImageURL,
-			Artists:              albumArtists,
-			CachedAt:             time.Now(),
-			UpdatedAt:            time.Now(),
-		}
-	}
-
-	// Extract track artists
-	trackArtists := make([]m.TrackArtist, len(fetchTrackResponse.Artists))
+	// Extract track artists IDs
+	trackArtistIDs := make([]m.SpotifyID, 0, len(fetchTrackResponse.Artists))
 	for i, artist := range fetchTrackResponse.Artists {
-		trackArtists[i] = m.TrackArtist{
-			ArtistData: m.ArtistData{
-				ID:   artist.ID,
-				Name: artist.Name,
-			},
-			IsPrimary: i == 0, // First artist is considered primary
-		}
-	}
-
-	// Handle preview URL (can be null)
-	previewURL := ""
-	if fetchTrackResponse.PreviewURL != nil {
-		if url, ok := fetchTrackResponse.PreviewURL.(string); ok {
-			previewURL = url
-		}
+		trackArtistIDs[i] = m.SpotifyID(artist.ID)
 	}
 
 	return m.TrackData{
 		ID:          trackID,
 		Name:        fetchTrackResponse.Name,
-		Album:       albumData,
-		Artists:     trackArtists,
 		DurationMs:  fetchTrackResponse.DurationMs,
 		DiscNumber:  fetchTrackResponse.DiscNumber,
 		TrackNumber: fetchTrackResponse.TrackNumber,
 		Popularity:  fetchTrackResponse.Popularity,
 		Explicit:    fetchTrackResponse.Explicit,
-		PreviewURL:  previewURL,
-		IsLocal:     false, // Spotify API tracks are not local
+		IsLocal:     fetchTrackResponse.IsLocal,
+		AlbumID:     m.SpotifyID(fetchTrackResponse.Album.ID),
+		ArtistIDs:   trackArtistIDs,
 		CachedAt:    time.Now(),
-		UpdatedAt:   time.Now(),
 	}, nil
 }
 

@@ -15,8 +15,8 @@ import (
 
 type SpotifyCache interface {
 	// Basic entity cache operations (cache-only, no API calls)
-	GetTrack(trackId string) (m.TrackData, bool)
-	SetTrack(trackId string, track m.TrackData)
+	GetTrack(trackId string) (m.TrackData, error)
+	SetTrack(trackId string, track m.TrackData) error
 	GetMultipleTracks(trackIDs []string) (map[string]m.TrackData, []string)
 	SetMultipleTracks(tracks map[string]m.TrackData)
 	GetAlbum(albumId string) (m.AlbumData, bool)
@@ -76,29 +76,27 @@ func (r *RedisSpotifyCache) generateSearchKey(searchType, query string) string {
 }
 
 // Track cache operations
-func (r *RedisSpotifyCache) GetTrack(trackId string) (m.TrackData, bool) {
+func (r *RedisSpotifyCache) GetTrack(trackId string) (m.TrackData, error) {
 	var track m.TrackData
 	key := r.generateKey("track", trackId)
-
 	val, err := r.client.Get(r.ctx, key).Result()
 	if err != nil {
-		return m.TrackData{}, false
+		return m.TrackData{}, err
 	}
-
 	if err := json.Unmarshal([]byte(val), &track); err != nil {
-		return m.TrackData{}, false
+		return m.TrackData{}, err
 	}
-
-	return track, true
+	return track, nil
 }
 
-func (r *RedisSpotifyCache) SetTrack(trackId string, track m.TrackData) {
+func (r *RedisSpotifyCache) SetTrack(trackId string, track m.TrackData) error {
 	key := r.generateKey("track", trackId)
 	trackJson, err := json.Marshal(track)
 	if err != nil {
-		return
+		return err
 	}
 	r.client.Set(r.ctx, key, trackJson, r.ttl)
+	return nil
 }
 
 // Batch track operations
