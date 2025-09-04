@@ -106,19 +106,16 @@ func (r *RedisSpotifyCache) GetMultipleTracks(trackIDs []string) (map[string]m.T
 	if len(trackIDs) == 0 {
 		return make(map[string]m.TrackData), []string{}
 	}
-	// Build keys for pipeline operation
-	keys := make([]string, len(trackIDs))
-	for i, trackID := range trackIDs {
-		keys[i] = r.generateKey("track", trackID)
-	}
 
 	// Use Redis pipeline for batch GET
 	pipeline := r.client.Pipeline()
-	cmds := make([]*redis.StringCmd, len(keys))
-	for i, key := range keys {
+	cmds := make([]*redis.StringCmd, len(trackIDs))
+	for i, trackID := range trackIDs {
+		key := r.generateKey("track", trackID)
 		cmds[i] = pipeline.Get(r.ctx, key)
 	}
 
+	// build pipeline
 	if _, err := pipeline.Exec(r.ctx); err != nil {
 		logger.Error(r.ctx, "could not fetch batch all trackIDs")
 	}
@@ -156,16 +153,21 @@ func (r *RedisSpotifyCache) SetMultipleTracks(tracks map[string]m.TrackData) {
 
 	// Use Redis pipeline for batch SET
 	pipeline := r.client.Pipeline()
+	skippedCount := 0
 	for trackID, track := range tracks {
 		key := r.generateKey("track", trackID)
 		trackJson, err := json.Marshal(track)
 		if err != nil {
-			continue // Skip tracks that can't be marshaled
+			logger.Warn(r.ctx, "Failed to marshal track for cache", logger.F("trackID", trackID), logger.F("error", err))
+			skippedCount++
+			continue
 		}
 		pipeline.Set(r.ctx, key, trackJson, r.ttl)
 	}
 
-	pipeline.Exec(r.ctx)
+	if _, err := pipeline.Exec(r.ctx); err != nil {
+		logger.Warn(r.ctx, "Redis batch cache operation failed for tracks", logger.F("attempted", len(tracks)-skippedCount), logger.F("skipped", skippedCount), logger.F("error", err))
+	}
 }
 
 // Album cache operations
@@ -199,16 +201,12 @@ func (r *RedisSpotifyCache) GetMultipleAlbums(albumIDs []string) (map[string]m.A
 	if len(albumIDs) == 0 {
 		return make(map[string]m.AlbumData), []string{}
 	}
-	// Build keys for pipeline operation
-	keys := make([]string, len(albumIDs))
-	for i, albumID := range albumIDs {
-		keys[i] = r.generateKey("album", albumID)
-	}
 
-	// Use Redis pipeline for batch GET
+	// Build pipeline Redis
 	pipeline := r.client.Pipeline()
-	cmds := make([]*redis.StringCmd, len(keys))
-	for i, key := range keys {
+	cmds := make([]*redis.StringCmd, len(albumIDs))
+	for i, albumID := range albumIDs {
+		key := r.generateKey("album", albumID)
 		cmds[i] = pipeline.Get(r.ctx, key)
 	}
 
@@ -249,16 +247,21 @@ func (r *RedisSpotifyCache) SetMultipleAlbums(albums map[string]m.AlbumData) {
 
 	// Use Redis pipeline for batch SET
 	pipeline := r.client.Pipeline()
+	skippedCount := 0
 	for albumID, album := range albums {
 		key := r.generateKey("album", albumID)
 		albumJson, err := json.Marshal(album)
 		if err != nil {
-			continue // Skip albums that can't be marshaled
+			logger.Warn(r.ctx, "Failed to marshal album for cache", logger.F("albumID", albumID), logger.F("error", err))
+			skippedCount++
+			continue
 		}
 		pipeline.Set(r.ctx, key, albumJson, r.ttl)
 	}
 
-	pipeline.Exec(r.ctx)
+	if _, err := pipeline.Exec(r.ctx); err != nil {
+		logger.Warn(r.ctx, "Redis batch cache operation failed for albums", logger.F("attempted", len(albums)-skippedCount), logger.F("skipped", skippedCount), logger.F("error", err))
+	}
 }
 
 // Artist cache operations
@@ -292,19 +295,15 @@ func (r *RedisSpotifyCache) GetMultipleArtists(artistIDs []string) (map[string]m
 	if len(artistIDs) == 0 {
 		return make(map[string]m.ArtistData), []string{}
 	}
-	// Build keys for pipeline operation
-	keys := make([]string, len(artistIDs))
-	for i, artistID := range artistIDs {
-		keys[i] = r.generateKey("artist", artistID)
-	}
-
-	// Use Redis pipeline for batch GET
+	// Build pipeline Redis
 	pipeline := r.client.Pipeline()
-	cmds := make([]*redis.StringCmd, len(keys))
-	for i, key := range keys {
+	cmds := make([]*redis.StringCmd, len(artistIDs))
+	for i, artistID := range artistIDs {
+		key := r.generateKey("artist", artistID)
 		cmds[i] = pipeline.Get(r.ctx, key)
 	}
 
+	// Execute
 	if _, err := pipeline.Exec(r.ctx); err != nil {
 		logger.Error(r.ctx, "could not fetch batch all artistIDs")
 	}
@@ -341,15 +340,20 @@ func (r *RedisSpotifyCache) SetMultipleArtists(artists map[string]m.ArtistData) 
 	}
 	// Use Redis pipeline for batch SET
 	pipeline := r.client.Pipeline()
+	skippedCount := 0
 	for artistID, artist := range artists {
 		key := r.generateKey("artist", artistID)
 		artistJson, err := json.Marshal(artist)
 		if err != nil {
-			continue // Skip artists that can't be marshaled
+			logger.Warn(r.ctx, "Failed to marshal artist for cache", logger.F("artistID", artistID), logger.F("error", err))
+			skippedCount++
+			continue
 		}
 		pipeline.Set(r.ctx, key, artistJson, r.ttl)
 	}
-	pipeline.Exec(r.ctx)
+	if _, err := pipeline.Exec(r.ctx); err != nil {
+		logger.Warn(r.ctx, "Redis batch cache operation failed for artists", logger.F("attempted", len(artists)-skippedCount), logger.F("skipped", skippedCount), logger.F("error", err))
+	}
 }
 
 // Playlist cache operations
@@ -382,19 +386,15 @@ func (r *RedisSpotifyCache) GetMultiplePlaylists(playlistIDs []string) (map[stri
 	if len(playlistIDs) == 0 {
 		return make(map[string]m.PlaylistData), []string{}
 	}
-	// Build keys for pipeline operation
-	keys := make([]string, len(playlistIDs))
-	for i, playlistID := range playlistIDs {
-		keys[i] = r.generateKey("playlist", playlistID)
-	}
-
-	// Use Redis pipeline for batch GET
+	// Build pipeline Redis
 	pipeline := r.client.Pipeline()
-	cmds := make([]*redis.StringCmd, len(keys))
-	for i, key := range keys {
+	cmds := make([]*redis.StringCmd, len(playlistIDs))
+	for i, playlistID := range playlistIDs {
+		key := r.generateKey("playlist", playlistID)
 		cmds[i] = pipeline.Get(r.ctx, key)
 	}
 
+	// Execute pipeline
 	if _, err := pipeline.Exec(r.ctx); err != nil {
 		logger.Error(r.ctx, "could not fetch batch all playlistIDs")
 	}
@@ -404,21 +404,18 @@ func (r *RedisSpotifyCache) GetMultiplePlaylists(playlistIDs []string) (map[stri
 	var missing []string
 	for i, cmd := range cmds {
 		playlistID := playlistIDs[i]
-
 		// single command error:
 		val, err := cmd.Result()
 		if err != nil {
 			missing = append(missing, playlistID)
 			continue
 		}
-
 		// unmarshal into PlaylistData
 		var playlist m.PlaylistData
 		if err := json.Unmarshal([]byte(val), &playlist); err != nil {
 			missing = append(missing, playlistID)
 			continue
 		}
-
 		found[playlistID] = playlist
 	}
 	return found, missing
@@ -430,15 +427,20 @@ func (r *RedisSpotifyCache) SetMultiplePlaylists(playlists map[string]m.Playlist
 	}
 	// Use Redis pipeline for batch SET
 	pipeline := r.client.Pipeline()
+	skippedCount := 0
 	for playlistID, playlist := range playlists {
 		key := r.generateKey("playlist", playlistID)
 		playlistJson, err := json.Marshal(playlist)
 		if err != nil {
-			continue // Skip playlists that can't be marshaled
+			logger.Warn(r.ctx, "Failed to marshal playlist for cache", logger.F("playlistID", playlistID), logger.F("error", err))
+			skippedCount++
+			continue
 		}
 		pipeline.Set(r.ctx, key, playlistJson, r.ttl)
 	}
-	pipeline.Exec(r.ctx)
+	if _, err := pipeline.Exec(r.ctx); err != nil {
+		logger.Warn(r.ctx, "Redis batch cache operation failed for playlists", logger.F("attempted", len(playlists)-skippedCount), logger.F("skipped", skippedCount), logger.F("error", err))
+	}
 }
 
 func (r *RedisSpotifyCache) GetPlaylistTracks(playlistId string) ([]string, bool) {
