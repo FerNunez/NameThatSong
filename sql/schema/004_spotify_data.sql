@@ -11,7 +11,7 @@ CREATE TABLE spotify_tracks (
     is_local BOOLEAN DEFAULT FALSE,
     album_id TEXT NOT NULL,
     artist_ids TEXT[] NOT NULL,
-    cached_at TIMESTAMP NOT NULL,
+    cached_at TIMESTAMP NOT NULL
 );
 
 
@@ -25,7 +25,7 @@ CREATE TABLE spotify_albums (
     total_tracks INTEGER NOT NULL DEFAULT 0,
     image_url TEXT,
     label VARCHAR(255),
-    popularity INTEGER NOT NULL DEFAULT 0 ,
+    popularity INTEGER NOT NULL DEFAULT 0,
     artist_ids TEXT[] NOT NULL,
     track_ids TEXT[] NOT NULL,
     cached_at TIMESTAMP NOT NULL
