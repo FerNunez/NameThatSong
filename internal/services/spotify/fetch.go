@@ -18,7 +18,7 @@ import (
 
 // FetchTrack fetches a track using three-tier strategy: Cache → Database → API
 func (s *Spotify) FetchTrack(ctx context.Context, userID, trackID string) (m.TrackData, error) {
-	// Get
+	// GET
 	// Tier 1: Check Redis cache first
 	if cachedTrack, err := s.cache.GetTrack(trackID); err == nil {
 		return cachedTrack, nil
@@ -77,7 +77,7 @@ func (s *Spotify) FetchMultipleTracks(ctx context.Context, userID string, trackI
 	}
 	remaining = stillMissing
 
-	// All getch
+	// All fetched
 	if len(remaining) == 0 {
 		return results, nil
 	}
@@ -785,7 +785,6 @@ func (s *Spotify) fetchPlaylistFromAPI(ctx context.Context, accessToken, playlis
 		TotalTracks:      fetchPlaylistResponse.Tracks.Total,
 		ImageURL:         imageUrl,
 		CachedAt:         time.Now(),
-		UpdatedAt:        time.Now(),
 	}, trackIDs, albumIDs, nil
 }
 
@@ -1088,73 +1087,24 @@ func (s *Spotify) fetchTrackBatchFromAPI(ctx context.Context, accessToken string
 			continue
 		}
 
-		// Extract album data
-		var albumData *m.AlbumData
-		if trackData.Album.ID != "" {
-			albumImageURL := ""
-			if len(trackData.Album.Images) > 0 {
-				albumImageURL = trackData.Album.Images[0].URL
-			}
-
-			// Extract album artists
-			albumArtists := make([]m.ArtistData, len(trackData.Album.Artists))
-			for i, artist := range trackData.Album.Artists {
-				albumArtists[i] = m.ArtistData{
-					ID:   artist.ID,
-					Name: artist.Name,
-				}
-			}
-
-			albumData = &m.AlbumData{
-				ID:                   trackData.Album.ID,
-				Name:                 trackData.Album.Name,
-				AlbumType:            trackData.Album.AlbumType,
-				ReleaseDate:          trackData.Album.ReleaseDate,
-				ReleaseDatePrecision: trackData.Album.ReleaseDatePrecision,
-				TotalTracks:          trackData.Album.TotalTracks,
-				ImageURL:             albumImageURL,
-				Artists:              albumArtists,
-				CachedAt:             time.Now(),
-				UpdatedAt:            time.Now(),
-			}
-		}
-
-		// Extract track artists
-		trackArtists := make([]m.TrackArtist, len(trackData.Artists))
+		// collect artists IDs
+		artistDIs := make([]m.SpotifyID, len(trackData.Artists))
 		for i, artist := range trackData.Artists {
-			trackArtists[i] = m.TrackArtist{
-				ArtistData: m.ArtistData{
-					ID:   artist.ID,
-					Name: artist.Name,
-				},
-				IsPrimary: i == 0, // First artist is considered primary
-			}
+			artistDIs[i] = m.SpotifyID(artist.ID) // First artist is considered primary
 		}
-
-		// Handle preview URL (can be null)
-		previewURL := ""
-		if trackData.PreviewURL != nil {
-			if url, ok := trackData.PreviewURL.(string); ok {
-				previewURL = url
-			}
-		}
-
 		track := m.TrackData{
 			ID:          trackData.ID,
 			Name:        trackData.Name,
-			Album:       albumData,
-			Artists:     trackArtists,
 			DurationMs:  trackData.DurationMs,
 			DiscNumber:  trackData.DiscNumber,
 			TrackNumber: trackData.TrackNumber,
 			Popularity:  trackData.Popularity,
 			Explicit:    trackData.Explicit,
-			PreviewURL:  previewURL,
-			IsLocal:     false, // Spotify API tracks are not local
+			IsLocal:     trackData.IsLocal,
+			AlbumID:     m.SpotifyID(trackData.Album.ID),
+			ArtistIDs:   artistDIs,
 			CachedAt:    time.Now(),
-			UpdatedAt:   time.Now(),
 		}
-
 		tracks = append(tracks, track)
 	}
 
