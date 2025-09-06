@@ -15,22 +15,22 @@ import (
 
 type SpotifyCache interface {
 	// Basic entity cache operations (cache-only, no API calls)
-	GetTrack(trackId string) (m.TrackData, error)
-	SetTrack(trackId string, track m.TrackData) error
-	GetMultipleTracks(trackIDs []string) (map[string]m.TrackData, []string)
-	SetMultipleTracks(tracks map[string]m.TrackData)
-	GetAlbum(albumId string) (m.AlbumData, bool)
-	SetAlbum(albumId string, album m.AlbumData)
-	GetMultipleAlbums(albumIDs []string) (map[string]m.AlbumData, []string)
-	SetMultipleAlbums(albums map[string]m.AlbumData)
-	GetArtist(artistId string) (m.ArtistData, bool)
-	SetArtist(artistId string, artist m.ArtistData)
-	GetMultipleArtists(artistIDs []string) (map[string]m.ArtistData, []string)
-	SetMultipleArtists(artists map[string]m.ArtistData)
-	GetPlaylist(playlistId string) (m.PlaylistData, bool)
-	SetPlaylist(playlistId string, playlist m.PlaylistData)
-	GetMultiplePlaylists(artistIDs []string) (map[string]m.PlaylistData, []string)
-	SetMultiplePlaylists(artists map[string]m.PlaylistData)
+	GetTrack(trackId m.SpotifyID) (m.TrackData, error)
+	SetTrack(trackId m.SpotifyID, track m.TrackData) error
+	GetMultipleTracks(trackIDs []m.SpotifyID) (map[m.SpotifyID]m.TrackData, []m.SpotifyID)
+	SetMultipleTracks(tracks map[m.SpotifyID]m.TrackData)
+	GetAlbum(albumId m.SpotifyID) (m.AlbumData, bool)
+	SetAlbum(albumId m.SpotifyID, album m.AlbumData)
+	GetMultipleAlbums(albumIDs []m.SpotifyID) (map[m.SpotifyID]m.AlbumData, []m.SpotifyID)
+	SetMultipleAlbums(albums map[m.SpotifyID]m.AlbumData)
+	GetArtist(artistId m.SpotifyID) (m.ArtistData, bool)
+	SetArtist(artistId m.SpotifyID, artist m.ArtistData)
+	GetMultipleArtists(artistIDs []m.SpotifyID) (map[m.SpotifyID]m.ArtistData, []m.SpotifyID)
+	SetMultipleArtists(artists map[m.SpotifyID]m.ArtistData)
+	GetPlaylist(playlistId m.SpotifyID) (m.PlaylistData, bool)
+	SetPlaylist(playlistId m.SpotifyID, playlist m.PlaylistData)
+	GetMultiplePlaylists(playlistIDs []m.SpotifyID) (map[m.SpotifyID]m.PlaylistData, []m.SpotifyID)
+	SetMultiplePlaylists(playlists map[m.SpotifyID]m.PlaylistData)
 	GetPlaylistTracks(playlistId string) ([]string, bool)
 	SetPlaylistTracks(playlistId string, tracks []string)
 	GetPlaylistAlbums(playlistId string) ([]string, bool)
@@ -65,8 +65,8 @@ func NewRedisSpotifyCache(redisClient *redis.Client) *RedisSpotifyCache {
 	}
 }
 
-func (r *RedisSpotifyCache) generateKey(entityType, entityId string) string {
-	return fmt.Sprintf("spotify:%s:%s", entityType, entityId)
+func (r *RedisSpotifyCache) generateKey(entityType string, entityId m.SpotifyID) string {
+	return fmt.Sprintf("spotify:%s:%s", entityType, string(entityId))
 }
 
 func (r *RedisSpotifyCache) generateSearchKey(searchType, query string) string {
@@ -76,7 +76,7 @@ func (r *RedisSpotifyCache) generateSearchKey(searchType, query string) string {
 }
 
 // Track cache operations
-func (r *RedisSpotifyCache) GetTrack(trackId string) (m.TrackData, error) {
+func (r *RedisSpotifyCache) GetTrack(trackId m.SpotifyID) (m.TrackData, error) {
 	var track m.TrackData
 	key := r.generateKey("track", trackId)
 	val, err := r.client.Get(r.ctx, key).Result()
@@ -89,7 +89,7 @@ func (r *RedisSpotifyCache) GetTrack(trackId string) (m.TrackData, error) {
 	return track, nil
 }
 
-func (r *RedisSpotifyCache) SetTrack(trackId string, track m.TrackData) error {
+func (r *RedisSpotifyCache) SetTrack(trackId m.SpotifyID, track m.TrackData) error {
 	key := r.generateKey("track", trackId)
 	trackJson, err := json.Marshal(track)
 	if err != nil {
@@ -100,11 +100,7 @@ func (r *RedisSpotifyCache) SetTrack(trackId string, track m.TrackData) error {
 }
 
 // Batch track operations
-func (r *RedisSpotifyCache) GetMultipleTracks(trackIDs []string) (map[string]m.TrackData, []string) {
-	if len(trackIDs) == 0 {
-		return make(map[string]m.TrackData), []string{}
-	}
-
+func (r *RedisSpotifyCache) GetMultipleTracks(trackIDs []m.SpotifyID) (map[m.SpotifyID]m.TrackData, []m.SpotifyID) {
 	// Use Redis pipeline for batch GET
 	pipeline := r.client.Pipeline()
 	cmds := make([]*redis.StringCmd, len(trackIDs))
@@ -119,8 +115,8 @@ func (r *RedisSpotifyCache) GetMultipleTracks(trackIDs []string) (map[string]m.T
 	}
 
 	// Check what is missing, and what worked
-	found := make(map[string]m.TrackData)
-	var missing []string
+	found := make(map[m.SpotifyID]m.TrackData)
+	var missing []m.SpotifyID
 	for i, cmd := range cmds {
 		trackID := trackIDs[i]
 
@@ -137,14 +133,13 @@ func (r *RedisSpotifyCache) GetMultipleTracks(trackIDs []string) (map[string]m.T
 			missing = append(missing, trackID)
 			continue
 		}
-
 		found[trackID] = track
 	}
 
 	return found, missing
 }
 
-func (r *RedisSpotifyCache) SetMultipleTracks(tracks map[string]m.TrackData) {
+func (r *RedisSpotifyCache) SetMultipleTracks(tracks map[m.SpotifyID]m.TrackData) {
 	if len(tracks) == 0 {
 		return
 	}
@@ -169,7 +164,7 @@ func (r *RedisSpotifyCache) SetMultipleTracks(tracks map[string]m.TrackData) {
 }
 
 // Album cache operations
-func (r *RedisSpotifyCache) GetAlbum(albumId string) (m.AlbumData, bool) {
+func (r *RedisSpotifyCache) GetAlbum(albumId m.SpotifyID) (m.AlbumData, bool) {
 	var album m.AlbumData
 	key := r.generateKey("album", albumId)
 
@@ -185,7 +180,7 @@ func (r *RedisSpotifyCache) GetAlbum(albumId string) (m.AlbumData, bool) {
 	return album, true
 }
 
-func (r *RedisSpotifyCache) SetAlbum(albumId string, album m.AlbumData) {
+func (r *RedisSpotifyCache) SetAlbum(albumId m.SpotifyID, album m.AlbumData) {
 	key := r.generateKey("album", albumId)
 	albumJson, err := json.Marshal(album)
 	if err != nil {
@@ -195,9 +190,9 @@ func (r *RedisSpotifyCache) SetAlbum(albumId string, album m.AlbumData) {
 }
 
 // Batch album operations
-func (r *RedisSpotifyCache) GetMultipleAlbums(albumIDs []string) (map[string]m.AlbumData, []string) {
+func (r *RedisSpotifyCache) GetMultipleAlbums(albumIDs []m.SpotifyID) (map[m.SpotifyID]m.AlbumData, []m.SpotifyID) {
 	if len(albumIDs) == 0 {
-		return make(map[string]m.AlbumData), []string{}
+		return make(map[m.SpotifyID]m.AlbumData), []m.SpotifyID{}
 	}
 
 	// Build pipeline Redis
@@ -213,8 +208,8 @@ func (r *RedisSpotifyCache) GetMultipleAlbums(albumIDs []string) (map[string]m.A
 	}
 
 	// Check what is missing, and what worked
-	found := make(map[string]m.AlbumData)
-	var missing []string
+	found := make(map[m.SpotifyID]m.AlbumData)
+	var missing []m.SpotifyID
 	for i, cmd := range cmds {
 		albumID := albumIDs[i]
 
@@ -238,7 +233,7 @@ func (r *RedisSpotifyCache) GetMultipleAlbums(albumIDs []string) (map[string]m.A
 	return found, missing
 }
 
-func (r *RedisSpotifyCache) SetMultipleAlbums(albums map[string]m.AlbumData) {
+func (r *RedisSpotifyCache) SetMultipleAlbums(albums map[m.SpotifyID]m.AlbumData) {
 	if len(albums) == 0 {
 		return
 	}
@@ -263,7 +258,7 @@ func (r *RedisSpotifyCache) SetMultipleAlbums(albums map[string]m.AlbumData) {
 }
 
 // Artist cache operations
-func (r *RedisSpotifyCache) GetArtist(artistId string) (m.ArtistData, bool) {
+func (r *RedisSpotifyCache) GetArtist(artistId m.SpotifyID) (m.ArtistData, bool) {
 	var artist m.ArtistData
 	key := r.generateKey("artist", artistId)
 
@@ -279,7 +274,7 @@ func (r *RedisSpotifyCache) GetArtist(artistId string) (m.ArtistData, bool) {
 	return artist, true
 }
 
-func (r *RedisSpotifyCache) SetArtist(artistId string, artist m.ArtistData) {
+func (r *RedisSpotifyCache) SetArtist(artistId m.SpotifyID, artist m.ArtistData) {
 	key := r.generateKey("artist", artistId)
 	artistJson, err := json.Marshal(artist)
 	if err != nil {
@@ -289,9 +284,9 @@ func (r *RedisSpotifyCache) SetArtist(artistId string, artist m.ArtistData) {
 }
 
 // Batch artist operations
-func (r *RedisSpotifyCache) GetMultipleArtists(artistIDs []string) (map[string]m.ArtistData, []string) {
+func (r *RedisSpotifyCache) GetMultipleArtists(artistIDs []m.SpotifyID) (map[m.SpotifyID]m.ArtistData, []m.SpotifyID) {
 	if len(artistIDs) == 0 {
-		return make(map[string]m.ArtistData), []string{}
+		return make(map[m.SpotifyID]m.ArtistData), []m.SpotifyID{}
 	}
 	// Build pipeline Redis
 	pipeline := r.client.Pipeline()
@@ -307,8 +302,8 @@ func (r *RedisSpotifyCache) GetMultipleArtists(artistIDs []string) (map[string]m
 	}
 
 	// Check what is missing, and what worked
-	found := make(map[string]m.ArtistData)
-	var missing []string
+	found := make(map[m.SpotifyID]m.ArtistData)
+	var missing []m.SpotifyID
 	for i, cmd := range cmds {
 		artistID := artistIDs[i]
 
@@ -332,7 +327,7 @@ func (r *RedisSpotifyCache) GetMultipleArtists(artistIDs []string) (map[string]m
 	return found, missing
 }
 
-func (r *RedisSpotifyCache) SetMultipleArtists(artists map[string]m.ArtistData) {
+func (r *RedisSpotifyCache) SetMultipleArtists(artists map[m.SpotifyID]m.ArtistData) {
 	if len(artists) == 0 {
 		return
 	}
@@ -355,7 +350,7 @@ func (r *RedisSpotifyCache) SetMultipleArtists(artists map[string]m.ArtistData) 
 }
 
 // Playlist cache operations
-func (r *RedisSpotifyCache) GetPlaylist(playlistId string) (m.PlaylistData, bool) {
+func (r *RedisSpotifyCache) GetPlaylist(playlistId m.SpotifyID) (m.PlaylistData, bool) {
 	var playlist m.PlaylistData
 	key := r.generateKey("playlist", playlistId)
 
@@ -370,7 +365,7 @@ func (r *RedisSpotifyCache) GetPlaylist(playlistId string) (m.PlaylistData, bool
 	return playlist, true
 }
 
-func (r *RedisSpotifyCache) SetPlaylist(playlistId string, playlist m.PlaylistData) {
+func (r *RedisSpotifyCache) SetPlaylist(playlistId m.SpotifyID, playlist m.PlaylistData) {
 	key := r.generateKey("playlist", playlistId)
 	playlistJson, err := json.Marshal(playlist)
 	if err != nil {
@@ -380,9 +375,9 @@ func (r *RedisSpotifyCache) SetPlaylist(playlistId string, playlist m.PlaylistDa
 }
 
 // Batch playlist operations
-func (r *RedisSpotifyCache) GetMultiplePlaylists(playlistIDs []string) (map[string]m.PlaylistData, []string) {
+func (r *RedisSpotifyCache) GetMultiplePlaylists(playlistIDs []m.SpotifyID) (map[m.SpotifyID]m.PlaylistData, []m.SpotifyID) {
 	if len(playlistIDs) == 0 {
-		return make(map[string]m.PlaylistData), []string{}
+		return make(map[m.SpotifyID]m.PlaylistData), []m.SpotifyID{}
 	}
 	// Build pipeline Redis
 	pipeline := r.client.Pipeline()
@@ -398,8 +393,8 @@ func (r *RedisSpotifyCache) GetMultiplePlaylists(playlistIDs []string) (map[stri
 	}
 
 	// Check what is missing, and what worked
-	found := make(map[string]m.PlaylistData)
-	var missing []string
+	found := make(map[m.SpotifyID]m.PlaylistData)
+	var missing []m.SpotifyID
 	for i, cmd := range cmds {
 		playlistID := playlistIDs[i]
 		// single command error:
@@ -419,7 +414,7 @@ func (r *RedisSpotifyCache) GetMultiplePlaylists(playlistIDs []string) (map[stri
 	return found, missing
 }
 
-func (r *RedisSpotifyCache) SetMultiplePlaylists(playlists map[string]m.PlaylistData) {
+func (r *RedisSpotifyCache) SetMultiplePlaylists(playlists map[m.SpotifyID]m.PlaylistData) {
 	if len(playlists) == 0 {
 		return
 	}
@@ -442,7 +437,7 @@ func (r *RedisSpotifyCache) SetMultiplePlaylists(playlists map[string]m.Playlist
 }
 
 func (r *RedisSpotifyCache) GetPlaylistTracks(playlistId string) ([]string, bool) {
-	key := r.generateKey("playlist:trackIDs", playlistId)
+	key := r.generateKey("playlist:trackIDs", m.SpotifyID(playlistId))
 
 	val, err := r.client.Get(r.ctx, key).Result()
 	if err != nil {
@@ -457,7 +452,7 @@ func (r *RedisSpotifyCache) GetPlaylistTracks(playlistId string) ([]string, bool
 	return trackIDs, true
 }
 func (r *RedisSpotifyCache) SetPlaylistTracks(playlistId string, tracks []string) {
-	key := r.generateKey("playlist:trackIDs", playlistId)
+	key := r.generateKey("playlist:trackIDs", m.SpotifyID(playlistId))
 
 	playlistJson, err := json.Marshal(tracks)
 	if err != nil {
@@ -467,7 +462,7 @@ func (r *RedisSpotifyCache) SetPlaylistTracks(playlistId string, tracks []string
 }
 
 func (r *RedisSpotifyCache) GetPlaylistAlbums(playlistId string) ([]string, bool) {
-	key := r.generateKey("playlist:albumIDs", playlistId)
+	key := r.generateKey("playlist:albumIDs", m.SpotifyID(playlistId))
 
 	val, err := r.client.Get(r.ctx, key).Result()
 	if err != nil {
@@ -482,7 +477,7 @@ func (r *RedisSpotifyCache) GetPlaylistAlbums(playlistId string) ([]string, bool
 	return albumIDs, true
 }
 func (r *RedisSpotifyCache) SetPlaylistAlbums(playlistId string, albums []string) {
-	key := r.generateKey("playlist:albumIDs", playlistId)
+	key := r.generateKey("playlist:albumIDs", m.SpotifyID(playlistId))
 
 	playlistJson, err := json.Marshal(albums)
 	if err != nil {
