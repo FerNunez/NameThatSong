@@ -17,7 +17,7 @@ import (
 // =============================================================================
 
 // FetchTrack fetches a track using three-tier strategy: Cache → Database → API
-func (s *Spotify) FetchTrack(ctx context.Context, userID, trackID string) (m.TrackData, error) {
+func (s *Spotify) FetchTrack(ctx context.Context, userID string, trackID m.SpotifyID) (m.TrackData, error) {
 	// GET
 	// Tier 1: Check Redis cache first
 	if cachedTrack, err := s.cache.GetTrack(trackID); err == nil {
@@ -25,7 +25,7 @@ func (s *Spotify) FetchTrack(ctx context.Context, userID, trackID string) (m.Tra
 	}
 	logger.Debug(ctx, "couldnt find track in cache", logger.F("track_id", trackID))
 	// Tier 2: Check database for persistent storage
-	if dbTrack, err := s.dataStore.GetTrack(ctx, trackID); err == nil && dbTrack != nil {
+	if dbTrack, err := s.dataStore.GetTrack(ctx, string(trackID)); err == nil && dbTrack != nil {
 		// Found in database, update cache and return
 		s.cache.SetTrack(trackID, *dbTrack)
 		return *dbTrack, nil
@@ -46,30 +46,29 @@ func (s *Spotify) FetchTrack(ctx context.Context, userID, trackID string) (m.Tra
 	// go func() { // 	// Async removed cause track db is needed for playlit relations :(
 	if err := s.dataStore.StoreTrack(ctx, &track); err != nil {
 		// Log error but don't fail the request
-		logger.Warn(ctx, "Failed to store track in db", logger.F("track_id", trackID), logger.F("err", err))
+		logger.Warn(ctx, "Failed to store track in db", logger.F("track_id", string(trackID)), logger.F("err", err))
 	}
 	// }()
 
 	// Cache the result for fast future access
 	go func() {
 		if err := s.cache.SetTrack(trackID, track); err != nil {
-			logger.Warn(ctx, "Failed to store track in cache", logger.F("track_id", trackID), logger.F("err", err))
+			logger.Warn(ctx, "Failed to store track in cache", logger.F("track_id", string(trackID)), logger.F("err", err))
 		}
 	}()
 	return track, nil
 }
 
 // FetchMultipleTracks fetches multiple tracks using three-tier strategy with batch processing
-func (s *Spotify) FetchMultipleTracks(ctx context.Context, userID string, trackIDs []string) ([]m.TrackData, error) {
+func (s *Spotify) FetchMultipleTracks(ctx context.Context, userID string, trackIDs []m.SpotifyID) ([]m.TrackData, error) {
 	if len(trackIDs) == 0 {
 		return []m.TrackData{}, nil
 	}
-
 	// Remove duplicates to avoid unnecessary processing
 	uniqueIDs := removeDuplicates(trackIDs)
-	results := make([]m.TrackData, 0, len(uniqueIDs))
-	remaining := uniqueIDs
 
+	remaining := uniqueIDs
+	results := make([]m.TrackData, 0, len(uniqueIDs))
 	// Tier 1: Check Redis cache with batch operation
 	cachedTracks, stillMissing := s.cache.GetMultipleTracks(remaining)
 	for _, track := range cachedTracks {
@@ -89,10 +88,10 @@ func (s *Spotify) FetchMultipleTracks(ctx context.Context, userID string, trackI
 	}
 
 	// Update cache with database results and add to results
-	cacheMap := make(map[string]m.TrackData)
+	cacheMap := make(map[m.SpotifyID]m.TrackData)
 	for trackID, track := range dbTracks {
 		results = append(results, *track)
-		cacheMap[trackID] = *track
+		cacheMap[m.SpotifyID(trackID)] = *track
 	}
 	if len(cacheMap) > 0 {
 		s.cache.SetMultipleTracks(cacheMap)
@@ -123,10 +122,10 @@ func (s *Spotify) FetchMultipleTracks(ctx context.Context, userID string, trackI
 	// Store API results in database and cache
 	if len(apiTracks) > 0 {
 		trackPointers := make([]*m.TrackData, len(apiTracks))
-		cacheMap := make(map[string]m.TrackData)
+		cacheMap := make(map[m.SpotifyID]m.TrackData)
 		for i, track := range apiTracks {
 			trackPointers[i] = &track
-			cacheMap[track.ID] = track
+			cacheMap[m.SpotifyID(track.ID)] = track
 		}
 
 		// Store in database (async to avoid blocking)
@@ -146,14 +145,14 @@ func (s *Spotify) FetchMultipleTracks(ctx context.Context, userID string, trackI
 }
 
 // FetchAlbum fetches an album using three-tier strategy: Cache → Database → API
-func (s *Spotify) FetchAlbum(ctx context.Context, userID, albumID string) (m.AlbumData, error) {
+func (s *Spotify) FetchAlbum(ctx context.Context, userID string, albumID m.SpotifyID) (m.AlbumData, error) {
 	// Tier 1: Check Redis cache first
 	if cachedAlbum, found := s.cache.GetAlbum(albumID); found {
 		return cachedAlbum, nil
 	}
 
 	// Tier 2: Check database for persistent storage
-	if dbAlbum, err := s.dataStore.GetAlbum(ctx, albumID); err == nil && dbAlbum != nil {
+	if dbAlbum, err := s.dataStore.GetAlbum(ctx, string(albumID)); err == nil && dbAlbum != nil {
 		// Found in database, update cache and return
 		s.cache.SetAlbum(albumID, *dbAlbum)
 		return *dbAlbum, nil
@@ -174,7 +173,7 @@ func (s *Spotify) FetchAlbum(ctx context.Context, userID, albumID string) (m.Alb
 	go func() {
 		if err := s.dataStore.StoreAlbum(context.Background(), &album); err != nil {
 			// Log error but don't fail the request
-			fmt.Printf("Warning: failed to store album %s in database: %v\n", albumID, err)
+			fmt.Printf("Warning: failed to store album %s in database: %v\n", string(albumID), err)
 		}
 	}()
 
@@ -184,14 +183,14 @@ func (s *Spotify) FetchAlbum(ctx context.Context, userID, albumID string) (m.Alb
 }
 
 // FetchArtist fetches an artist using three-tier strategy: Cache → Database → API
-func (s *Spotify) FetchArtist(ctx context.Context, userID, artistID string) (m.ArtistData, error) {
+func (s *Spotify) FetchArtist(ctx context.Context, userID string, artistID m.SpotifyID) (m.ArtistData, error) {
 	// Tier 1: Check Redis cache first
 	if cachedArtist, found := s.cache.GetArtist(artistID); found {
 		return cachedArtist, nil
 	}
 
 	// Tier 2: Check database for persistent storage
-	if dbArtist, err := s.dataStore.GetArtist(ctx, artistID); err == nil && dbArtist != nil {
+	if dbArtist, err := s.dataStore.GetArtist(ctx, string(artistID)); err == nil && dbArtist != nil {
 		// Found in database, update cache and return
 		s.cache.SetArtist(artistID, *dbArtist)
 		return *dbArtist, nil
@@ -212,7 +211,7 @@ func (s *Spotify) FetchArtist(ctx context.Context, userID, artistID string) (m.A
 	go func() {
 		if err := s.dataStore.StoreArtist(context.Background(), &artist); err != nil {
 			// Log error but don't fail the request
-			fmt.Printf("Warning: failed to store artist %s in database: %v\n", artistID, err)
+			fmt.Printf("Warning: failed to store artist %s in database: %v\n", string(artistID), err)
 		}
 	}()
 
@@ -222,17 +221,17 @@ func (s *Spotify) FetchArtist(ctx context.Context, userID, artistID string) (m.A
 }
 
 // FetchPlaylist fetches a playlist using three-tier strategy: Cache → Database → API
-func (s *Spotify) FetchPlaylist(ctx context.Context, userID, playlistID string) (m.PlaylistData, []string, []string, error) {
+func (s *Spotify) FetchPlaylist(ctx context.Context, userID string, playlistID m.SpotifyID) (m.PlaylistData, []string, []string, error) {
 	// // Tier 1: Check Redis cache first
 	if cachedPlaylist, found := s.cache.GetPlaylist(playlistID); found {
-		trackIDs, _ := s.cache.GetPlaylistTracks(playlistID)
-		albumIDs, _ := s.cache.GetPlaylistAlbums(playlistID)
+		trackIDs, _ := s.cache.GetPlaylistTracks(string(playlistID))
+		albumIDs, _ := s.cache.GetPlaylistAlbums(string(playlistID))
 		return cachedPlaylist, trackIDs, albumIDs, nil
 	}
 
 	// Tier 2: Check database for persistent storage
-	if dbPlaylist, err := s.dataStore.GetPlaylist(ctx, playlistID); err == nil && dbPlaylist != nil {
-		trackIDs, _ := s.dataStore.GetPlaylistTracks(ctx, playlistID)
+	if dbPlaylist, err := s.dataStore.GetPlaylist(ctx, string(playlistID)); err == nil && dbPlaylist != nil {
+		trackIDs, _ := s.dataStore.GetPlaylistTracks(ctx, string(playlistID))
 
 		albumIDs := make([]string, 0, len(trackIDs))
 		for _, trackID := range trackIDs {
@@ -245,8 +244,8 @@ func (s *Spotify) FetchPlaylist(ctx context.Context, userID, playlistID string) 
 
 		// Found in database, update cache and return
 		s.cache.SetPlaylist(playlistID, *dbPlaylist)
-		s.cache.SetPlaylistTracks(playlistID, trackIDs)
-		s.cache.SetPlaylistAlbums(playlistID, albumIDs)
+		s.cache.SetPlaylistTracks(string(playlistID), trackIDs)
+		s.cache.SetPlaylistAlbums(string(playlistID), albumIDs)
 		return *dbPlaylist, trackIDs, albumIDs, nil
 	}
 	//
@@ -262,15 +261,20 @@ func (s *Spotify) FetchPlaylist(ctx context.Context, userID, playlistID string) 
 		return m.PlaylistData{}, []string{}, []string{}, err
 	}
 
+	// Convert string track IDs to m.SpotifyID for batch fetching
+	spotifyTrackIDs := make([]m.SpotifyID, len(trackIDs))
+	for i, id := range trackIDs {
+		spotifyTrackIDs[i] = m.SpotifyID(id)
+	}
 	// Use batch fetching for tracks for better performance
-	_, err = s.FetchMultipleTracks(ctx, userID, trackIDs)
+	_, err = s.FetchMultipleTracks(ctx, userID, spotifyTrackIDs)
 	if err != nil {
 		return m.PlaylistData{}, []string{}, []string{}, err
 	}
 
 	// Albums still need individual fetching since we don't have batch album fetching yet
 	for _, albumID := range albumIDs {
-		_, err := s.FetchAlbum(ctx, userID, albumID)
+		_, err := s.FetchAlbum(ctx, userID, m.SpotifyID(albumID))
 		if err != nil {
 			return m.PlaylistData{}, []string{}, []string{}, err
 		}
@@ -283,7 +287,7 @@ func (s *Spotify) FetchPlaylist(ctx context.Context, userID, playlistID string) 
 			fmt.Printf("Warning: failed to store playlist %s in database: %v\n", playlistID, err)
 		}
 
-		if err := s.dataStore.UpsertPlaylistTracks(context.Background(), playlistID, trackIDs); err != nil {
+		if err := s.dataStore.UpsertPlaylistTracks(context.Background(), string(playlistID), trackIDs); err != nil {
 			// Log error but don't fail the request
 			fmt.Printf("Warning: failed to store playlist tracks %s in database: %v\n", playlistID, err)
 		}
@@ -298,13 +302,13 @@ func (s *Spotify) FetchPlaylist(ctx context.Context, userID, playlistID string) 
 
 	// Cache the result for fast future access
 	s.cache.SetPlaylist(playlistID, playlist)
-	s.cache.SetPlaylistTracks(playlistID, trackIDs)
-	s.cache.SetPlaylistAlbums(playlistID, albumIDs)
+	s.cache.SetPlaylistTracks(string(playlistID), trackIDs)
+	s.cache.SetPlaylistAlbums(string(playlistID), albumIDs)
 	return playlist, trackIDs, albumIDs, nil
 }
 
 // Private API fetch methods
-func (s *Spotify) fetchTrackFromAPI(ctx context.Context, accessToken, trackID string) (m.TrackData, error) {
+func (s *Spotify) fetchTrackFromAPI(ctx context.Context, accessToken string, trackID m.SpotifyID) (m.TrackData, error) {
 	fmt.Println("[SpotifyFetchService] FetchTrack: trackID:", trackID)
 	requestURL := fmt.Sprintf("%s/tracks/%s", s.config.GetAPIBaseURL(), trackID)
 	req, err := http.NewRequestWithContext(ctx, "GET", requestURL, nil)
@@ -391,7 +395,7 @@ func (s *Spotify) fetchTrackFromAPI(ctx context.Context, accessToken, trackID st
 	}
 
 	// Extract track artists IDs
-	trackArtistIDs := make([]m.SpotifyID, 0, len(fetchTrackResponse.Artists))
+	trackArtistIDs := make([]m.SpotifyID, len(fetchTrackResponse.Artists))
 	for i, artist := range fetchTrackResponse.Artists {
 		trackArtistIDs[i] = m.SpotifyID(artist.ID)
 	}
@@ -412,7 +416,7 @@ func (s *Spotify) fetchTrackFromAPI(ctx context.Context, accessToken, trackID st
 }
 
 // Fetch album by ID: retireves all tracks of the album too
-func (s *Spotify) fetchAlbumFromAPI(ctx context.Context, accessToken, albumID string) (m.AlbumData, error) {
+func (s *Spotify) fetchAlbumFromAPI(ctx context.Context, accessToken string, albumID m.SpotifyID) (m.AlbumData, error) {
 	requestURL := fmt.Sprintf("%s/albums/%s", s.config.GetAPIBaseURL(), albumID)
 	req, err := http.NewRequestWithContext(ctx, "GET", requestURL, nil)
 	if err != nil {
@@ -538,11 +542,10 @@ func (s *Spotify) fetchAlbumFromAPI(ctx context.Context, accessToken, albumID st
 		Popularity:           fetchAlbumResponse.Popularity,
 		Artists:              albumArtists,
 		CachedAt:             time.Now(),
-		UpdatedAt:            time.Now(),
 	}, nil
 }
 
-func (s *Spotify) fetchArtistFromAPI(ctx context.Context, accessToken, artistID string) (m.ArtistData, error) {
+func (s *Spotify) fetchArtistFromAPI(ctx context.Context, accessToken string, artistID m.SpotifyID) (m.ArtistData, error) {
 	requestURL := fmt.Sprintf("%s/artists/%s", s.config.GetAPIBaseURL(), artistID)
 	req, err := http.NewRequestWithContext(ctx, "GET", requestURL, nil)
 	if err != nil {
@@ -601,11 +604,10 @@ func (s *Spotify) fetchArtistFromAPI(ctx context.Context, accessToken, artistID 
 		FollowersTotal: fetchArtistResponse.Followers.Total,
 		Genres:         fetchArtistResponse.Genres,
 		CachedAt:       time.Now(),
-		UpdatedAt:      time.Now(),
 	}, nil
 }
 
-func (s *Spotify) fetchPlaylistFromAPI(ctx context.Context, accessToken, playlistID string) (m.PlaylistData, []string, []string, error) {
+func (s *Spotify) fetchPlaylistFromAPI(ctx context.Context, accessToken string, playlistID m.SpotifyID) (m.PlaylistData, []string, []string, error) {
 	baseURL := s.config.GetAPIBaseURL() + "/playlists/" + playlistID
 	fmt.Println(baseURL)
 	u, err := url.Parse(baseURL)
@@ -789,7 +791,7 @@ func (s *Spotify) fetchPlaylistFromAPI(ctx context.Context, accessToken, playlis
 }
 
 // FetchAlbumsFromArtist fetches album IDs from an artist
-func (s *Spotify) FetchAlbumsFromArtist(ctx context.Context, userID, artistID string) ([]string, error) {
+func (s *Spotify) FetchAlbumsFromArtist(ctx context.Context, userID string, artistID m.SpotifyID) ([]string, error) {
 	// Get access token for user
 	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
@@ -868,7 +870,7 @@ func (s *Spotify) FetchAlbumsFromArtist(ctx context.Context, userID, artistID st
 }
 
 // FetchTracksFromAlbum fetches track IDs from an album
-func (s *Spotify) FetchTracksFromAlbum(ctx context.Context, userID, albumID string) ([]string, error) {
+func (s *Spotify) FetchTracksFromAlbum(ctx context.Context, userID string, albumID m.SpotifyID) ([]string, error) {
 	// Get access token for user
 	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
@@ -955,7 +957,7 @@ func (s *Spotify) FetchTracksFromAlbum(ctx context.Context, userID, albumID stri
 }
 
 // fetchMultipleTracksFromAPI fetches multiple tracks from Spotify API in batches of 50
-func (s *Spotify) fetchMultipleTracksFromAPI(ctx context.Context, accessToken string, trackIDs []string) ([]m.TrackData, error) {
+func (s *Spotify) fetchMultipleTracksFromAPI(ctx context.Context, accessToken string, trackIDs []m.SpotifyID) ([]m.TrackData, error) {
 	if len(trackIDs) == 0 {
 		return []m.TrackData{}, nil
 	}
@@ -980,7 +982,7 @@ func (s *Spotify) fetchMultipleTracksFromAPI(ctx context.Context, accessToken st
 }
 
 // fetchTrackBatchFromAPI fetches a single batch of tracks (up to 50) from Spotify API
-func (s *Spotify) fetchTrackBatchFromAPI(ctx context.Context, accessToken string, trackIDs []string) ([]m.TrackData, error) {
+func (s *Spotify) fetchTrackBatchFromAPI(ctx context.Context, accessToken string, trackIDs []m.SpotifyID) ([]m.TrackData, error) {
 	if len(trackIDs) == 0 {
 		return []m.TrackData{}, nil
 	}
@@ -991,7 +993,7 @@ func (s *Spotify) fetchTrackBatchFromAPI(ctx context.Context, accessToken string
 		if i > 0 {
 			idsParam += ","
 		}
-		idsParam += url.QueryEscape(id)
+		idsParam += url.QueryEscape(string(id))
 	}
 
 	requestURL := fmt.Sprintf("%s/tracks?ids=%s", s.config.GetAPIBaseURL(), idsParam)
@@ -1093,7 +1095,7 @@ func (s *Spotify) fetchTrackBatchFromAPI(ctx context.Context, accessToken string
 			artistDIs[i] = m.SpotifyID(artist.ID) // First artist is considered primary
 		}
 		track := m.TrackData{
-			ID:          trackData.ID,
+			ID:          m.SpotifyID(trackData.ID),
 			Name:        trackData.Name,
 			DurationMs:  trackData.DurationMs,
 			DiscNumber:  trackData.DiscNumber,
@@ -1111,27 +1113,8 @@ func (s *Spotify) fetchTrackBatchFromAPI(ctx context.Context, accessToken string
 	return tracks, nil
 }
 
-// removeDuplicates removes duplicate track IDs from a slice
-func removeDuplicates(trackIDs []string) []string {
-	if len(trackIDs) == 0 {
-		return []string{}
-	}
-
-	seen := make(map[string]bool)
-	unique := make([]string, 0, len(trackIDs))
-
-	for _, id := range trackIDs {
-		if !seen[id] {
-			seen[id] = true
-			unique = append(unique, id)
-		}
-	}
-
-	return unique
-}
-
 // FetchTracksFromPlaylist fetches track IDs from a playlist
-func (s *Spotify) FetchTracksFromPlaylist(ctx context.Context, userID, playlistID string) ([]string, error) {
+func (s *Spotify) FetchTracksFromPlaylist(ctx context.Context, userID string, playlistID m.SpotifyID) ([]string, error) {
 	// Get access token for user
 	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
@@ -1174,4 +1157,24 @@ func (s *Spotify) FetchTracksFromPlaylist(ctx context.Context, userID, playlistI
 		trackIDs[idx] = item.Track.ID
 	}
 	return trackIDs, nil
+}
+
+// // Tools
+// removeDuplicates removes duplicate track IDs from a slice
+func removeDuplicates(trackIDs []m.SpotifyID) []m.SpotifyID {
+	if len(trackIDs) == 0 {
+		return []m.SpotifyID{}
+	}
+
+	seen := make(map[m.SpotifyID]bool)
+	unique := make([]m.SpotifyID, 0, len(trackIDs))
+
+	for _, id := range trackIDs {
+		if !seen[id] {
+			seen[id] = true
+			unique = append(unique, id)
+		}
+	}
+
+	return unique
 }
