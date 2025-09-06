@@ -200,7 +200,7 @@ func (p *PlaylistProvider) ImportFromSpotify(ctx context.Context, userID uuid.UU
 	}
 
 	// Fetch playlist data from Spotify
-	spotifyPlaylist, trackIDs, _, err := p.spotifyService.FetchPlaylist(ctx, userID.String(), req.SpotifyPlaylistID)
+	spotifyPlaylist, err := p.spotifyService.FetchPlaylist(ctx, userID.String(), models.SpotifyID(req.SpotifyPlaylistID))
 	if err != nil {
 		logger.Error(ctx, "failed to fetch playlist from Spotify API",
 			logger.F("user_id", userID),
@@ -227,8 +227,8 @@ func (p *PlaylistProvider) ImportFromSpotify(ctx context.Context, userID uuid.UU
 		return nil, fmt.Errorf("failed to create playlist: %w", err)
 	}
 
-	for idx, trackID := range trackIDs {
-		err := p.playlistStore.AddSongToPlaylist(ctx, playlist.ID, trackID, idx+1)
+	for idx, trackID := range spotifyPlaylist.TrackIDs {
+		err := p.playlistStore.AddSongToPlaylist(ctx, playlist.ID, string(trackID), idx+1)
 		if err != nil {
 			return nil, err
 		}

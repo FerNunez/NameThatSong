@@ -2,6 +2,7 @@ package songs
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/FerNunez/NameThatSong/internal/models"
@@ -41,23 +42,37 @@ func (s *SongProvider) GetSongBySpotifyID(ctx context.Context, userID, spotifyTr
 	logger.Debug(ctx, "song not found in db, fetching from spotify")
 
 	// add user ID
-	trackData, err := s.SpotifyService.FetchTrack(ctx, userID, spotifyTrackID)
+	trackData, err := s.SpotifyService.FetchTrack(ctx, userID, models.SpotifyID(spotifyTrackID))
 	if err != nil {
 		return models.Song{}, err
 	}
-	if trackData.GetPrimaryArtist() == nil {
-		logger.Error(ctx, "PrimaryArtist is nil!")
+	
+	if len(trackData.ArtistIDs) == 0 {
+		logger.Error(ctx, "Track has no artists!")
+		return models.Song{}, fmt.Errorf("track has no artists")
+	}
+
+	// Fetch album data
+	albumData, err := s.SpotifyService.FetchAlbum(ctx, userID, trackData.AlbumID)
+	if err != nil {
+		return models.Song{}, fmt.Errorf("failed to fetch album: %w", err)
+	}
+
+	// Fetch primary artist data (first artist)
+	artistData, err := s.SpotifyService.FetchArtist(ctx, userID, trackData.ArtistIDs[0])
+	if err != nil {
+		return models.Song{}, fmt.Errorf("failed to fetch artist: %w", err)
 	}
 
 	song = models.Song{
 		SpotifyTrackID:   spotifyTrackID,
-		SpotifyAlbumID:   trackData.Album.ID,
-		SpotifyArtistID:  trackData.GetPrimaryArtist().ID,
+		SpotifyAlbumID:   string(trackData.AlbumID),
+		SpotifyArtistID:  string(trackData.ArtistIDs[0]),
 		TrackName:        trackData.Name,
-		ArtistName:       trackData.GetPrimaryArtistName(),
-		AlbumName:        trackData.Album.Name,
-		SpotifyAlbumURL:  trackData.Album.ImageURL,
-		SpotifyArtistURL: trackData.GetPrimaryArtist().ImageURL,
+		ArtistName:       artistData.Name,
+		AlbumName:        albumData.Name,
+		SpotifyArtistURL: artistData.ImageURL,
+		SpotifyAlbumURL:  albumData.ImageURL,
 		DurationMs:       trackData.DurationMs,
 		UpdatedAt:        time.Now(),
 	}

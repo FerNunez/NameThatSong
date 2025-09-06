@@ -31,10 +31,6 @@ type SpotifyCache interface {
 	SetPlaylist(playlistId m.SpotifyID, playlist m.PlaylistData)
 	GetMultiplePlaylists(playlistIDs []m.SpotifyID) (map[m.SpotifyID]m.PlaylistData, []m.SpotifyID)
 	SetMultiplePlaylists(playlists map[m.SpotifyID]m.PlaylistData)
-	GetPlaylistTracks(playlistId string) ([]string, bool)
-	SetPlaylistTracks(playlistId string, tracks []string)
-	GetPlaylistAlbums(playlistId string) ([]string, bool)
-	SetPlaylistAlbums(playlistId string, tracks []string)
 
 	// Search cache operations (cache-only, no API calls)
 	GetSearchTracks(query string) ([]m.TrackSearch, bool)
@@ -436,55 +432,6 @@ func (r *RedisSpotifyCache) SetMultiplePlaylists(playlists map[m.SpotifyID]m.Pla
 	}
 }
 
-func (r *RedisSpotifyCache) GetPlaylistTracks(playlistId string) ([]string, bool) {
-	key := r.generateKey("playlist:trackIDs", m.SpotifyID(playlistId))
-
-	val, err := r.client.Get(r.ctx, key).Result()
-	if err != nil {
-		return []string{}, false
-	}
-
-	var trackIDs []string
-	if err := json.Unmarshal([]byte(val), &trackIDs); err != nil {
-		return trackIDs, false
-	}
-
-	return trackIDs, true
-}
-func (r *RedisSpotifyCache) SetPlaylistTracks(playlistId string, tracks []string) {
-	key := r.generateKey("playlist:trackIDs", m.SpotifyID(playlistId))
-
-	playlistJson, err := json.Marshal(tracks)
-	if err != nil {
-		return
-	}
-	r.client.Set(r.ctx, key, playlistJson, r.ttl)
-}
-
-func (r *RedisSpotifyCache) GetPlaylistAlbums(playlistId string) ([]string, bool) {
-	key := r.generateKey("playlist:albumIDs", m.SpotifyID(playlistId))
-
-	val, err := r.client.Get(r.ctx, key).Result()
-	if err != nil {
-		return []string{}, false
-	}
-
-	var albumIDs []string
-	if err := json.Unmarshal([]byte(val), &albumIDs); err != nil {
-		return albumIDs, false
-	}
-
-	return albumIDs, true
-}
-func (r *RedisSpotifyCache) SetPlaylistAlbums(playlistId string, albums []string) {
-	key := r.generateKey("playlist:albumIDs", m.SpotifyID(playlistId))
-
-	playlistJson, err := json.Marshal(albums)
-	if err != nil {
-		return
-	}
-	r.client.Set(r.ctx, key, playlistJson, r.ttl)
-}
 
 // Search cache operations
 func (r *RedisSpotifyCache) GetSearchTracks(query string) ([]m.TrackSearch, bool) {
