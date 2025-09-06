@@ -277,37 +277,3 @@ ON CONFLICT (id) DO UPDATE SET
     cached_at = EXCLUDED.cached_at;
 
 
--- =============================================================================
--- EFFICIENT SEARCH OPERATIONS
--- =============================================================================
-
--- name: SearchSpotifyArtistsByName :many
-SELECT id, name, image_url, popularity, followers_total, genres
-FROM spotify_artists 
-WHERE name ILIKE '%' || $1 || '%'
-ORDER BY popularity DESC, name
-LIMIT $2;
-
--- name: SearchSpotifyAlbumsByName :many
-SELECT a.id, a.name, a.album_type, a.release_date, a.total_tracks, a.image_url,
-       string_agg(ar.name, ', ') as artist_names
-FROM spotify_albums a
-LEFT JOIN spotify_album_artists aa ON a.id = aa.album_id
-LEFT JOIN spotify_artists ar ON aa.artist_id = ar.id
-WHERE a.name ILIKE '%' || $1 || '%'
-GROUP BY a.id, a.name, a.album_type, a.release_date, a.total_tracks, a.image_url
-ORDER BY a.popularity DESC, a.name
-LIMIT $2;
-
--- name: SearchSpotifyTracksByName :many
-SELECT t.id, t.name, t.duration_ms, t.popularity, t.explicit,
-       a.name as album_name, a.image_url as album_image_url,
-       string_agg(ar.name, ', ') as artist_names
-FROM spotify_tracks t
-LEFT JOIN spotify_albums a ON t.album_id = a.id
-LEFT JOIN spotify_track_artists ta ON t.id = ta.track_id
-LEFT JOIN spotify_artists ar ON ta.artist_id = ar.id
-WHERE t.name ILIKE '%' || $1 || '%'
-GROUP BY t.id, t.name, t.duration_ms, t.popularity, t.explicit, a.name, a.image_url
-ORDER BY t.popularity DESC, t.name
-LIMIT $2;
