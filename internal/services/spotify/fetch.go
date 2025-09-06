@@ -144,6 +144,176 @@ func (s *Spotify) FetchMultipleTracks(ctx context.Context, userID string, trackI
 	return results, nil
 }
 
+// FetchMultipleAlbums fetches multiple albums using three-tier strategy with batch processing
+func (s *Spotify) FetchMultipleAlbums(ctx context.Context, userID string, albumIDs []m.SpotifyID) ([]m.AlbumData, error) {
+	if len(albumIDs) == 0 {
+		return []m.AlbumData{}, nil
+	}
+	// Remove duplicates to avoid unnecessary processing
+	uniqueIDs := removeDuplicates(albumIDs)
+
+	remaining := uniqueIDs
+	results := make([]m.AlbumData, 0, len(uniqueIDs))
+	// Tier 1: Check Redis cache with batch operation
+	cachedAlbums, stillMissing := s.cache.GetMultipleAlbums(remaining)
+	for _, album := range cachedAlbums {
+		results = append(results, album)
+	}
+	remaining = stillMissing
+
+	// All fetched
+	if len(remaining) == 0 {
+		return results, nil
+	}
+
+	// Tier 2: Check database with batch operation
+	dbAlbums, stillMissing, err := s.dataStore.GetMultipleAlbums(ctx, remaining)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch albums from database: %w", err)
+	}
+
+	// Update cache with database results and add to results
+	cacheMap := make(map[m.SpotifyID]m.AlbumData)
+	for albumID, album := range dbAlbums {
+		results = append(results, *album)
+		cacheMap[m.SpotifyID(albumID)] = *album
+	}
+	if len(cacheMap) > 0 {
+		s.cache.SetMultipleAlbums(cacheMap)
+	}
+	remaining = stillMissing
+
+	if len(remaining) == 0 {
+		return results, nil
+	}
+
+	// Tier 3: Fetch remaining albums from Spotify API in batches of 20
+	accessToken, err := s.GetValidToken(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get access token: %w", err)
+	}
+
+	apiAlbums, err := s.fetchMultipleAlbumsFromAPI(ctx, accessToken, remaining)
+	if err != nil {
+		// If we have some albums from cache/database, return partial success
+		if len(results) > 0 {
+			fmt.Printf("Warning: API fetch failed but returning %d cached/database albums: %v\n", len(results), err)
+			return results, nil
+		}
+		// If we have no albums at all, return the error
+		return nil, fmt.Errorf("failed to fetch albums from API: %w", err)
+	}
+
+	// Store API results in database and cache
+	if len(apiAlbums) > 0 {
+		albumPointers := make([]*m.AlbumData, len(apiAlbums))
+		cacheMap := make(map[m.SpotifyID]m.AlbumData)
+		for i, album := range apiAlbums {
+			albumPointers[i] = &album
+			cacheMap[m.SpotifyID(album.ID)] = album
+		}
+
+		// Store in database (async to avoid blocking)
+		go func() {
+			if err := s.dataStore.StoreMultipleAlbums(context.Background(), albumPointers); err != nil {
+				fmt.Printf("Warning: failed to store batch albums in database: %v\n", err)
+			}
+		}()
+
+		// Cache the results for fast future access
+		s.cache.SetMultipleAlbums(cacheMap)
+
+		results = append(results, apiAlbums...)
+	}
+
+	return results, nil
+}
+
+// FetchMultipleArtists fetches multiple artists using three-tier strategy with batch processing
+func (s *Spotify) FetchMultipleArtists(ctx context.Context, userID string, artistIDs []m.SpotifyID) ([]m.ArtistData, error) {
+	if len(artistIDs) == 0 {
+		return []m.ArtistData{}, nil
+	}
+	// Remove duplicates to avoid unnecessary processing
+	uniqueIDs := removeDuplicates(artistIDs)
+
+	remaining := uniqueIDs
+	results := make([]m.ArtistData, 0, len(uniqueIDs))
+	// Tier 1: Check Redis cache with batch operation
+	cachedArtists, stillMissing := s.cache.GetMultipleArtists(remaining)
+	for _, artist := range cachedArtists {
+		results = append(results, artist)
+	}
+	remaining = stillMissing
+
+	// All fetched
+	if len(remaining) == 0 {
+		return results, nil
+	}
+
+	// Tier 2: Check database with batch operation
+	dbArtists, stillMissing, err := s.dataStore.GetMultipleArtists(ctx, remaining)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch artists from database: %w", err)
+	}
+
+	// Update cache with database results and add to results
+	cacheMap := make(map[m.SpotifyID]m.ArtistData)
+	for artistID, artist := range dbArtists {
+		results = append(results, *artist)
+		cacheMap[m.SpotifyID(artistID)] = *artist
+	}
+	if len(cacheMap) > 0 {
+		s.cache.SetMultipleArtists(cacheMap)
+	}
+	remaining = stillMissing
+
+	if len(remaining) == 0 {
+		return results, nil
+	}
+
+	// Tier 3: Fetch remaining artists from Spotify API in batches of 50
+	accessToken, err := s.GetValidToken(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get access token: %w", err)
+	}
+
+	apiArtists, err := s.fetchMultipleArtistsFromAPI(ctx, accessToken, remaining)
+	if err != nil {
+		// If we have some artists from cache/database, return partial success
+		if len(results) > 0 {
+			fmt.Printf("Warning: API fetch failed but returning %d cached/database artists: %v\n", len(results), err)
+			return results, nil
+		}
+		// If we have no artists at all, return the error
+		return nil, fmt.Errorf("failed to fetch artists from API: %w", err)
+	}
+
+	// Store API results in database and cache
+	if len(apiArtists) > 0 {
+		artistPointers := make([]*m.ArtistData, len(apiArtists))
+		cacheMap := make(map[m.SpotifyID]m.ArtistData)
+		for i, artist := range apiArtists {
+			artistPointers[i] = &artist
+			cacheMap[m.SpotifyID(artist.ID)] = artist
+		}
+
+		// Store in database (async to avoid blocking)
+		go func() {
+			if err := s.dataStore.StoreMultipleArtists(context.Background(), artistPointers); err != nil {
+				fmt.Printf("Warning: failed to store batch artists in database: %v\n", err)
+			}
+		}()
+
+		// Cache the results for fast future access
+		s.cache.SetMultipleArtists(cacheMap)
+
+		results = append(results, apiArtists...)
+	}
+
+	return results, nil
+}
+
 // FetchAlbum fetches an album using three-tier strategy: Cache → Database → API
 func (s *Spotify) FetchAlbum(ctx context.Context, userID string, albumID m.SpotifyID) (m.AlbumData, error) {
 	// Tier 1: Check Redis cache first
@@ -890,6 +1060,263 @@ func (s *Spotify) fetchTrackBatchFromAPI(ctx context.Context, accessToken string
 	}
 
 	return tracks, nil
+}
+
+// fetchMultipleAlbumsFromAPI fetches multiple albums from Spotify API in batches of 20
+func (s *Spotify) fetchMultipleAlbumsFromAPI(ctx context.Context, accessToken string, albumIDs []m.SpotifyID) ([]m.AlbumData, error) {
+	if len(albumIDs) == 0 {
+		return []m.AlbumData{}, nil
+	}
+
+	var allAlbums []m.AlbumData
+	const batchSize = 20 // Spotify API limit for albums endpoint
+
+	// Process albums in batches of 20
+	for i := 0; i < len(albumIDs); i += batchSize {
+		end := min(i+batchSize, len(albumIDs))
+
+		batch := albumIDs[i:end]
+		batchAlbums, err := s.fetchAlbumBatchFromAPI(ctx, accessToken, batch)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch batch %d-%d: %w", i, end-1, err)
+		}
+
+		allAlbums = append(allAlbums, batchAlbums...)
+	}
+
+	return allAlbums, nil
+}
+
+// fetchAlbumBatchFromAPI fetches a single batch of albums (up to 20) from Spotify API
+func (s *Spotify) fetchAlbumBatchFromAPI(ctx context.Context, accessToken string, albumIDs []m.SpotifyID) ([]m.AlbumData, error) {
+	if len(albumIDs) == 0 {
+		return []m.AlbumData{}, nil
+	}
+
+	// Join album IDs with comma and URL encode
+	idsParam := ""
+	for i, id := range albumIDs {
+		if i > 0 {
+			idsParam += ","
+		}
+		idsParam += url.QueryEscape(string(id))
+	}
+
+	requestURL := fmt.Sprintf("%s/albums?ids=%s", s.config.GetAPIBaseURL(), idsParam)
+	req, err := http.NewRequestWithContext(ctx, "GET", requestURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	type BatchAlbumsResponse struct {
+		Albums []*struct {
+			AlbumType        string   `json:"album_type"`
+			TotalTracks      int      `json:"total_tracks"`
+			AvailableMarkets []string `json:"available_markets"`
+			ExternalUrls     struct {
+				Spotify string `json:"spotify"`
+			} `json:"external_urls"`
+			Href   string `json:"href"`
+			ID     string `json:"id"`
+			Images []struct {
+				URL    string `json:"url"`
+				Height int    `json:"height"`
+				Width  int    `json:"width"`
+			} `json:"images"`
+			Name                 string `json:"name"`
+			ReleaseDate          string `json:"release_date"`
+			ReleaseDatePrecision string `json:"release_date_precision"`
+			Type                 string `json:"type"`
+			URI                  string `json:"uri"`
+			Artists              []struct {
+				ExternalUrls struct {
+					Spotify string `json:"spotify"`
+				} `json:"external_urls"`
+				Href string `json:"href"`
+				ID   string `json:"id"`
+				Name string `json:"name"`
+				Type string `json:"type"`
+				URI  string `json:"uri"`
+			} `json:"artists"`
+			Copyrights []struct {
+				Text string `json:"text"`
+				Type string `json:"type"`
+			} `json:"copyrights"`
+			ExternalIds struct {
+				Upc string `json:"upc"`
+			} `json:"external_ids"`
+			Genres     []string `json:"genres"`
+			Label      string   `json:"label"`
+			Popularity int      `json:"popularity"`
+		} `json:"albums"`
+	}
+
+	var batchResponse BatchAlbumsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&batchResponse); err != nil {
+		return nil, err
+	}
+
+	albums := make([]m.AlbumData, 0, len(batchResponse.Albums))
+	for _, albumData := range batchResponse.Albums {
+		// Skip null albums (can happen with invalid IDs)
+		if albumData == nil || albumData.ID == "" {
+			continue
+		}
+
+		// Get image URL
+		imageUrl := ""
+		if len(albumData.Images) > 0 {
+			imageUrl = albumData.Images[len(albumData.Images)-1].URL
+		}
+
+		// Convert album artists to SpotifyID slice
+		artistIDs := make([]m.SpotifyID, len(albumData.Artists))
+		for i, artist := range albumData.Artists {
+			artistIDs[i] = m.SpotifyID(artist.ID)
+		}
+
+		album := m.AlbumData{
+			ID:                   albumData.ID,
+			Name:                 albumData.Name,
+			AlbumType:            albumData.AlbumType,
+			ReleaseDate:          albumData.ReleaseDate,
+			ReleaseDatePrecision: albumData.ReleaseDatePrecision,
+			TotalTracks:          albumData.TotalTracks,
+			ImageURL:             imageUrl,
+			Label:                albumData.Label,
+			Popularity:           albumData.Popularity,
+			ArtistIDs:            artistIDs,
+			CachedAt:             time.Now(),
+		}
+		albums = append(albums, album)
+	}
+
+	return albums, nil
+}
+
+// fetchMultipleArtistsFromAPI fetches multiple artists from Spotify API in batches of 50
+func (s *Spotify) fetchMultipleArtistsFromAPI(ctx context.Context, accessToken string, artistIDs []m.SpotifyID) ([]m.ArtistData, error) {
+	if len(artistIDs) == 0 {
+		return []m.ArtistData{}, nil
+	}
+
+	var allArtists []m.ArtistData
+	const batchSize = 50 // Spotify API limit for artists endpoint
+
+	// Process artists in batches of 50
+	for i := 0; i < len(artistIDs); i += batchSize {
+		end := min(i+batchSize, len(artistIDs))
+
+		batch := artistIDs[i:end]
+		batchArtists, err := s.fetchArtistBatchFromAPI(ctx, accessToken, batch)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch batch %d-%d: %w", i, end-1, err)
+		}
+
+		allArtists = append(allArtists, batchArtists...)
+	}
+
+	return allArtists, nil
+}
+
+// fetchArtistBatchFromAPI fetches a single batch of artists (up to 50) from Spotify API
+func (s *Spotify) fetchArtistBatchFromAPI(ctx context.Context, accessToken string, artistIDs []m.SpotifyID) ([]m.ArtistData, error) {
+	if len(artistIDs) == 0 {
+		return []m.ArtistData{}, nil
+	}
+
+	// Join artist IDs with comma and URL encode
+	idsParam := ""
+	for i, id := range artistIDs {
+		if i > 0 {
+			idsParam += ","
+		}
+		idsParam += url.QueryEscape(string(id))
+	}
+
+	requestURL := fmt.Sprintf("%s/artists?ids=%s", s.config.GetAPIBaseURL(), idsParam)
+	req, err := http.NewRequestWithContext(ctx, "GET", requestURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	type BatchArtistsResponse struct {
+		Artists []*struct {
+			ExternalUrls struct {
+				Spotify string `json:"spotify"`
+			} `json:"external_urls"`
+			Followers struct {
+				Href  string `json:"href"`
+				Total int    `json:"total"`
+			} `json:"followers"`
+			Genres []string `json:"genres"`
+			Href   string   `json:"href"`
+			ID     string   `json:"id"`
+			Images []struct {
+				URL    string `json:"url"`
+				Height int    `json:"height"`
+				Width  int    `json:"width"`
+			} `json:"images"`
+			Name       string `json:"name"`
+			Popularity int    `json:"popularity"`
+			Type       string `json:"type"`
+			URI        string `json:"uri"`
+		} `json:"artists"`
+	}
+
+	var batchResponse BatchArtistsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&batchResponse); err != nil {
+		return nil, err
+	}
+
+	artists := make([]m.ArtistData, 0, len(batchResponse.Artists))
+	for _, artistData := range batchResponse.Artists {
+		// Skip null artists (can happen with invalid IDs)
+		if artistData == nil || artistData.ID == "" {
+			continue
+		}
+
+		// Get image URL
+		imageUrl := ""
+		if len(artistData.Images) > 0 {
+			imageUrl = artistData.Images[len(artistData.Images)-1].URL
+		}
+
+		artist := m.ArtistData{
+			ID:             artistData.ID,
+			Name:           artistData.Name,
+			ImageURL:       imageUrl,
+			Popularity:     artistData.Popularity,
+			FollowersTotal: artistData.Followers.Total,
+			Genres:         artistData.Genres,
+			CachedAt:       time.Now(),
+		}
+		artists = append(artists, artist)
+	}
+
+	return artists, nil
 }
 
 // FetchTracksFromPlaylist fetches track IDs from a playlist
