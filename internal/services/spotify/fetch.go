@@ -46,14 +46,14 @@ func (s *Spotify) FetchTrack(ctx context.Context, userID string, trackID m.Spoti
 	go func() {
 		if err := s.dataStore.StoreTrack(ctx, &track); err != nil {
 			// Log error but don't fail the request
-			logger.Warn(ctx, "Failed to store track in db", logger.F("track_id", string(trackID)), logger.F("err", err))
+			logger.Warn(ctx, "Failed to store track in db", logger.F("track_id", trackID), logger.F("err", err))
 		}
 	}()
 
 	// Cache the result for fast future access
 	go func() {
 		if err := s.cache.SetTrack(trackID, track); err != nil {
-			logger.Warn(ctx, "Failed to store track in cache", logger.F("track_id", string(trackID)), logger.F("err", err))
+			logger.Warn(ctx, "Failed to store track in cache", logger.F("track_id", trackID), logger.F("err", err))
 		}
 	}()
 	return track, nil
@@ -343,7 +343,7 @@ func (s *Spotify) FetchAlbum(ctx context.Context, userID string, albumID m.Spoti
 	go func() {
 		if err := s.dataStore.StoreAlbum(context.Background(), &album); err != nil {
 			// Log error but don't fail the request
-			fmt.Printf("Warning: failed to store album %s in database: %v\n", string(albumID), err)
+			fmt.Printf("Warning: failed to store album %s in database: %v\n", albumID, err)
 		}
 	}()
 
@@ -381,7 +381,7 @@ func (s *Spotify) FetchArtist(ctx context.Context, userID string, artistID m.Spo
 	go func() {
 		if err := s.dataStore.StoreArtist(context.Background(), &artist); err != nil {
 			// Log error but don't fail the request
-			fmt.Printf("Warning: failed to store artist %s in database: %v\n", string(artistID), err)
+			fmt.Printf("Warning: failed to store artist %s in database: %v\n", artistID, err)
 		}
 	}()
 
@@ -522,7 +522,7 @@ func (s *Spotify) fetchTrackFromAPI(ctx context.Context, accessToken string, tra
 	}
 
 	return m.TrackData{
-		ID:          string(trackID),
+		ID:          trackID,
 		Name:        fetchTrackResponse.Name,
 		DurationMs:  fetchTrackResponse.DurationMs,
 		DiscNumber:  fetchTrackResponse.DiscNumber,
@@ -648,7 +648,7 @@ func (s *Spotify) fetchAlbumFromAPI(ctx context.Context, accessToken string, alb
 	}
 
 	return m.AlbumData{
-		ID:                   string(albumID),
+		ID:                   albumID,
 		Name:                 fetchAlbumResponse.Name,
 		AlbumType:            fetchAlbumResponse.AlbumType,
 		ReleaseDate:          fetchAlbumResponse.ReleaseDate,
@@ -714,7 +714,7 @@ func (s *Spotify) fetchArtistFromAPI(ctx context.Context, accessToken string, ar
 	}
 
 	return m.ArtistData{
-		ID:             string(artistID),
+		ID:             artistID,
 		Name:           fetchArtistResponse.Name,
 		ImageURL:       imageUrl,
 		Popularity:     fetchArtistResponse.Popularity,
@@ -890,7 +890,7 @@ func (s *Spotify) fetchPlaylistFromAPI(ctx context.Context, accessToken string, 
 	}
 
 	return m.PlaylistData{
-		ID:               string(playlistID),
+		ID:               playlistID,
 		Name:             fetchPlaylistResponse.Name,
 		Description:      fetchPlaylistResponse.Description,
 		OwnerID:          fetchPlaylistResponse.Owner.ID,
@@ -1044,7 +1044,7 @@ func (s *Spotify) fetchTrackBatchFromAPI(ctx context.Context, accessToken string
 			artistDIs[i] = m.SpotifyID(artist.ID) // First artist is considered primary
 		}
 		track := m.TrackData{
-			ID:          trackData.ID,
+			ID:          m.SpotifyID(trackData.ID),
 			Name:        trackData.Name,
 			DurationMs:  trackData.DurationMs,
 			DiscNumber:  trackData.DiscNumber,
@@ -1187,7 +1187,7 @@ func (s *Spotify) fetchAlbumBatchFromAPI(ctx context.Context, accessToken string
 		}
 
 		album := m.AlbumData{
-			ID:                   albumData.ID,
+			ID:                   m.SpotifyID(albumData.ID),
 			Name:                 albumData.Name,
 			AlbumType:            albumData.AlbumType,
 			ReleaseDate:          albumData.ReleaseDate,
@@ -1305,7 +1305,7 @@ func (s *Spotify) fetchArtistBatchFromAPI(ctx context.Context, accessToken strin
 		}
 
 		artist := m.ArtistData{
-			ID:             artistData.ID,
+			ID:             m.SpotifyID(artistData.ID),
 			Name:           artistData.Name,
 			ImageURL:       imageUrl,
 			Popularity:     artistData.Popularity,

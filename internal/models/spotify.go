@@ -60,7 +60,7 @@ type PlaylistSearch struct {
 
 // TrackData represents a complete Spotify track with full relationships
 type TrackData struct {
-	ID          string      `json:"id"`
+	ID          SpotifyID   `json:"id"`
 	Name        string      `json:"name"`
 	DurationMs  int         `json:"duration_ms"`
 	DiscNumber  int         `json:"disc_number"`
@@ -75,7 +75,7 @@ type TrackData struct {
 
 // AlbumData represents a complete Spotify album with artist relationships
 type AlbumData struct {
-	ID                   string      `json:"id"`
+	ID                   SpotifyID   `json:"id"`
 	Name                 string      `json:"name"`
 	AlbumType            string      `json:"album_type"` // album, single, compilation
 	ReleaseDate          string      `json:"release_date"`
@@ -91,7 +91,7 @@ type AlbumData struct {
 
 // ArtistData represents a complete Spotify artist with all metadata
 type ArtistData struct {
-	ID             string    `json:"id"`
+	ID             SpotifyID `json:"id"`
 	Name           string    `json:"name"`
 	ImageURL       string    `json:"image_url"`
 	Popularity     int       `json:"popularity"`
@@ -102,7 +102,7 @@ type ArtistData struct {
 
 // PlaylistData represents Spotify playlist metadata (for caching)
 type PlaylistData struct {
-	ID               string      `json:"id"`
+	ID               SpotifyID   `json:"id"`
 	Name             string      `json:"name"`
 	Description      string      `json:"description"`
 	OwnerID          string      `json:"owner_id"` // Spotify user ID

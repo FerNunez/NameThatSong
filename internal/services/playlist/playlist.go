@@ -269,12 +269,12 @@ func (p *PlaylistProvider) ExportToSpotify(ctx context.Context, userID uuid.UUID
 
 	// Add tracks to Spotify playlist
 	if len(trackIDs) > 0 {
-		if err := p.spotifyService.AddTracksToPlaylist(ctx, userID.String(), spotifyPlaylist.ID, trackIDs); err != nil {
+		if err := p.spotifyService.AddTracksToPlaylist(ctx, userID.String(), string(spotifyPlaylist.ID), trackIDs); err != nil {
 			return "", fmt.Errorf("failed to add tracks to Spotify playlist: %w", err)
 		}
 	}
 
-	return spotifyPlaylist.ID, nil
+	return string(spotifyPlaylist.ID), nil
 }
 
 // func (p *Playlist) SyncWithSpotify(ctx context.Context, playlistID, userID uuid.UUID) error {

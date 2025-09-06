@@ -82,7 +82,7 @@ func (s *SQLSpotifyDataStore) GetArtist(ctx context.Context, artistID m.SpotifyI
 
 func (s *SQLSpotifyDataStore) StoreArtist(ctx context.Context, artist *m.ArtistData) error {
 	_, err := s.db.UpsertSpotifyArtist(ctx, database.UpsertSpotifyArtistParams{
-		ID:             artist.ID,
+		ID:             string(artist.ID),
 		Name:           artist.Name,
 		ImageUrl:       nullStringFromString(artist.ImageURL),
 		Popularity:     nullInt32FromInt(artist.Popularity),
@@ -121,7 +121,7 @@ func (s *SQLSpotifyDataStore) StoreAlbum(ctx context.Context, album *m.AlbumData
 
 	// Store album
 	_, err := s.db.UpsertSpotifyAlbum(ctx, database.UpsertSpotifyAlbumParams{
-		ID:                   album.ID,
+		ID:                   string(album.ID),
 		Name:                 album.Name,
 		AlbumType:            album.AlbumType,
 		ReleaseDate:          nullDateFromString(album.ReleaseDate),
@@ -166,7 +166,7 @@ func (s *SQLSpotifyDataStore) StoreTrack(ctx context.Context, track *m.TrackData
 	}
 
 	_, err := s.db.UpsertSpotifyTrack(ctx, database.UpsertSpotifyTrackParams{
-		ID:          track.ID,
+		ID:          string(track.ID),
 		Name:        track.Name,
 		AlbumID:     string(track.AlbumID),
 		DurationMs:  int32(track.DurationMs),
@@ -571,7 +571,7 @@ func (s *SQLSpotifyDataStore) StorePlaylist(ctx context.Context, playlist *m.Pla
 	}
 
 	_, err := s.db.UpsertSpotifyPlaylist(ctx, database.UpsertSpotifyPlaylistParams{
-		ID:               playlist.ID,
+		ID:               string(playlist.ID),
 		Name:             playlist.Name,
 		Description:      nullStringFromString(playlist.Description),
 		OwnerID:          playlist.OwnerID,
@@ -635,7 +635,7 @@ func (s *SQLSpotifyDataStore) GetCacheStats(ctx context.Context) (map[string]int
 // Convert database models to domain models
 func convertDbArtistToModel(dbArtist database.SpotifyArtist) *m.ArtistData {
 	return &m.ArtistData{
-		ID:             dbArtist.ID,
+		ID:             m.SpotifyID(dbArtist.ID),
 		Name:           dbArtist.Name,
 		ImageURL:       nullStringToString(dbArtist.ImageUrl),
 		Popularity:     nullInt32ToInt(dbArtist.Popularity),
@@ -667,7 +667,7 @@ func convertDbAlbumToModel(dbAlbum database.SpotifyAlbum) *m.AlbumData {
 	}
 
 	return &m.AlbumData{
-		ID:                   dbAlbum.ID,
+		ID:                   m.SpotifyID(dbAlbum.ID),
 		Name:                 dbAlbum.Name,
 		AlbumType:            dbAlbum.AlbumType,
 		ReleaseDate:          releaseDate,
@@ -690,7 +690,7 @@ func convertDbTrackToModel(dbTrack database.SpotifyTrack) *m.TrackData {
 	}
 
 	return &m.TrackData{
-		ID:          dbTrack.ID,
+		ID:          m.SpotifyID(dbTrack.ID),
 		Name:        dbTrack.Name,
 		DurationMs:  int(dbTrack.DurationMs),
 		DiscNumber:  nullInt32ToInt(dbTrack.DiscNumber),
@@ -712,7 +712,7 @@ func convertDbPlaylistToModel(dbPlaylist database.SpotifyPlaylist) *m.PlaylistDa
 	}
 
 	return &m.PlaylistData{
-		ID:               dbPlaylist.ID,
+		ID:               m.SpotifyID(dbPlaylist.ID),
 		Name:             dbPlaylist.Name,
 		Description:      nullStringToString(dbPlaylist.Description),
 		OwnerID:          dbPlaylist.OwnerID,

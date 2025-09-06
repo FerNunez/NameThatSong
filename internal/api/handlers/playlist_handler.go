@@ -106,11 +106,11 @@ func (h *PlaylistHandler) GetSpotifyPlaylists(w http.ResponseWriter, r *http.Req
 	var templatePlaylists []templates.UserPlaylist
 	for _, playlist := range spotifyPlaylists {
 		templatePlaylists = append(templatePlaylists, templates.UserPlaylist{
-			ID:         playlist.ID,
+			ID:         string(playlist.ID),
 			Name:       playlist.Name,
 			TrackCount: playlist.TotalTracks,
 			IsSpotify:  true,
-			SpotifyID:  playlist.ID,
+			SpotifyID:  string(playlist.ID),
 			ImageURL:   playlist.ImageURL,
 		})
 	}
@@ -145,7 +145,7 @@ func (h *PlaylistHandler) GetSpotifyPlaylistsForImport(w http.ResponseWriter, r 
 
 	for _, spotifyPlaylist := range spotifyPlaylists {
 		_, err := h.playlistService.ImportFromSpotify(r.Context(), user.ID, models.ImportPlaylistRequest{
-			SpotifyPlaylistID: spotifyPlaylist.ID,
+			SpotifyPlaylistID: string(spotifyPlaylist.ID),
 			SyncWithSpotify:   true,
 		})
 		if err != nil {
@@ -157,11 +157,11 @@ func (h *PlaylistHandler) GetSpotifyPlaylistsForImport(w http.ResponseWriter, r 
 	var templatePlaylists []templates.UserPlaylist
 	for _, playlist := range spotifyPlaylists {
 		templatePlaylists = append(templatePlaylists, templates.UserPlaylist{
-			ID:         playlist.ID,
+			ID:         string(playlist.ID),
 			Name:       playlist.Name,
 			TrackCount: playlist.TotalTracks,
 			IsSpotify:  true,
-			SpotifyID:  playlist.ID,
+			SpotifyID:  string(playlist.ID),
 		})
 	}
 
@@ -198,11 +198,11 @@ func (h *PlaylistHandler) UpdateSpotifyPlaylist(w http.ResponseWriter, r *http.R
 	var templatePlaylists []templates.UserPlaylist
 	for _, playlist := range spotifyPlaylists {
 		templatePlaylists = append(templatePlaylists, templates.UserPlaylist{
-			ID:         playlist.ID,
+			ID:         string(playlist.ID),
 			Name:       playlist.Name,
 			TrackCount: playlist.TotalTracks,
 			IsSpotify:  true,
-			SpotifyID:  playlist.ID,
+			SpotifyID:  string(playlist.ID),
 		})
 	}
 

@@ -138,7 +138,7 @@ func (s *Spotify) getUserPlaylistsFromAPI(ctx context.Context, accessToken strin
 		}
 
 		playlists[i] = m.PlaylistData{
-			ID:               item.ID,
+			ID:               m.SpotifyID(item.ID),
 			Name:             item.Name,
 			Description:      item.Description,
 			OwnerID:          item.Owner.ID,
@@ -217,7 +217,7 @@ func (s *Spotify) createPlaylistOnSpotify(ctx context.Context, accessToken, user
 	}
 
 	return m.PlaylistData{
-		ID:               response.ID,
+		ID:               m.SpotifyID(response.ID),
 		Name:             response.Name,
 		Description:      response.Description,
 		OwnerID:          "", // Not available in this response
