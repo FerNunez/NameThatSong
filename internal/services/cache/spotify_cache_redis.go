@@ -41,6 +41,8 @@ type SpotifyCache interface {
 	SetSearchArtists(query string, artists []m.ArtistSearch)
 	GetSearchPlaylists(query string) ([]m.PlaylistSearch, bool)
 	SetSearchPlaylists(query string, playlists []m.PlaylistSearch)
+	GetSearchAll(query string) (*m.SearchAllResults, bool)
+	SetSearchAll(query string, results *m.SearchAllResults)
 
 	// OAuth state management
 	GetOAuthState(userID string) (string, bool)
@@ -453,9 +455,21 @@ func (r *RedisSpotifyCache) SetSearchTracks(query string, tracks []m.TrackSearch
 	key := r.generateSearchKey("tracks", query)
 	tracksJson, err := json.Marshal(tracks)
 	if err != nil {
+		logger.Error(r.ctx, "failed to marshal track search results for cache",
+			logger.F("query", query),
+			logger.F("cache_key", key),
+			logger.F("error", err))
 		return
 	}
-	r.client.Set(r.ctx, key, tracksJson, r.ttl)
+
+	err = r.client.Set(r.ctx, key, tracksJson, r.ttl).Err()
+	if err != nil {
+		logger.Error(r.ctx, "failed to store track search results in cache",
+			logger.F("query", query),
+			logger.F("cache_key", key),
+			logger.F("results_count", len(tracks)),
+			logger.F("error", err))
+	}
 }
 
 func (r *RedisSpotifyCache) GetSearchAlbums(query string) ([]m.AlbumSearch, bool) {
@@ -478,9 +492,21 @@ func (r *RedisSpotifyCache) SetSearchAlbums(query string, albums []m.AlbumSearch
 	key := r.generateSearchKey("albums", query)
 	albumsJson, err := json.Marshal(albums)
 	if err != nil {
+		logger.Error(r.ctx, "failed to marshal album search results for cache",
+			logger.F("query", query),
+			logger.F("cache_key", key),
+			logger.F("error", err))
 		return
 	}
-	r.client.Set(r.ctx, key, albumsJson, r.ttl)
+
+	err = r.client.Set(r.ctx, key, albumsJson, r.ttl).Err()
+	if err != nil {
+		logger.Error(r.ctx, "failed to store album search results in cache",
+			logger.F("query", query),
+			logger.F("cache_key", key),
+			logger.F("results_count", len(albums)),
+			logger.F("error", err))
+	}
 }
 
 func (r *RedisSpotifyCache) GetSearchArtists(query string) ([]m.ArtistSearch, bool) {
@@ -503,9 +529,21 @@ func (r *RedisSpotifyCache) SetSearchArtists(query string, artists []m.ArtistSea
 	key := r.generateSearchKey("artists", query)
 	artistsJson, err := json.Marshal(artists)
 	if err != nil {
+		logger.Error(r.ctx, "failed to marshal artist search results for cache",
+			logger.F("query", query),
+			logger.F("cache_key", key),
+			logger.F("error", err))
 		return
 	}
-	r.client.Set(r.ctx, key, artistsJson, r.ttl)
+
+	err = r.client.Set(r.ctx, key, artistsJson, r.ttl).Err()
+	if err != nil {
+		logger.Error(r.ctx, "failed to store artist search results in cache",
+			logger.F("query", query),
+			logger.F("cache_key", key),
+			logger.F("results_count", len(artists)),
+			logger.F("error", err))
+	}
 }
 
 func (r *RedisSpotifyCache) GetSearchPlaylists(query string) ([]m.PlaylistSearch, bool) {
@@ -528,9 +566,21 @@ func (r *RedisSpotifyCache) SetSearchPlaylists(query string, playlists []m.Playl
 	key := r.generateSearchKey("playlists", query)
 	playlistsJson, err := json.Marshal(playlists)
 	if err != nil {
+		logger.Error(r.ctx, "failed to marshal playlist search results for cache",
+			logger.F("query", query),
+			logger.F("cache_key", key),
+			logger.F("error", err))
 		return
 	}
-	r.client.Set(r.ctx, key, playlistsJson, r.ttl)
+
+	err = r.client.Set(r.ctx, key, playlistsJson, r.ttl).Err()
+	if err != nil {
+		logger.Error(r.ctx, "failed to store playlist search results in cache",
+			logger.F("query", query),
+			logger.F("cache_key", key),
+			logger.F("results_count", len(playlists)),
+			logger.F("error", err))
+	}
 }
 
 // OAuth state management operations
@@ -553,4 +603,49 @@ func (r *RedisSpotifyCache) SetOAuthState(userID, state string) {
 
 func (r *RedisSpotifyCache) generateStateKey(userID string) string {
 	return fmt.Sprintf("spotify:oauth:state:%s", userID)
+}
+
+// SearchAll cache operations
+func (r *RedisSpotifyCache) GetSearchAll(query string) (*m.SearchAllResults, bool) {
+	var results m.SearchAllResults
+	key := r.generateSearchKey("all", query)
+
+	val, err := r.client.Get(r.ctx, key).Result()
+	if err != nil {
+		return nil, false
+	}
+
+	if err := json.Unmarshal([]byte(val), &results); err != nil {
+		return nil, false
+	}
+
+	return &results, true
+}
+
+func (r *RedisSpotifyCache) SetSearchAll(query string, results *m.SearchAllResults) {
+	key := r.generateSearchKey("all", query)
+	resultsJson, err := json.Marshal(results)
+	if err != nil {
+		logger.Error(r.ctx, "failed to marshal search all results for cache",
+			logger.F("query", query),
+			logger.F("cache_key", key),
+			logger.F("error", err))
+		return
+	}
+
+	err = r.client.Set(r.ctx, key, resultsJson, r.ttl).Err()
+	if err != nil {
+		logger.Error(r.ctx, "failed to store search all results in cache",
+			logger.F("query", query),
+			logger.F("cache_key", key),
+			logger.F("error", err))
+	} else {
+		logger.Debug(r.ctx, "successfully cached search all results",
+			logger.F("query", query),
+			logger.F("cache_key", key),
+			logger.F("tracks_count", len(results.Tracks)),
+			logger.F("albums_count", len(results.Albums)),
+			logger.F("artists_count", len(results.Artists)),
+			logger.F("playlists_count", len(results.Playlists)))
+	}
 }

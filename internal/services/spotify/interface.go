@@ -18,6 +18,7 @@ type SpotifyService interface {
 	SearchAlbums(ctx context.Context, userID, query string) ([]m.AlbumSearch, error)
 	SearchArtists(ctx context.Context, userID, query string) ([]m.ArtistSearch, error)
 	SearchPlaylists(ctx context.Context, userID, query string) ([]m.PlaylistSearch, error)
+	SearchAll(ctx context.Context, userID, query string) (*m.SearchAllResults, error)
 
 	// Fetch operations
 	FetchTrack(ctx context.Context, userID string, trackID m.SpotifyID) (m.TrackData, error)

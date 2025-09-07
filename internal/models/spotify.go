@@ -54,6 +54,15 @@ type PlaylistSearch struct {
 	FollowersTotal int    `json:"followers_total"`
 }
 
+// SearchAllResults contains combined search results from all Spotify content types
+type SearchAllResults struct {
+	Tracks    []TrackSearch    `json:"tracks"`
+	Albums    []AlbumSearch    `json:"albums"`
+	Artists   []ArtistSearch   `json:"artists"`
+	Playlists []PlaylistSearch `json:"playlists"`
+	Query     string           `json:"query"`
+}
+
 // =============================================================================
 // FULL DATA MODELS (with relationships, for caching and database)
 // =============================================================================
