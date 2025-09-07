@@ -107,7 +107,7 @@ func (r *RedisSpotifyCache) GetMultipleTracks(trackIDs []m.SpotifyID) (map[m.Spo
 
 	// build pipeline
 	if _, err := pipeline.Exec(r.ctx); err != nil {
-		logger.Error(r.ctx, "could not fetch batch all trackIDs")
+		logger.Debug(r.ctx, "couldn't fetch cache batch tracks")
 	}
 
 	// Check what is missing, and what worked
@@ -431,7 +431,6 @@ func (r *RedisSpotifyCache) SetMultiplePlaylists(playlists map[m.SpotifyID]m.Pla
 		logger.Warn(r.ctx, "Redis batch cache operation failed for playlists", logger.F("attempted", len(playlists)-skippedCount), logger.F("skipped", skippedCount), logger.F("error", err))
 	}
 }
-
 
 // Search cache operations
 func (r *RedisSpotifyCache) GetSearchTracks(query string) ([]m.TrackSearch, bool) {

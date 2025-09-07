@@ -75,6 +75,7 @@ func (s *Spotify) FetchMultipleTracks(ctx context.Context, userID string, trackI
 		results = append(results, track)
 	}
 	remaining = stillMissing
+	logger.Debug(ctx, "tracks from cache", logger.F("cached_count", len(cachedTracks)), logger.F("remaining_count", len(remaining)))
 
 	// All fetched
 	if len(remaining) == 0 {
@@ -97,6 +98,7 @@ func (s *Spotify) FetchMultipleTracks(ctx context.Context, userID string, trackI
 		s.cache.SetMultipleTracks(cacheMap)
 	}
 	remaining = stillMissing
+	logger.Debug(ctx, "tracks from database", logger.F("db_count", len(dbTracks)), logger.F("remaining_count", len(remaining)))
 
 	if len(remaining) == 0 {
 		return results, nil
@@ -140,6 +142,8 @@ func (s *Spotify) FetchMultipleTracks(ctx context.Context, userID string, trackI
 
 		results = append(results, apiTracks...)
 	}
+	logger.Debug(ctx, "tracks from API", logger.F("api_count", len(apiTracks)))
+	logger.Debug(ctx, "batch tracks fetch complete", logger.F("total_requested", len(uniqueIDs)), logger.F("total_returned", len(results)))
 
 	return results, nil
 }
@@ -160,6 +164,7 @@ func (s *Spotify) FetchMultipleAlbums(ctx context.Context, userID string, albumI
 		results = append(results, album)
 	}
 	remaining = stillMissing
+	logger.Debug(ctx, "albums from cache", logger.F("cached_count", len(cachedAlbums)), logger.F("remaining_count", len(remaining)))
 
 	// All fetched
 	if len(remaining) == 0 {
@@ -182,6 +187,7 @@ func (s *Spotify) FetchMultipleAlbums(ctx context.Context, userID string, albumI
 		s.cache.SetMultipleAlbums(cacheMap)
 	}
 	remaining = stillMissing
+	logger.Debug(ctx, "albums from database", logger.F("db_count", len(dbAlbums)), logger.F("remaining_count", len(remaining)))
 
 	if len(remaining) == 0 {
 		return results, nil
@@ -225,6 +231,8 @@ func (s *Spotify) FetchMultipleAlbums(ctx context.Context, userID string, albumI
 
 		results = append(results, apiAlbums...)
 	}
+	logger.Debug(ctx, "albums from API", logger.F("api_count", len(apiAlbums)))
+	logger.Debug(ctx, "batch albums fetch complete", logger.F("total_requested", len(uniqueIDs)), logger.F("total_returned", len(results)))
 
 	return results, nil
 }
@@ -245,6 +253,7 @@ func (s *Spotify) FetchMultipleArtists(ctx context.Context, userID string, artis
 		results = append(results, artist)
 	}
 	remaining = stillMissing
+	logger.Debug(ctx, "artists from cache", logger.F("cached_count", len(cachedArtists)), logger.F("remaining_count", len(remaining)))
 
 	// All fetched
 	if len(remaining) == 0 {
@@ -267,6 +276,7 @@ func (s *Spotify) FetchMultipleArtists(ctx context.Context, userID string, artis
 		s.cache.SetMultipleArtists(cacheMap)
 	}
 	remaining = stillMissing
+	logger.Debug(ctx, "artists from database", logger.F("db_count", len(dbArtists)), logger.F("remaining_count", len(remaining)))
 
 	if len(remaining) == 0 {
 		return results, nil
@@ -310,6 +320,8 @@ func (s *Spotify) FetchMultipleArtists(ctx context.Context, userID string, artis
 
 		results = append(results, apiArtists...)
 	}
+	logger.Debug(ctx, "artists from API", logger.F("api_count", len(apiArtists)))
+	logger.Debug(ctx, "batch artists fetch complete", logger.F("total_requested", len(uniqueIDs)), logger.F("total_returned", len(results)))
 
 	return results, nil
 }
