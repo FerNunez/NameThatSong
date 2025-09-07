@@ -85,19 +85,9 @@ type SpotifyAlbum struct {
 	ImageUrl             sql.NullString
 	Label                sql.NullString
 	Popularity           int32
+	ArtistIds            []string
+	TrackIds             []string
 	CachedAt             time.Time
-	UpdatedAt            time.Time
-}
-
-type SpotifyAlbumArtist struct {
-	AlbumID  string
-	ArtistID string
-}
-
-type SpotifyAlbumTrack struct {
-	AlbumID  string
-	TrackID  string
-	Position int32
 }
 
 type SpotifyArtist struct {
@@ -108,7 +98,6 @@ type SpotifyArtist struct {
 	FollowersTotal int32
 	Genres         []string
 	CachedAt       time.Time
-	UpdatedAt      time.Time
 }
 
 type SpotifyPlaylist struct {
@@ -122,15 +111,8 @@ type SpotifyPlaylist struct {
 	FollowersTotal   sql.NullInt32
 	TotalTracks      sql.NullInt32
 	ImageUrl         sql.NullString
+	TrackIds         []string
 	CachedAt         time.Time
-	UpdatedAt        time.Time
-}
-
-type SpotifyPlaylistTrack struct {
-	PlaylistID string
-	TrackID    string
-	Position   int32
-	UpdatedAt  time.Time
 }
 
 type SpotifyToken struct {
@@ -147,22 +129,15 @@ type SpotifyToken struct {
 type SpotifyTrack struct {
 	ID          string
 	Name        string
-	AlbumID     sql.NullString
 	DurationMs  int32
 	DiscNumber  sql.NullInt32
 	TrackNumber sql.NullInt32
 	Popularity  sql.NullInt32
 	Explicit    sql.NullBool
-	PreviewUrl  sql.NullString
 	IsLocal     sql.NullBool
+	AlbumID     string
+	ArtistIds   []string
 	CachedAt    time.Time
-	UpdatedAt   time.Time
-}
-
-type SpotifyTrackArtist struct {
-	TrackID   string
-	ArtistID  string
-	IsPrimary sql.NullBool
 }
 
 type User struct {

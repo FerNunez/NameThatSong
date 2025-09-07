@@ -148,10 +148,10 @@ templ PlaylistSongsWithData(songs []PlaylistSong) {
 }
 
 templ PlaylistDetailsView(playlist PlaylistInfo, songs []PlaylistSong) {
-	<div 
+	<div
 		class="h-full flex flex-col"
 		hx-trigger="trackAdded from:body"
-		hx-get={"/api/playlist/" + playlist.ID + "/songs"}
+		hx-get={ "/api/playlist/" + playlist.ID + "/songs" }
 		hx-target="#playlist-songs-container"
 		hx-swap="innerHTML"
 	>
@@ -692,7 +692,7 @@ templ AlbumSearchItem(album m.AlbumSearch) {
 		<button
 			class="p-1.5 text-forest-50 hover:text-blue-400 hover:bg-forest-100 rounded transition-colors opacity-0 group-hover:opacity-100"
 			title="View artist"
-			hx-get={ "/api/search/album/" + album.ID }
+			hx-get={ "/api/music-search/album/" + album.ID }
 			hx-target="#music-search-results"
 		>
 			<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -720,7 +720,7 @@ templ ArtistSearchItem(artist m.ArtistSearch) {
 		<button
 			class="p-1.5 text-forest-50 hover:text-blue-400 hover:bg-forest-100 rounded transition-colors opacity-0 group-hover:opacity-100"
 			title="View artist"
-			hx-get={ "/api/search/artist/" + artist.ID }
+			hx-get={ "/api/music-search/artist/" + artist.ID }
 			hx-target="#music-search-results"
 		>
 			<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">

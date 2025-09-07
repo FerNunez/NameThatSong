@@ -401,17 +401,11 @@ func (s *Spotify) parseTrackSearchResponse(data []byte) ([]m.TrackSearch, error)
 		}
 
 		trackInfo := m.TrackSearch{
-			ID:         t.ID,
-			Name:       t.Name,
-			Popularity: t.Popularity,
-			DurationMs: t.DurationMs,
-			Explicit:   t.Explicit,
-			PreviewURL: func() string {
-				if url, ok := t.PreviewURL.(string); ok {
-					return url
-				}
-				return ""
-			}(),
+			ID:            t.ID,
+			Name:          t.Name,
+			Popularity:    t.Popularity,
+			DurationMs:    t.DurationMs,
+			Explicit:      t.Explicit,
 			ArtistNames:   artists,
 			AlbumName:     albumsName,
 			AlbumImageURL: albumsImageURL,
@@ -713,18 +707,12 @@ func (s *Spotify) parseSearchAllResponse(ctx context.Context, data []byte, query
 			albumImageURL = t.Album.Images[0].URL
 		}
 
-		previewURL := ""
-		if url, ok := t.PreviewURL.(string); ok {
-			previewURL = url
-		}
-
 		results.Tracks = append(results.Tracks, m.TrackSearch{
 			ID:            t.ID,
 			Name:          t.Name,
 			Popularity:    t.Popularity,
 			DurationMs:    t.DurationMs,
 			Explicit:      t.Explicit,
-			PreviewURL:    previewURL,
 			ArtistNames:   artists,
 			AlbumName:     t.Album.Name,
 			AlbumImageURL: albumImageURL,

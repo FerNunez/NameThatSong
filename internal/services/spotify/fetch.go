@@ -350,6 +350,7 @@ func (s *Spotify) FetchAlbum(ctx context.Context, userID string, albumID m.Spoti
 	if err != nil {
 		return m.AlbumData{}, err
 	}
+	fmt.Println("album", len(album.TrackIDs))
 
 	// Store in database for persistence (async to avoid blocking)
 	go func() {
@@ -658,6 +659,10 @@ func (s *Spotify) fetchAlbumFromAPI(ctx context.Context, accessToken string, alb
 	for i, artist := range fetchAlbumResponse.Artists {
 		artistIDs[i] = m.SpotifyID(artist.ID)
 	}
+	tracksIDs := make([]m.SpotifyID, len(fetchAlbumResponse.Tracks.Items))
+	for i, tracks := range fetchAlbumResponse.Tracks.Items {
+		tracksIDs[i] = m.SpotifyID(tracks.ID)
+	}
 
 	return m.AlbumData{
 		ID:                   albumID,
@@ -670,6 +675,7 @@ func (s *Spotify) fetchAlbumFromAPI(ctx context.Context, accessToken string, alb
 		Label:                fetchAlbumResponse.Label,
 		Popularity:           fetchAlbumResponse.Popularity,
 		ArtistIDs:            artistIDs,
+		TrackIDs:             tracksIDs,
 		CachedAt:             time.Now(),
 	}, nil
 }

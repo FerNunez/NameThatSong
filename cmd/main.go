@@ -146,19 +146,6 @@ func main() {
 			r.Post("/api/playlist/create", playlistHandler.CreateAndShowPlaylist)
 			r.Get("/api/playlist/cancel-create", playlistHandler.CancelCreatePlaylist)
 
-			// HTMX Search API (integrated into modern UI sidebar)
-			r.Get("/api/search", handlers.NewSimpleSearchHandler(spotifyService).ServeHTTP)
-			r.Get("/api/music-search", handlers.NewSimpleSearchHandler(spotifyService).ServeHTTP)
-
-			// Action endpoints for the search interface
-			actionHandler := handlers.NewActionHandler(spotifyService)
-			r.Post("/api/add-track", actionHandler.AddTrackHandler)
-			r.Post("/api/play-track", actionHandler.PlayTrackHandler)
-			r.Post("/api/add-album", actionHandler.AddAlbumHandler)
-			r.Post("/api/play-album", actionHandler.PlayAlbumHandler)
-			r.Post("/api/play-artist", actionHandler.PlayArtistHandler)
-			r.Post("/api/play-playlist", actionHandler.PlayPlaylistHandler)
-			r.Get("/api/artist/{artistId}", handlers.NewArtistDetailHandler(spotifyService).ServeHTTP)
 
 			// Game routes (integrated into modern UI)
 			r.Get("/api/game/setup", playlistHandler.ShowGameSetup)
@@ -172,9 +159,10 @@ func main() {
 			r.Get("/api/playlist-songs-empty", playlistHandler.ShowPlaylistSongsEmpty)
 			r.Get("/api/playlist/{id}/songs", playlistHandler.GetPlaylistSongsView)
 
-			searchHandler := handlers.NewSearchHandler(spotifyService)
-			r.Get("/api/search/artist/{id}", searchHandler.GetArtistItems)
-			r.Get("/api/search/album/{id}", searchHandler.GetAlbumItems)
+			musicSearchHandler := handlers.NewMusicSearchHandler(spotifyService)
+			r.Get("/api/music-search", musicSearchHandler.SearchAll)
+			r.Get("/api/music-search/artist/{id}", musicSearchHandler.SearchArtistItems)
+			r.Get("/api/music-search/album/{id}", musicSearchHandler.SearchAlbumItems)
 
 			// Playlist context and track addition routes
 			r.Get("/api/set-playlist-context", playlistHandler.SetPlaylistContext)

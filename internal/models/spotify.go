@@ -18,7 +18,6 @@ type TrackSearch struct {
 	Popularity    int      `json:"popularity"`
 	DurationMs    int      `json:"duration_ms"`
 	Explicit      bool     `json:"explicit"`
-	PreviewURL    string   `json:"preview_url"`
 	ArtistNames   []string `json:"artist_names"` // Simple list for search display
 	AlbumName     string   `json:"album_name"`   // Simple string for search display
 	AlbumImageURL string   `json:"album_image_url"`
