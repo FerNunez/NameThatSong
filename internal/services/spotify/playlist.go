@@ -7,19 +7,65 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	m "github.com/FerNunez/NameThatSong/internal/models"
+	"github.com/FerNunez/NameThatSong/internal/pkg/logger"
 )
 
-func (s *Spotify) GetUserPlaylists(ctx context.Context, userID string) ([]m.PlaylistData, error) {
+// GetUserSpotifyPlaylists fetches user's Spotify playlists with 3-tier caching strategy
+func (s *Spotify) GetUserSpotifyPlaylists(ctx context.Context, userID string) ([]m.SpotifyUserPlaylist, error) {
+
+	// 1. Check Redis cache first
+	if cachedPlaylists, found := s.cache.GetSpotifyUserPlaylist(userID); found {
+		logger.Debug(ctx, "spotify user playlists found in cache",
+			logger.F("user_id", userID),
+			logger.F("count", len(cachedPlaylists)))
+		return cachedPlaylists, nil
+	}
+	logger.Debug(ctx, "spotify user playlists not in cache, fetching from API",
+		logger.F("user_id", userID))
+
+	// 3. Fetch from Spotify API
 	accessToken, err := s.GetValidToken(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get access token: %v", err)
 	}
-
 	playlists, err := s.getUserPlaylistsFromAPI(ctx, accessToken)
 	if err != nil {
+		return nil, fmt.Errorf("failed to fetch playlists from API: %v", err)
+	}
+
+	// Cache the results
+	if success := s.cache.SetSpotifyUserPlaylist(userID, playlists); !success {
+		logger.Warn(ctx, "failed to cache spotify user playlists",
+			logger.F("user_id", userID))
+	} else {
+		logger.Debug(ctx, "successfully cached spotify user playlists",
+			logger.F("user_id", userID),
+			logger.F("count", len(playlists)))
+	}
+
+	return playlists, nil
+}
+
+// Deprecated: Use GetUserSpotifyPlaylists instead
+func (s *Spotify) GetUserPlaylists(ctx context.Context, userID string) ([]m.PlaylistData, error) {
+	spotifyPlaylists, err := s.GetUserSpotifyPlaylists(ctx, userID)
+	if err != nil {
 		return nil, err
+	}
+
+	// Convert SpotifyUserPlaylist to PlaylistData for backward compatibility
+	playlists := make([]m.PlaylistData, len(spotifyPlaylists))
+	for i, sp := range spotifyPlaylists {
+		playlists[i] = m.PlaylistData{
+			ID:          sp.ID,
+			Name:        sp.Name,
+			TotalTracks: sp.TotalTracks,
+			ImageURL:    sp.ImageURL,
+			CachedAt:    sp.CachedAt,
+		}
 	}
 
 	return playlists, nil
@@ -64,7 +110,7 @@ func (s *Spotify) RemoveTracksFromPlaylist(ctx context.Context, userID, playlist
 }
 
 // Returns a list of playlist for the current user.
-func (s *Spotify) getUserPlaylistsFromAPI(ctx context.Context, accessToken string) ([]m.PlaylistData, error) {
+func (s *Spotify) getUserPlaylistsFromAPI(ctx context.Context, accessToken string) ([]m.SpotifyUserPlaylist, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", "https://api.spotify.com/v1/me/playlists", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
@@ -130,24 +176,19 @@ func (s *Spotify) getUserPlaylistsFromAPI(ctx context.Context, accessToken strin
 		return nil, fmt.Errorf("failed to unmarshal response: %v", err)
 	}
 
-	playlists := make([]m.PlaylistData, len(response.Items))
+	playlists := make([]m.SpotifyUserPlaylist, len(response.Items))
 	for i, item := range response.Items {
 		imageUrl := ""
 		if len(item.Images) > 0 {
 			imageUrl = item.Images[0].URL
 		}
 
-		playlists[i] = m.PlaylistData{
-			ID:               m.SpotifyID(item.ID),
-			Name:             item.Name,
-			Description:      item.Description,
-			OwnerID:          item.Owner.ID,
-			OwnerDisplayName: item.Owner.DisplayName,
-			Public:           item.Public,
-			Collaborative:    item.Collaborative,
-			FollowersTotal:   0,
-			TotalTracks:      item.Tracks.Total,
-			ImageURL:         imageUrl,
+		playlists[i] = m.SpotifyUserPlaylist{
+			ID:          m.SpotifyID(item.ID),
+			Name:        item.Name,
+			TotalTracks: item.Tracks.Total,
+			ImageURL:    imageUrl,
+			CachedAt:    time.Now(),
 		}
 	}
 

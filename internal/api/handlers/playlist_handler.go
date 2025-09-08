@@ -94,8 +94,10 @@ func (h *PlaylistHandler) GetSpotifyPlaylists(w http.ResponseWriter, r *http.Req
 	}
 
 	// Get user's Spotify playlists
-	spotifyPlaylists, err := h.spotifyService.GetUserPlaylists(r.Context(), user.ID.String())
+	spotifyPlaylists, err := h.spotifyService.GetUserSpotifyPlaylists(r.Context(), user.ID.String())
+
 	if err != nil {
+		fmt.Println("err: ", err)
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusOK)
 		templates.SpotifyPlaylistsList([]templates.UserPlaylist{}).Render(r.Context(), w)
@@ -135,7 +137,7 @@ func (h *PlaylistHandler) GetSpotifyPlaylistsForImport(w http.ResponseWriter, r 
 	// gets playlist info + all songs
 
 	// Get user's Spotify playlists
-	spotifyPlaylists, err := h.spotifyService.GetUserPlaylists(r.Context(), user.ID.String())
+	spotifyPlaylists, err := h.spotifyService.GetUserSpotifyPlaylists(r.Context(), user.ID.String())
 	if err != nil {
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusOK)
@@ -186,7 +188,7 @@ func (h *PlaylistHandler) UpdateSpotifyPlaylist(w http.ResponseWriter, r *http.R
 	}
 
 	// Refresh this specific playlist from Spotify
-	spotifyPlaylists, err := h.spotifyService.GetUserPlaylists(r.Context(), user.ID.String())
+	spotifyPlaylists, err := h.spotifyService.GetUserSpotifyPlaylists(r.Context(), user.ID.String())
 	if err != nil {
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusOK)

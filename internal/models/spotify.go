@@ -65,7 +65,6 @@ type SearchAllResults struct {
 // =============================================================================
 // FULL DATA MODELS (with relationships, for caching and database)
 // =============================================================================
-
 // TrackData represents a complete Spotify track with full relationships
 type TrackData struct {
 	ID          SpotifyID   `json:"id"`
@@ -122,4 +121,13 @@ type PlaylistData struct {
 	ImageURL         string      `json:"image_url"`
 	TrackIDs         []SpotifyID `json:"track_ids"` // IDs of tracks in this album
 	CachedAt         time.Time   `json:"cached_at"`
+}
+
+// This is the Playlist model returned by getting the User Spotify list
+type SpotifyUserPlaylist struct {
+	ID          SpotifyID `json:"id"`
+	Name        string    `json:"name"`
+	TotalTracks int       `json:"total_tracks"`
+	ImageURL    string    `json:"image_url"`
+	CachedAt    time.Time `json:"cached_at"`
 }
