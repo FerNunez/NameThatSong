@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -62,7 +61,7 @@ func (h *MusicSearchHandler) SearchAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logger.Debug(r.Context(), "search all completed", 
+	logger.Debug(r.Context(), "search all completed",
 		logger.F("tracks_found", len(results.Tracks)),
 		logger.F("albums_found", len(results.Albums)),
 		logger.F("artists_found", len(results.Artists)),
@@ -98,7 +97,7 @@ func (h *MusicSearchHandler) SearchAll(w http.ResponseWriter, r *http.Request) {
 		logger.F("#playlists", len(playlists)))
 
 	// Render the search results
-	logger.Debug(r.Context(), "rendering search results", 
+	logger.Debug(r.Context(), "rendering search results",
 		logger.F("final_tracks", len(tracks)),
 		logger.F("final_albums", len(albums)),
 		logger.F("final_artists", len(artists)),
@@ -237,4 +236,3 @@ func (h *MusicSearchHandler) SearchAlbumItems(w http.ResponseWriter, r *http.Req
 	component := templates.SearchResults(tracks, []m.AlbumSearch{}, []m.ArtistSearch{}, []m.PlaylistSearch{}, searchAlbumIDStr, "")
 	component.Render(r.Context(), w)
 }
-

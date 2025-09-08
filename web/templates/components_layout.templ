@@ -97,7 +97,7 @@ templ Sidebar(user *User) {
 		if user != nil {
 			<!-- Local Playlists - Only for authenticated users -->
 			<section class="px-4 pb-4 pt-4">
-				<h3 class="text-lg font-bold mb-4 text-white">Local Playlists</h3>
+				<h3 class="text-lg font-bold mb-4 text-white">Playlists</h3>
 				<div
 					id="local-playlists"
 					class="space-y-2"
@@ -107,16 +107,21 @@ templ Sidebar(user *User) {
 				>
 					@PlaylistsLoading()
 				</div>
+				<button
+					class="mt-2 text-accent text-sm hover:text-green-400 transition-colors"
+					hx-get="/api/spotify-playlists"
+					hx-target="#spotify-playlists"
+					hx-trigger="click"
+				>
+					Import from Spotifyy
+				</button>
 			</section>
-			<!-- Spotify Playlists - Only for authenticated users -->
+			<!--Spotify Playlists - Only for authenticated users -->
 			<section class="px-4 pb-6">
 				<h3 class="text-lg font-bold mb-4 text-white">Spotify Playlists</h3>
 				<div
 					id="spotify-playlists"
 					class="space-y-2"
-					hx-get="/api/spotify-playlists"
-					hx-trigger="load"
-					hx-target="this"
 				>
 					@PlaylistsLoading()
 				</div>

@@ -19,7 +19,7 @@ templ SearchInput(placeholder, id string) {
 				placeholder={ placeholder }
 				class="flex-1 bg-transparent border-none outline-none text-white 
 					   placeholder-forest-50 px-4 text-base focus:outline-none"
-				hx-get="/api/search"
+				hx-get="/api/music-search"
 				hx-trigger="keyup changed delay:300ms"
 				hx-target="#search-results"
 				hx-include="[name='filter']"
