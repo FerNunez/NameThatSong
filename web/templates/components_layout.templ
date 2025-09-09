@@ -2,6 +2,7 @@ package templates
 
 import (
 	m "github.com/FerNunez/NameThatSong/internal/api/middleware"
+	"github.com/FerNunez/NameThatSong/internal/models"
 	"strconv"
 )
 
@@ -16,7 +17,7 @@ type LayoutData struct {
 	User  *User
 }
 
-templ Header(user *User) {
+templ Header(user *models.User) {
 	<header
 		class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between 
 				   bg-forest-400 border-b border-forest-100 px-10 py-3"
@@ -48,7 +49,7 @@ templ NotificationButton() {
 	</button>
 }
 
-templ UserProfile(user *User) {
+templ UserProfile(user *models.User) {
 	{{ _, ok := m.GetUser(ctx) }}
 	if ok && user != nil {
 		<div class="flex items-center gap-3">
@@ -92,7 +93,7 @@ templ UserAvatar(avatarURL string) {
 	</div>
 }
 
-templ Sidebar(user *User) {
+templ Sidebar(user *models.User) {
 	<aside class="w-80 bg-forest-400 border-r border-forest-100 overflow-auto h-full">
 		if user != nil {
 			<!-- Local Playlists - Only for authenticated users -->
@@ -107,14 +108,25 @@ templ Sidebar(user *User) {
 				>
 					@PlaylistsLoading()
 				</div>
-				<button
-					class="mt-2 text-accent text-sm hover:text-green-400 transition-colors"
-					hx-get="/api/spotify-playlists"
-					hx-target="#spotify-playlists"
-					hx-trigger="click"
-				>
-					Import from Spotifyy
-				</button>
+				if user.SpotifyPlaylistsImported {
+					<button
+						class="mt-2 text-accent text-sm hover:text-green-400 transition-colors"
+						hx-get="/api/spotify-playlists"
+						hx-target="#spotify-playlists"
+						hx-trigger="click"
+					>
+						Refresh Spotify PlayLists
+					</button>
+				} else {
+					<button
+						class="mt-2 text-accent text-sm hover:text-green-400 transition-colors"
+						hx-get="/api/spotify-playlists"
+						hx-target="#spotify-playlists"
+						hx-trigger="click"
+					>
+						Import from Spotify
+					</button>
+				}
 			</section>
 			<!--Spotify Playlists - Only for authenticated users -->
 			<section class="px-4 pb-6">
@@ -181,7 +193,7 @@ templ LibraryItem(label, iconType, href string) {
 	</a>
 }
 
-templ LayoutWithUser(contents templ.Component, title string, user *User) {
+templ LayoutWithUser(contents templ.Component, title string, user *models.User) {
 	<html class="h-full bg-forest-400 font-sans">
 		<head>
 			<title>{ title }</title>

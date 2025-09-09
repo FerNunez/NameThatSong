@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/FerNunez/NameThatSong/internal/api/middleware"
@@ -17,15 +18,9 @@ func NewModernHandler() *ModernHandler {
 func (h *ModernHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Get user from context
 	user, ok := middleware.GetUser(r.Context())
-	var templateUser *templates.User
 	var indexComponent templ.Component
 
 	if ok && user != nil {
-		templateUser = &templates.User{
-			Name:      user.DisplayName,
-			Email:     user.Email,
-			AvatarURL: user.AvatarURL,
-		}
 		// Show the full modern interface for authenticated users
 		indexComponent = templates.IndexPage()
 	} else {
@@ -34,7 +29,7 @@ func (h *ModernHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Wrap it in the modern layout with user data
-	component := templates.LayoutWithUser(indexComponent, "NameThatSong", templateUser)
+	component := templates.LayoutWithUser(indexComponent, "NameThatSong", user)
 
 	// Render the component
 	err := component.Render(r.Context(), w)
