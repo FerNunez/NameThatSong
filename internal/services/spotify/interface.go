@@ -35,10 +35,10 @@ type SpotifyService interface {
 	ResumePlayback(ctx context.Context, userID string) error
 
 	// Playlist operations
-	GetUserPlaylists(ctx context.Context, userID string) ([]m.PlaylistData, error)
+	//FetchUserPlaylists(ctx context.Context, userID string) ([]m.PlaylistData, error)
 	CreatePlaylist(ctx context.Context, userID, name, description string, isPublic bool) (m.PlaylistData, error)
 	AddTracksToPlaylist(ctx context.Context, userID, playlistID string, trackIDs []string) error
 	RemoveTracksFromPlaylist(ctx context.Context, userID, playlistID string, trackIDs []string) error
 
-	GetUserSpotifyPlaylists(ctx context.Context, userID string) ([]m.SpotifyUserPlaylist, error)
+	FetchUserSpotifyPlaylistsVersion(ctx context.Context, userID string) ([]m.SpotifyUserPlaylistVersion, error)
 }

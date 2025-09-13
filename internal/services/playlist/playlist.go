@@ -9,35 +9,31 @@ import (
 	"github.com/FerNunez/NameThatSong/internal/pkg/logger"
 	"github.com/FerNunez/NameThatSong/internal/pkg/validation"
 	"github.com/FerNunez/NameThatSong/internal/repository"
-	"github.com/FerNunez/NameThatSong/internal/services/songs"
 	"github.com/FerNunez/NameThatSong/internal/services/spotify"
 	"github.com/google/uuid"
 )
 
 type PlaylistProvider struct {
 	playlistStore  repository.PlaylistStore
-	songService    songs.Service
 	spotifyService spotify.SpotifyService
 }
 
 func NewPlaylistService(
 	playlistStore repository.PlaylistStore,
-	songService songs.Service,
 	spotifyService spotify.SpotifyService,
 ) Service {
 	return &PlaylistProvider{
 		playlistStore,
-		songService,
 		spotifyService,
 	}
 }
 
 // Local playlist operations
-func (p *PlaylistProvider) CreatePlaylist(ctx context.Context, userID uuid.UUID, req models.CreatePlaylistRequest) (*models.Playlist, error) {
+func (p *PlaylistProvider) CreatePlaylist(ctx context.Context, userID uuid.UUID, req models.CreatePlaylistRequest) (*models.LocalPlaylist, error) {
 	logger.Info(ctx, "creating new playlist",
 		logger.F("user_id", userID),
 		logger.F("name", req.Name),
-		logger.F("sync_with_spotify", req.SyncWithSpotify))
+		logger.F("SnapshotID", req.SnapshotID))
 
 	// Validate request
 	if err := p.validateCreatePlaylistRequest(req); err != nil {
@@ -48,15 +44,15 @@ func (p *PlaylistProvider) CreatePlaylist(ctx context.Context, userID uuid.UUID,
 		return nil, fmt.Errorf("validation error: %w", err)
 	}
 
-	playlist := &models.Playlist{
-		ID:              uuid.New(),
-		UserID:          userID,
-		Name:            req.Name,
-		Description:     req.Description,
-		IsPublic:        req.IsPublic,
-		SyncWithSpotify: req.SyncWithSpotify,
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
+	playlist := &models.LocalPlaylist{
+		ID:          uuid.New(),
+		UserID:      userID,
+		Name:        req.Name,
+		Description: req.Description,
+		IsPublic:    req.IsPublic,
+		SnapshotID:  &req.SnapshotID,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 
 	if err := p.playlistStore.CreatePlaylist(ctx, playlist); err != nil {
@@ -75,15 +71,18 @@ func (p *PlaylistProvider) CreatePlaylist(ctx context.Context, userID uuid.UUID,
 	return playlist, nil
 }
 
-func (p *PlaylistProvider) GetUserPlaylists(ctx context.Context, userID uuid.UUID) ([]*models.Playlist, error) {
+func (p *PlaylistProvider) GetUserPlaylists(ctx context.Context, userID uuid.UUID) ([]*models.LocalPlaylist, error) {
+	// TODO: To add a cache here!
+	// TODO: add logger?
+
 	return p.playlistStore.GetPlaylistsByUserID(ctx, userID)
 }
 
-func (p *PlaylistProvider) GetPlaylist(ctx context.Context, playlistID, userID uuid.UUID) (*models.Playlist, error) {
+func (p *PlaylistProvider) GetPlaylist(ctx context.Context, playlistID, userID uuid.UUID) (*models.LocalPlaylist, error) {
 	return p.playlistStore.GetPlaylistByUserIDAndID(ctx, playlistID, userID)
 }
 
-func (p *PlaylistProvider) UpdatePlaylist(ctx context.Context, playlistID, userID uuid.UUID, req models.UpdatePlaylistRequest) (*models.Playlist, error) {
+func (p *PlaylistProvider) UpdatePlaylist(ctx context.Context, playlistID, userID uuid.UUID, req models.UpdatePlaylistRequest) (*models.LocalPlaylist, error) {
 	// Validate request
 	if err := p.validateUpdatePlaylistRequest(req); err != nil {
 		return nil, fmt.Errorf("validation error: %w", err)
@@ -99,7 +98,7 @@ func (p *PlaylistProvider) UpdatePlaylist(ctx context.Context, playlistID, userI
 	playlist.Name = req.Name
 	playlist.Description = req.Description
 	playlist.IsPublic = req.IsPublic
-	playlist.SyncWithSpotify = req.SyncWithSpotify
+	playlist.SnapshotID = &req.SnapshotID
 	playlist.UpdatedAt = time.Now()
 
 	if err := p.playlistStore.UpdatePlaylist(ctx, playlist); err != nil {
@@ -120,10 +119,10 @@ func (p *PlaylistProvider) AddSongToPlaylist(ctx context.Context, userID string,
 		return fmt.Errorf("validation error: %w", err)
 	}
 
-	// fetch song data into db
-	_, err := p.songService.GetSongBySpotifyID(ctx, userID, req.SpotifyTrackID)
+	// Ensure track exists in spotify_tracks table (3-tier caching will handle this)
+	_, err := p.spotifyService.FetchTrack(ctx, userID, models.SpotifyID(req.SpotifyTrackID))
 	if err != nil {
-		return fmt.Errorf("couldn't fetch song: %w", err)
+		return fmt.Errorf("couldn't fetch track from Spotify: %w", err)
 	}
 
 	songIDs, _, err := p.playlistStore.GetPlaylistSongs(ctx, playlistID)
@@ -133,22 +132,111 @@ func (p *PlaylistProvider) AddSongToPlaylist(ctx context.Context, userID string,
 	return p.playlistStore.AddSongToPlaylist(ctx, playlistID, req.SpotifyTrackID, len(songIDs))
 }
 
-func (p *PlaylistProvider) GetPlaylistSongs(ctx context.Context, userID string, playlistID uuid.UUID) ([]*models.Song, error) {
-	//TODO: Rename this to GetPlaylistSongsSpotifyIdx
-	songIDs, positions, err := p.playlistStore.GetPlaylistSongs(ctx, playlistID)
+func (p *PlaylistProvider) GetPlaylistSongs(ctx context.Context, userID string, playlistID uuid.UUID) ([]*models.PlaylistTrack, error) {
+	// Use the new query that joins with spotify_tracks directly
+	trackRows, err := p.playlistStore.GetPlaylistSongsWithTrackData(ctx, playlistID)
 	if err != nil {
 		return nil, err
 	}
-	songs := make([]*models.Song, len(songIDs))
-	for idx, songID := range songIDs {
-		pos := positions[idx]
-		song, err := p.songService.GetSongBySpotifyID(ctx, userID, songID)
-		if err != nil {
-			return nil, err
+	
+	tracks := make([]*models.PlaylistTrack, len(trackRows))
+	for i, row := range trackRows {
+		tracks[i] = &models.PlaylistTrack{
+			SpotifyTrackID: row.SpotifyTrackID,
+			Position:       row.Position,
+			UpdatedAt:      row.UpdatedAt,
+			TrackName:      row.TrackName,
+			DurationMs:     row.DurationMs,
+			AlbumID:        row.AlbumID,
+			ArtistIds:      row.ArtistIds,
 		}
-		songs[pos] = &song
 	}
-	return songs, nil
+	return tracks, nil
+}
+
+func (p *PlaylistProvider) GetPlaylistSongsWithDetails(ctx context.Context, userID string, playlistID uuid.UUID) ([]*models.PlaylistTrackWithDetails, error) {
+	// 1. Get basic tracks
+	basicTracks, err := p.GetPlaylistSongs(ctx, userID, playlistID)
+	if err != nil {
+		return nil, err
+	}
+	
+	if len(basicTracks) == 0 {
+		return []*models.PlaylistTrackWithDetails{}, nil
+	}
+	
+	// 2. Collect ALL album IDs and artist IDs (duplicates OK - SpotifyService handles deduplication)
+	albumIDs := make([]models.SpotifyID, len(basicTracks))
+	var allArtistIDs []models.SpotifyID
+	
+	for i, track := range basicTracks {
+		albumIDs[i] = models.SpotifyID(track.AlbumID)
+		for _, artistID := range track.ArtistIds {
+			allArtistIDs = append(allArtistIDs, models.SpotifyID(artistID))
+		}
+	}
+	
+	// 3. Batch fetch albums and artists via 3-tier caching (SpotifyService handles deduplication)
+	albums, err := p.spotifyService.FetchMultipleAlbums(ctx, userID, albumIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch album data: %w", err)
+	}
+	
+	artists, err := p.spotifyService.FetchMultipleArtists(ctx, userID, allArtistIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch artist data: %w", err)
+	}
+	
+	// 4. Build enriched tracks
+	return p.enrichTracks(basicTracks, albums, artists), nil
+}
+
+// enrichTracks combines basic track data with album/artist details
+func (p *PlaylistProvider) enrichTracks(
+	basicTracks []*models.PlaylistTrack, 
+	albums []models.AlbumData,
+	artists []models.ArtistData,
+) []*models.PlaylistTrackWithDetails {
+	
+	// Create lookup maps from batch results
+	albumMap := make(map[string]models.AlbumData)
+	for _, album := range albums {
+		albumMap[string(album.ID)] = album
+	}
+	
+	artistMap := make(map[string]models.ArtistData)
+	for _, artist := range artists {
+		artistMap[string(artist.ID)] = artist
+	}
+	
+	// Enrich tracks
+	enriched := make([]*models.PlaylistTrackWithDetails, len(basicTracks))
+	
+	for i, track := range basicTracks {
+		enriched[i] = &models.PlaylistTrackWithDetails{
+			PlaylistTrack: *track,
+		}
+		
+		// Add album data if available
+		if album, exists := albumMap[track.AlbumID]; exists {
+			enriched[i].AlbumName = album.Name
+			enriched[i].AlbumImageUrl = album.ImageURL
+		}
+		
+		// Add artist names if available
+		artistNames := make([]string, 0, len(track.ArtistIds))
+		for j, artistID := range track.ArtistIds {
+			if artist, exists := artistMap[artistID]; exists {
+				artistNames = append(artistNames, artist.Name)
+				if j == 0 { // Use first artist image as primary
+					enriched[i].PrimaryArtistImageUrl = artist.ImageURL
+				}
+			}
+		}
+		enriched[i].ArtistNames = artistNames
+	}
+	
+	return enriched
 }
 
 func (p *PlaylistProvider) RemoveSongFromPlaylist(ctx context.Context, playlistID, userID uuid.UUID, spotifyTrackID string) error {
@@ -184,11 +272,11 @@ func (p *PlaylistProvider) RemoveSongFromPlaylist(ctx context.Context, playlistI
 // }
 
 // Spotify integration
-func (p *PlaylistProvider) ImportFromSpotify(ctx context.Context, userID uuid.UUID, req models.ImportPlaylistRequest) (*models.Playlist, error) {
+func (p *PlaylistProvider) ImportFromSpotify(ctx context.Context, userID uuid.UUID, req models.ImportPlaylistRequest) (*models.LocalPlaylist, error) {
 	logger.Info(ctx, "importing playlist from Spotify",
 		logger.F("user_id", userID),
 		logger.F("spotify_playlist_id", req.SpotifyPlaylistID),
-		logger.F("sync_with_spotify", req.SyncWithSpotify))
+		logger.F("snapshot_id", req.SnapshotID))
 
 	// Validate request
 	if err := p.validateImportPlaylistRequest(req); err != nil {
@@ -210,14 +298,14 @@ func (p *PlaylistProvider) ImportFromSpotify(ctx context.Context, userID uuid.UU
 	}
 
 	// Create local playlist
-	playlist := &models.Playlist{
+	playlist := &models.LocalPlaylist{
 		ID:                uuid.New(),
 		UserID:            userID,
 		Name:              spotifyPlaylist.Name,
 		Description:       spotifyPlaylist.Description,
 		SpotifyPlaylistID: &req.SpotifyPlaylistID,
 		IsPublic:          spotifyPlaylist.Public,
-		SyncWithSpotify:   req.SyncWithSpotify,
+		SnapshotID:        &req.SnapshotID,
 		LastSyncedAt:      &time.Time{},
 		CreatedAt:         time.Now(),
 		UpdatedAt:         time.Now(),
@@ -232,13 +320,6 @@ func (p *PlaylistProvider) ImportFromSpotify(ctx context.Context, userID uuid.UU
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	// Update sync time
-	now := time.Now()
-	playlist.LastSyncedAt = &now
-	if err := p.playlistStore.UpdatePlaylistSyncTime(ctx, playlist.ID, userID); err != nil {
-		// Non-fatal error
 	}
 
 	return playlist, nil
@@ -387,4 +468,59 @@ func (p *PlaylistProvider) validateReorderSongsRequest(req models.ReorderSongsRe
 	}
 
 	return nil
+}
+func (p *PlaylistProvider) ImportUsersPlaylistsFromSpotify(ctx context.Context, userID uuid.UUID) ([]models.LocalPlaylist, error) {
+	// fetch users playlists versions
+	spotifyPlaylistsVersion, err := p.spotifyService.FetchUserSpotifyPlaylistsVersion(ctx, userID.String())
+	if err != nil {
+		return nil, err
+	}
+	localPlaylists := make([]models.LocalPlaylist, 0, len(spotifyPlaylistsVersion))
+	// loop playlist and check if they in local or sync
+	for _, playlist := range spotifyPlaylistsVersion {
+
+		localPlaylist, err := p.playlistStore.GetPlaylistBySpotifyIDAndUserID(ctx, playlist.ID, userID)
+		if err == nil && *localPlaylist.SnapshotID == playlist.SnapshotID {
+			logger.Debug(ctx, "local playlist found & same snapshot")
+			continue
+		} else if err == nil {
+			logger.Error(ctx, "local playlist found with different snapshot. Needs update ")
+		} else if err != nil {
+			logger.Debug(ctx, "local playlist not found")
+
+			// Fetch playlist data and tracks
+			playlistData, err := p.spotifyService.FetchPlaylist(ctx, userID.String(), playlist.ID)
+			if err != nil {
+				logger.Error(ctx, "couldnt playlist")
+				continue
+			}
+			tracks, err := p.spotifyService.FetchMultipleTracks(ctx, userID.String(), playlistData.TrackIDs)
+			if err != nil {
+				logger.Error(ctx, "couldnt fetch playlist song")
+			}
+
+			// Create new playlist
+			timeNow := time.Now()
+			spotifyPlaylistID := string(playlist.ID)
+			newLocalPlaylist := &models.LocalPlaylist{
+				ID:                uuid.New(),
+				UserID:            userID,
+				Name:              playlistData.Name,
+				Description:       playlistData.Description,
+				SpotifyPlaylistID: &spotifyPlaylistID,
+				IsPublic:          playlistData.Public,
+				SnapshotID:        &playlistData.SnapshotID,
+				LastSyncedAt:      &timeNow,
+				CreatedAt:         time.Now(),
+				UpdatedAt:         time.Now(),
+				Tracks:            tracks,
+			}
+			if err := p.playlistStore.UpdatePlaylist(ctx, newLocalPlaylist); err != nil {
+				logger.Error(ctx, "couldnt store new playlist")
+			}
+			localPlaylists = append(localPlaylists, *newLocalPlaylist)
+		}
+	}
+
+	return localPlaylists, nil
 }
