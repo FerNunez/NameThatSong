@@ -5,8 +5,8 @@ CREATE TABLE local_playlists (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     spotify_playlist_id TEXT NULL, -- NULL for local playlists
+    snapshot_id TEXT,   --  version identifier  from spotifyt 
     is_public BOOLEAN DEFAULT FALSE NOT NULL,
-    sync_with_spotify BOOLEAN DEFAULT FALSE NOT NULL,
     last_synced_at TIMESTAMP NULL,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
