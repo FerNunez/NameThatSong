@@ -119,15 +119,13 @@ type PlaylistData struct {
 	FollowersTotal   int         `json:"followers_total"`
 	TotalTracks      int         `json:"total_tracks"`
 	ImageURL         string      `json:"image_url"`
+	SnapshotID       string      `json:"snapshot_id"`
 	TrackIDs         []SpotifyID `json:"track_ids"` // IDs of tracks in this album
 	CachedAt         time.Time   `json:"cached_at"`
 }
 
 // This is the Playlist model returned by getting the User Spotify list
-type SpotifyUserPlaylist struct {
-	ID          SpotifyID `json:"id"`
-	Name        string    `json:"name"`
-	TotalTracks int       `json:"total_tracks"`
-	ImageURL    string    `json:"image_url"`
-	CachedAt    time.Time `json:"cached_at"`
+type SpotifyUserPlaylistVersion struct {
+	ID         SpotifyID `json:"id"`
+	SnapshotID string    `json:"snapshot_id"`
 }
