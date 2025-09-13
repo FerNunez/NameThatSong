@@ -7,51 +7,58 @@ import (
 )
 
 // Business domain models following existing patterns
-type Playlist struct {
-	ID                uuid.UUID  `json:"id"`
-	UserID            uuid.UUID  `json:"user_id"`
-	Name              string     `json:"name"`
-	Description       string     `json:"description"`
-	SpotifyPlaylistID *string    `json:"spotify_playlist_id"`
-	IsPublic          bool       `json:"is_public"`
-	SyncWithSpotify   bool       `json:"sync_with_spotify"`
-	LastSyncedAt      *time.Time `json:"last_synced_at"`
-	CreatedAt         time.Time  `json:"created_at"`
-	UpdatedAt         time.Time  `json:"updated_at"`
-	Songs             []Song     `json:"songs,omitempty"`
+type LocalPlaylist struct {
+	ID                uuid.UUID   `json:"id"`
+	UserID            uuid.UUID   `json:"user_id"`
+	Name              string      `json:"name"`
+	Description       string      `json:"description"`
+	SpotifyPlaylistID *string     `json:"spotify_playlist_id"`
+	IsPublic          bool        `json:"is_public"`
+	SnapshotID        *string     `json:"snapshot_id"`
+	LastSyncedAt      *time.Time  `json:"last_synced_at"`
+	CreatedAt         time.Time   `json:"created_at"`
+	UpdatedAt         time.Time   `json:"updated_at"`
+	Tracks            []TrackData `json:"tracks"`
 }
 
-type Song struct {
-	SpotifyTrackID   string    `json:"spotify_track_id"`
-	SpotifyAlbumID   string    `json:"spotify_album_id"`
-	SpotifyArtistID  string    `json:"spotify_artist_id"`
-	TrackName        string    `json:"track_name"`
-	ArtistName       string    `json:"artist_name"`
-	AlbumName        string    `json:"album_name"`
-	SpotifyAlbumURL  string    `json:"spotify_album_url"`
-	SpotifyArtistURL string    `json:"spotify_artist_url"`
-	DurationMs       int       `json:"duration_ms"`
-	UpdatedAt        time.Time `json:"updated_at"`
+// PlaylistTrack represents a track in a playlist with basic metadata from spotify_tracks
+type PlaylistTrack struct {
+	SpotifyTrackID string    `json:"spotify_track_id"`
+	Position       int32     `json:"position"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	TrackName      string    `json:"track_name"`
+	DurationMs     int32     `json:"duration_ms"`
+	AlbumID        string    `json:"album_id"`
+	ArtistIds      []string  `json:"artist_ids"`
+}
+
+// PlaylistTrackWithDetails represents enriched track data with album/artist names via 3-tier caching
+type PlaylistTrackWithDetails struct {
+	PlaylistTrack
+	AlbumName             string   `json:"album_name,omitempty"`
+	AlbumImageUrl         string   `json:"album_image_url,omitempty"`
+	ArtistNames           []string `json:"artist_names,omitempty"`
+	PrimaryArtistImageUrl string   `json:"primary_artist_image_url,omitempty"`
 }
 
 // Request/Response DTOs
 type CreatePlaylistRequest struct {
-	Name            string `json:"name"`
-	Description     string `json:"description"`
-	IsPublic        bool   `json:"is_public"`
-	SyncWithSpotify bool   `json:"sync_with_spotify"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	IsPublic    bool   `json:"is_public"`
+	SnapshotID  string `json:"snapshot_id"`
 }
 
 type UpdatePlaylistRequest struct {
-	Name            string `json:"name"`
-	Description     string `json:"description"`
-	IsPublic        bool   `json:"is_public"`
-	SyncWithSpotify bool   `json:"sync_with_spotify"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	IsPublic    bool   `json:"is_public"`
+	SnapshotID  string `json:"snapshot_id"`
 }
 
 type ImportPlaylistRequest struct {
 	SpotifyPlaylistID string `json:"spotify_playlist_id"`
-	SyncWithSpotify   bool   `json:"sync_with_spotify"`
+	SnapshotID        string `json:"snapshot_id"`
 }
 
 type ExportPlaylistRequest struct {

@@ -138,7 +138,7 @@ func (p *PlaylistProvider) GetPlaylistSongs(ctx context.Context, userID string, 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	tracks := make([]*models.PlaylistTrack, len(trackRows))
 	for i, row := range trackRows {
 		tracks[i] = &models.PlaylistTrack{
@@ -160,69 +160,69 @@ func (p *PlaylistProvider) GetPlaylistSongsWithDetails(ctx context.Context, user
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if len(basicTracks) == 0 {
 		return []*models.PlaylistTrackWithDetails{}, nil
 	}
-	
+
 	// 2. Collect ALL album IDs and artist IDs (duplicates OK - SpotifyService handles deduplication)
 	albumIDs := make([]models.SpotifyID, len(basicTracks))
 	var allArtistIDs []models.SpotifyID
-	
+
 	for i, track := range basicTracks {
 		albumIDs[i] = models.SpotifyID(track.AlbumID)
 		for _, artistID := range track.ArtistIds {
 			allArtistIDs = append(allArtistIDs, models.SpotifyID(artistID))
 		}
 	}
-	
+
 	// 3. Batch fetch albums and artists via 3-tier caching (SpotifyService handles deduplication)
 	albums, err := p.spotifyService.FetchMultipleAlbums(ctx, userID, albumIDs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch album data: %w", err)
 	}
-	
+
 	artists, err := p.spotifyService.FetchMultipleArtists(ctx, userID, allArtistIDs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch artist data: %w", err)
 	}
-	
+
 	// 4. Build enriched tracks
 	return p.enrichTracks(basicTracks, albums, artists), nil
 }
 
 // enrichTracks combines basic track data with album/artist details
 func (p *PlaylistProvider) enrichTracks(
-	basicTracks []*models.PlaylistTrack, 
+	basicTracks []*models.PlaylistTrack,
 	albums []models.AlbumData,
 	artists []models.ArtistData,
 ) []*models.PlaylistTrackWithDetails {
-	
+
 	// Create lookup maps from batch results
 	albumMap := make(map[string]models.AlbumData)
 	for _, album := range albums {
 		albumMap[string(album.ID)] = album
 	}
-	
+
 	artistMap := make(map[string]models.ArtistData)
 	for _, artist := range artists {
 		artistMap[string(artist.ID)] = artist
 	}
-	
+
 	// Enrich tracks
 	enriched := make([]*models.PlaylistTrackWithDetails, len(basicTracks))
-	
+
 	for i, track := range basicTracks {
 		enriched[i] = &models.PlaylistTrackWithDetails{
 			PlaylistTrack: *track,
 		}
-		
+
 		// Add album data if available
 		if album, exists := albumMap[track.AlbumID]; exists {
 			enriched[i].AlbumName = album.Name
 			enriched[i].AlbumImageUrl = album.ImageURL
 		}
-		
+
 		// Add artist names if available
 		artistNames := make([]string, 0, len(track.ArtistIds))
 		for j, artistID := range track.ArtistIds {
@@ -235,7 +235,7 @@ func (p *PlaylistProvider) enrichTracks(
 		}
 		enriched[i].ArtistNames = artistNames
 	}
-	
+
 	return enriched
 }
 
