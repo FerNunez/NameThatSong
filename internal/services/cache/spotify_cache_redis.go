@@ -44,9 +44,6 @@ type SpotifyCache interface {
 	GetSearchAll(query string) (*m.SearchAllResults, bool)
 	SetSearchAll(query string, results *m.SearchAllResults)
 
-	GetSpotifyUserPlaylist(query string) ([]m.SpotifyUserPlaylist, bool)
-	SetSpotifyUserPlaylist(query string, spotifyUserPlaylist []m.SpotifyUserPlaylist) bool
-
 	// OAuth state management
 	GetOAuthState(userID string) (string, bool)
 	SetOAuthState(userID, state string)
@@ -651,43 +648,4 @@ func (r *RedisSpotifyCache) SetSearchAll(query string, results *m.SearchAllResul
 			logger.F("artists_count", len(results.Artists)),
 			logger.F("playlists_count", len(results.Playlists)))
 	}
-}
-
-func (r *RedisSpotifyCache) GetSpotifyUserPlaylist(query string) ([]m.SpotifyUserPlaylist, bool) {
-	var playlists []m.SpotifyUserPlaylist
-	key := r.generateSearchKey("spotifyUserPlaylist", query)
-
-	val, err := r.client.Get(r.ctx, key).Result()
-	if err != nil {
-		return nil, false
-	}
-
-	if err := json.Unmarshal([]byte(val), &playlists); err != nil {
-		return nil, false
-	}
-	return playlists, true
-}
-func (r *RedisSpotifyCache) SetSpotifyUserPlaylist(query string, spotifyUserPlaylist []m.SpotifyUserPlaylist) bool {
-	key := r.generateSearchKey("spotifyUserPlaylist", query)
-
-	playlistJson, err := json.Marshal(spotifyUserPlaylist)
-	if err != nil {
-		logger.Error(r.ctx, "failed to marshal spotify user playlists for cache",
-			logger.F("query", query),
-			logger.F("cache_key", key),
-			logger.F("error", err))
-		return false
-	}
-	
-	err = r.client.Set(r.ctx, key, playlistJson, r.ttl).Err()
-	if err != nil {
-		logger.Error(r.ctx, "failed to store spotify user playlists in cache",
-			logger.F("query", query),
-			logger.F("cache_key", key),
-			logger.F("playlists_count", len(spotifyUserPlaylist)),
-			logger.F("error", err))
-		return false
-	}
-	
-	return true
 }
