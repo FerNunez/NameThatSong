@@ -124,7 +124,7 @@ func main() {
 		r.Post("/login", handlers.NewPostLoginHandler(userService, spotifyService, cookieName).ServeHttp)
 		r.Post("/logout", handlers.NewPostLogoutHandler(userService, cookieName).ServeHTTP)
 		r.Post("/spotify-auth", handlers.NewGetAuthHandler(spotifyService).ServeHttp)
-		r.Get("/auth/callback", handlers.NewGetAuthCallbackHandler(spotifyService, userService).ServeHttp)
+		r.Get("/auth/callback", handlers.NewGetAuthCallbackHandler(spotifyService, userService, playlistService).ServeHttp)
 		r.Get("/connect-spotify", handlers.NewConnectSpotifyHandler().ServeHTTP)
 
 		// Protected routes that require Spotify connection

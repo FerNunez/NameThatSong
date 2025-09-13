@@ -37,9 +37,10 @@ type LocalPlaylist struct {
 	UserID            uuid.UUID
 	Name              string
 	Description       sql.NullString
+	ImageUrl          sql.NullString
 	SpotifyPlaylistID sql.NullString
+	SnapshotID        sql.NullString
 	IsPublic          bool
-	SyncWithSpotify   bool
 	LastSyncedAt      sql.NullTime
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
@@ -59,20 +60,6 @@ type PasswordResetToken struct {
 	ExpiresAt time.Time
 	UsedAt    sql.NullTime
 	CreatedAt time.Time
-}
-
-type Song struct {
-	SpotifyTrackID  string
-	SpotifyAlbumID  string
-	SpotifyArtistID string
-	TrackName       string
-	AlbumName       string
-	ArtistName      string
-	ArtistImageUrl  string
-	AlbumImageUrl   string
-	DurationMs      int32
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
 }
 
 type SpotifyAlbum struct {

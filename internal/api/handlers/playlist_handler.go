@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/FerNunez/NameThatSong/internal/api/middleware"
 	"github.com/FerNunez/NameThatSong/internal/models"
@@ -44,8 +45,7 @@ func (h *PlaylistHandler) GetLocalPlaylists(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Get user's local playlists (where spotify_playlist_id IS NULL for pure local, or IS NOT NULL for imported)
-	playlists, err := h.playlistService.GetUserPlaylists(r.Context(), user.ID)
+	localPlaylists, err := h.playlistService.GetUserPlaylists(r.Context(), user.ID)
 	if err != nil {
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusOK)
@@ -55,25 +55,22 @@ func (h *PlaylistHandler) GetLocalPlaylists(w http.ResponseWriter, r *http.Reque
 
 	// Convert to template format - these are local playlists
 	var templatePlaylists []templates.UserPlaylist
-	for _, playlist := range playlists {
-		spotifyID := ""
-		if playlist.SpotifyPlaylistID != nil {
-			spotifyID = *playlist.SpotifyPlaylistID
-		}
+	for _, playlist := range localPlaylists {
 
-		// Use GetPlaylistWithSongs to get accurate song count
-		songs, err := h.playlistService.GetPlaylistSongs(r.Context(), user.ID.String(), playlist.ID)
-		songCount := 0
-		if err == nil {
-			songCount = len(songs)
+		var imgUrl string
+		if playlist.ImageURL == nil {
+			imgUrl = ""
+		} else {
+			imgUrl = *playlist.ImageURL
 		}
 
 		templatePlaylists = append(templatePlaylists, templates.UserPlaylist{
 			ID:         playlist.ID.String(),
 			Name:       playlist.Name,
-			TrackCount: songCount,
+			TrackCount: len(playlist.Tracks),
 			IsSpotify:  playlist.SpotifyPlaylistID != nil,
-			SpotifyID:  spotifyID,
+			SpotifyID:  *playlist.SpotifyPlaylistID,
+			ImageURL:   imgUrl,
 		})
 	}
 
@@ -93,27 +90,25 @@ func (h *PlaylistHandler) GetSpotifyPlaylists(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Get user's Spotify playlists
-	spotifyPlaylists, err := h.spotifyService.GetUserSpotifyPlaylists(r.Context(), user.ID.String())
-
+	localPlaylists, err := h.playlistService.GetUserPlaylists(r.Context(), user.ID)
 	if err != nil {
-		fmt.Println("err: ", err)
+		logger.Error(r.Context(), "couldnt fetch localplaylsits")
 		w.Header().Set("Content-Type", "text/html")
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusInternalServerError)
 		templates.SpotifyPlaylistsList([]templates.UserPlaylist{}).Render(r.Context(), w)
 		return
 	}
 
 	// Convert to template format - these are Spotify playlists for viewing
 	var templatePlaylists []templates.UserPlaylist
-	for _, playlist := range spotifyPlaylists {
+	for _, playlist := range localPlaylists {
 		templatePlaylists = append(templatePlaylists, templates.UserPlaylist{
-			ID:         string(playlist.ID),
+			ID:         playlist.ID.String(),
 			Name:       playlist.Name,
-			TrackCount: playlist.TotalTracks,
-			IsSpotify:  true,
-			SpotifyID:  string(playlist.ID),
-			ImageURL:   playlist.ImageURL,
+			TrackCount: len(playlist.Tracks),
+			IsSpotify:  playlist.SnapshotID != nil,
+			SpotifyID:  *playlist.SpotifyPlaylistID,
+			ImageURL:   *playlist.ImageURL,
 		})
 	}
 
@@ -136,8 +131,10 @@ func (h *PlaylistHandler) GetSpotifyPlaylistsForImport(w http.ResponseWriter, r 
 	// h.playlistService.ImportPlaylistsFromSpotify()
 	// gets playlist info + all songs
 
+	h.playlistService.GetUserPlaylists(r.Context(), user.ID)
+
 	// Get user's Spotify playlists
-	spotifyPlaylists, err := h.spotifyService.GetUserSpotifyPlaylists(r.Context(), user.ID.String())
+	spotifyPlaylists, err := h.spotifyService.FetchUserSpotifyPlaylistsVersion(r.Context(), user.ID.String())
 	if err != nil {
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusOK)
@@ -148,7 +145,7 @@ func (h *PlaylistHandler) GetSpotifyPlaylistsForImport(w http.ResponseWriter, r 
 	for _, spotifyPlaylist := range spotifyPlaylists {
 		_, err := h.playlistService.ImportFromSpotify(r.Context(), user.ID, models.ImportPlaylistRequest{
 			SpotifyPlaylistID: string(spotifyPlaylist.ID),
-			SyncWithSpotify:   true,
+			SnapshotID:        spotifyPlaylist.SnapshotID,
 		})
 		if err != nil {
 			logger.Error(r.Context(), "Couldnt import playlist")
@@ -160,8 +157,8 @@ func (h *PlaylistHandler) GetSpotifyPlaylistsForImport(w http.ResponseWriter, r 
 	for _, playlist := range spotifyPlaylists {
 		templatePlaylists = append(templatePlaylists, templates.UserPlaylist{
 			ID:         string(playlist.ID),
-			Name:       playlist.Name,
-			TrackCount: playlist.TotalTracks,
+			Name:       "Spotify Playlist", // TODO: Fetch full playlist data for name
+			TrackCount: 0,                  // TODO: Fetch full playlist data for track count
 			IsSpotify:  true,
 			SpotifyID:  string(playlist.ID),
 		})
@@ -188,7 +185,7 @@ func (h *PlaylistHandler) UpdateSpotifyPlaylist(w http.ResponseWriter, r *http.R
 	}
 
 	// Refresh this specific playlist from Spotify
-	spotifyPlaylists, err := h.spotifyService.GetUserSpotifyPlaylists(r.Context(), user.ID.String())
+	spotifyPlaylists, err := h.spotifyService.FetchUserSpotifyPlaylistsVersion(r.Context(), user.ID.String())
 	if err != nil {
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusOK)
@@ -201,8 +198,8 @@ func (h *PlaylistHandler) UpdateSpotifyPlaylist(w http.ResponseWriter, r *http.R
 	for _, playlist := range spotifyPlaylists {
 		templatePlaylists = append(templatePlaylists, templates.UserPlaylist{
 			ID:         string(playlist.ID),
-			Name:       playlist.Name,
-			TrackCount: playlist.TotalTracks,
+			Name:       "Spotify Playlist", // TODO: Fetch full playlist data for name
+			TrackCount: 0,                  // TODO: Fetch full playlist data for track count
 			IsSpotify:  true,
 			SpotifyID:  string(playlist.ID),
 		})
@@ -250,10 +247,9 @@ func (h *PlaylistHandler) CreateAndShowPlaylist(w http.ResponseWriter, r *http.R
 
 	// Create playlist request
 	req := models.CreatePlaylistRequest{
-		Name:            name,
-		Description:     description,
-		IsPublic:        isPublic,
-		SyncWithSpotify: false, // Local playlist
+		Name:        name,
+		Description: description,
+		IsPublic:    isPublic,
 	}
 
 	// Create playlist
@@ -320,7 +316,7 @@ func (h *PlaylistHandler) GetGamePlaylists(w http.ResponseWriter, r *http.Reques
 		templatePlaylists[i] = templates.UserPlaylist{
 			ID:         p.ID.String(),
 			Name:       p.Name,
-			TrackCount: len(p.Songs),
+			TrackCount: 0, // TODO: Fetch track count separately if needed
 			IsSpotify:  p.SpotifyPlaylistID != nil,
 			SpotifyID: func() string {
 				if p.SpotifyPlaylistID != nil {
@@ -346,12 +342,12 @@ func (h *PlaylistHandler) GetPlaylistSongsView(w http.ResponseWriter, r *http.Re
 	playlistIDStr := chi.URLParam(r, "id")
 
 	// Check if this is a Spotify playlist ID or local playlist UUID
-	var songs []*models.Song
+	var enrichedSongs []*models.PlaylistTrackWithDetails
 	var err error
 
 	if playlistID, uuidErr := uuid.Parse(playlistIDStr); uuidErr == nil {
-		// It's a UUID, get local playlist with songs
-		songs, err = h.playlistService.GetPlaylistSongs(r.Context(), user.ID.String(), playlistID)
+		// It's a UUID, get local playlist with enriched song data (album/artist names via 3-tier caching)
+		enrichedSongs, err = h.playlistService.GetPlaylistSongsWithDetails(r.Context(), user.ID.String(), playlistID)
 	} else {
 		fmt.Println("Spotify playlist not yet implemented")
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -428,14 +424,20 @@ func (h *PlaylistHandler) GetPlaylistSongsView(w http.ResponseWriter, r *http.Re
 	// 	}
 	// }
 	//
-	// Convert songs to template format
+	// Convert enriched songs to template format
 	var templateSongs []templates.PlaylistSong
-	for _, song := range songs {
+	for _, song := range enrichedSongs {
 		templateSong := templates.PlaylistSong{
-			ID:       song.SpotifyTrackID,
-			Title:    song.TrackName,
-			Artist:   song.ArtistName,
-			AlbumArt: song.SpotifyAlbumURL,
+			ID:    song.SpotifyTrackID,
+			Title: song.TrackName,
+			Artist: func() string {
+				if len(song.ArtistNames) > 0 {
+					// Join multiple artist names with comma
+					return strings.Join(song.ArtistNames, ", ")
+				}
+				return "Unknown Artist"
+			}(),
+			AlbumArt: song.AlbumImageUrl, // Rich album image URL from 3-tier caching
 		}
 
 		// Format duration

@@ -6,6 +6,7 @@ import (
 
 	"github.com/FerNunez/NameThatSong/internal/api/middleware"
 	"github.com/FerNunez/NameThatSong/internal/pkg/logger"
+	"github.com/FerNunez/NameThatSong/internal/services/playlist"
 	"github.com/FerNunez/NameThatSong/internal/services/spotify"
 	"github.com/FerNunez/NameThatSong/internal/services/user"
 )
@@ -51,14 +52,16 @@ func (h *GetAuthHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
 
 // //////////////////////////////////////
 type GetAuthCallbackHandler struct {
-	spotifyService spotify.SpotifyService
-	userService    user.UserService
+	spotifyService  spotify.SpotifyService
+	userService     user.UserService
+	playlistService playlist.Service
 }
 
-func NewGetAuthCallbackHandler(ss spotify.SpotifyService, us user.UserService) *GetAuthCallbackHandler {
+func NewGetAuthCallbackHandler(ss spotify.SpotifyService, us user.UserService, ps playlist.Service) *GetAuthCallbackHandler {
 	return &GetAuthCallbackHandler{
-		spotifyService: ss,
-		userService:    us,
+		spotifyService:  ss,
+		userService:     us,
+		playlistService: ps,
 	}
 }
 func (h *GetAuthCallbackHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
@@ -104,6 +107,16 @@ func (h *GetAuthCallbackHandler) ServeHttp(w http.ResponseWriter, r *http.Reques
 		logger.Info(r.Context(), "user marked as spotify connected",
 			logger.F("user_id", user.ID.String()))
 	}
+
+	// Importing playlists from spotify
+	spotifyPlaylists, err := h.playlistService.ImportUsersPlaylistsFromSpotify(r.Context(), user.ID)
+	if err != nil {
+		logger.Info(r.Context(), "couldn't import spotify playlists into local",
+			logger.F("user_id", user.ID.String()))
+	}
+	logger.Info(r.Context(), "imported spotify playlists into local",
+		logger.F("user_id", user.ID.String()),
+		logger.F("numb imported", len(spotifyPlaylists)))
 
 	http.Redirect(w, r, "/", http.StatusFound)
 }

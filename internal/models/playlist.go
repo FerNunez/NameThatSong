@@ -12,6 +12,7 @@ type LocalPlaylist struct {
 	UserID            uuid.UUID   `json:"user_id"`
 	Name              string      `json:"name"`
 	Description       string      `json:"description"`
+	ImageURL          *string     `json:"image_url"`
 	SpotifyPlaylistID *string     `json:"spotify_playlist_id"`
 	IsPublic          bool        `json:"is_public"`
 	SnapshotID        *string     `json:"snapshot_id"`

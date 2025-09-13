@@ -1,8 +1,8 @@
 -- Playlist operations
 -- TODO: To add UPSERT LocalPlaylist
 -- name: CreatePlaylist :one
-INSERT INTO local_playlists (id, user_id, name, description, spotify_playlist_id, snapshot_id, is_public, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+INSERT INTO local_playlists (id, user_id, name, description, image_url, spotify_playlist_id, snapshot_id, is_public, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
 RETURNING *;
 
 -- name: GetPlaylistByID :one
@@ -19,8 +19,8 @@ SELECT * FROM local_playlists WHERE spotify_playlist_id = $1 AND user_id = $2 OR
 
 -- name: UpdatePlaylist :exec
 UPDATE local_playlists 
-SET name = $2, description = $3, is_public = $4, updated_at = NOW()
-WHERE id = $1 AND user_id = $5;
+SET name = $2, description = $3, image_url=$4, is_public = $5, updated_at = NOW()
+WHERE id = $1 AND user_id = $6;
 
 -- name: DeletePlaylist :exec
 DELETE FROM local_playlists WHERE id = $1 AND user_id = $2;

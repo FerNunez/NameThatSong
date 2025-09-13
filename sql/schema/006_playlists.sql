@@ -4,6 +4,7 @@ CREATE TABLE local_playlists (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     description TEXT,
+    image_url TEXT,
     spotify_playlist_id TEXT NULL, -- NULL for local playlists
     snapshot_id TEXT,   --  version identifier  from spotifyt 
     is_public BOOLEAN DEFAULT FALSE NOT NULL,

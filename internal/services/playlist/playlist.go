@@ -146,9 +146,9 @@ func (p *PlaylistProvider) GetPlaylistSongs(ctx context.Context, userID string, 
 			Position:       row.Position,
 			UpdatedAt:      row.UpdatedAt,
 			TrackName:      row.TrackName,
-			DurationMs:     row.DurationMs,
-			AlbumID:        row.AlbumID,
-			ArtistIds:      row.ArtistIds,
+			DurationMs:     row.TrackDurationMs,
+			AlbumID:        row.TrackAlbumID,
+			ArtistIds:      row.TrackArtistIds,
 		}
 	}
 	return tracks, nil
@@ -475,11 +475,14 @@ func (p *PlaylistProvider) ImportUsersPlaylistsFromSpotify(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
+	logger.Debug(ctx, "fetched playlist versions", logger.F("nb playlists", len(spotifyPlaylistsVersion)))
+
 	localPlaylists := make([]models.LocalPlaylist, 0, len(spotifyPlaylistsVersion))
 	// loop playlist and check if they in local or sync
 	for _, playlist := range spotifyPlaylistsVersion {
 
 		localPlaylist, err := p.playlistStore.GetPlaylistBySpotifyIDAndUserID(ctx, playlist.ID, userID)
+
 		if err == nil && *localPlaylist.SnapshotID == playlist.SnapshotID {
 			logger.Debug(ctx, "local playlist found & same snapshot")
 			continue
@@ -514,10 +517,15 @@ func (p *PlaylistProvider) ImportUsersPlaylistsFromSpotify(ctx context.Context, 
 				CreatedAt:         time.Now(),
 				UpdatedAt:         time.Now(),
 				Tracks:            tracks,
+				ImageURL:          &playlistData.ImageURL,
 			}
-			if err := p.playlistStore.UpdatePlaylist(ctx, newLocalPlaylist); err != nil {
+
+			logger.Debug(ctx, "local playlist ot add", logger.F("localplaylist", *newLocalPlaylist))
+
+			if err := p.playlistStore.CreatePlaylist(ctx, newLocalPlaylist); err != nil {
 				logger.Error(ctx, "couldnt store new playlist")
 			}
+			logger.Debug(ctx, "added new local playlist", logger.F("name", newLocalPlaylist.Name))
 			localPlaylists = append(localPlaylists, *newLocalPlaylist)
 		}
 	}

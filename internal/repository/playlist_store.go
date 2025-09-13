@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/FerNunez/NameThatSong/internal/models"
+	"github.com/FerNunez/NameThatSong/internal/pkg/logger"
 	"github.com/FerNunez/NameThatSong/internal/repository/database"
 	"github.com/google/uuid"
 )
@@ -39,6 +40,7 @@ func NewSQLPlaylistStore(db *database.Queries) PlaylistStore {
 
 // Playlist operations
 func (s *SQLPlaylistStore) CreatePlaylist(ctx context.Context, playlist *models.LocalPlaylist) error {
+	logger.Debug(ctx, "creating playlist with a imgrl?", logger.F("img", playlist.ImageURL))
 	dbPlaylist, err := s.db.CreatePlaylist(ctx, database.CreatePlaylistParams{
 		ID:                playlist.ID,
 		UserID:            playlist.UserID,
@@ -47,6 +49,7 @@ func (s *SQLPlaylistStore) CreatePlaylist(ctx context.Context, playlist *models.
 		SpotifyPlaylistID: nullStringFromStringPtr(playlist.SpotifyPlaylistID),
 		SnapshotID:        nullStringFromStringPtr(playlist.SnapshotID),
 		IsPublic:          playlist.IsPublic,
+		ImageUrl:          nullStringFromStringPtr(playlist.ImageURL),
 	})
 	if err != nil {
 		return err
@@ -87,6 +90,7 @@ func (s *SQLPlaylistStore) GetPlaylistsByUserID(ctx context.Context, userID uuid
 	playlists := make([]*models.LocalPlaylist, len(dbPlaylists))
 	for i, dbPlaylist := range dbPlaylists {
 		playlists[i] = convertDbLocalPlaylistToModel(dbPlaylist)
+		logger.Debug(ctx, "fetched a playlistByUserID", logger.F("", dbPlaylists))
 		//TODO: FILL tracks
 	}
 
@@ -193,6 +197,8 @@ func convertDbLocalPlaylistToModel(dbPlaylist database.LocalPlaylist) *models.Lo
 		LastSyncedAt:      timePtrFromNullTime(dbPlaylist.LastSyncedAt),
 		CreatedAt:         dbPlaylist.CreatedAt,
 		UpdatedAt:         dbPlaylist.UpdatedAt,
+		ImageURL:          stringPtrFromNullString(dbPlaylist.ImageUrl),
+		Tracks:            []models.TrackData{},
 	}
 }
 

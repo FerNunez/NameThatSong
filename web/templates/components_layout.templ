@@ -108,25 +108,14 @@ templ Sidebar(user *models.User) {
 				>
 					@PlaylistsLoading()
 				</div>
-				if user.SpotifyPlaylistsImported {
-					<button
-						class="mt-2 text-accent text-sm hover:text-green-400 transition-colors"
-						hx-get="/api/spotify-playlists"
-						hx-target="#spotify-playlists"
-						hx-trigger="click"
-					>
-						Refresh Spotify PlayLists
-					</button>
-				} else {
-					<button
-						class="mt-2 text-accent text-sm hover:text-green-400 transition-colors"
-						hx-get="/api/spotify-playlists"
-						hx-target="#spotify-playlists"
-						hx-trigger="click"
-					>
-						Import from Spotify
-					</button>
-				}
+				<button
+					class="mt-2 text-accent text-sm hover:text-green-400 transition-colors"
+					hx-get="/api/spotify-playlists"
+					hx-target="#spotify-playlists"
+					hx-trigger="click"
+				>
+					Refresh Spotify PlayLists
+				</button>
 			</section>
 			<!--Spotify Playlists - Only for authenticated users -->
 			<section class="px-4 pb-6">
@@ -375,13 +364,13 @@ templ LocalPlaylistsList(playlists []UserPlaylist) {
 templ LocalPlaylistItem(playlist UserPlaylist) {
 	<a
 		href="#"
-		class="flex items-center gap-3 p-3 rounded-lg hover:bg-forest-300 transition-colors group cursor-pointer"
+		class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-forest-300 transition-colors group cursor-pointer"
 		hx-get={ "/api/playlist/" + playlist.ID + "/songs" }
 		hx-target="#playlist-songs-container"
 		hx-swap="innerHTML"
 	>
 		<div class="w-10 h-10 bg-forest-200 rounded-lg flex items-center justify-center group-hover:bg-forest-100">
-			@MusicIcon()
+			<img src={ playlist.ImageURL } alt={ playlist.Name } class="w-full h-full object-cover"/>
 		</div>
 		<div class="flex-1 min-w-0">
 			<span class="text-white font-medium truncate block">{ playlist.Name }</span>

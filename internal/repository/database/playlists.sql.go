@@ -8,8 +8,10 @@ package database
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 const addSongToPlaylist = `-- name: AddSongToPlaylist :one
@@ -47,9 +49,9 @@ func (q *Queries) ClearPlaylistSongs(ctx context.Context, playlistID uuid.UUID) 
 }
 
 const createPlaylist = `-- name: CreatePlaylist :one
-INSERT INTO local_playlists (id, user_id, name, description, spotify_playlist_id, is_public, sync_with_spotify, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-RETURNING id, user_id, name, description, spotify_playlist_id, is_public, sync_with_spotify, last_synced_at, created_at, updated_at
+INSERT INTO local_playlists (id, user_id, name, description, image_url, spotify_playlist_id, snapshot_id, is_public, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+RETURNING id, user_id, name, description, image_url, spotify_playlist_id, snapshot_id, is_public, last_synced_at, created_at, updated_at
 `
 
 type CreatePlaylistParams struct {
@@ -57,21 +59,24 @@ type CreatePlaylistParams struct {
 	UserID            uuid.UUID
 	Name              string
 	Description       sql.NullString
+	ImageUrl          sql.NullString
 	SpotifyPlaylistID sql.NullString
+	SnapshotID        sql.NullString
 	IsPublic          bool
-	SyncWithSpotify   bool
 }
 
 // Playlist operations
+// TODO: To add UPSERT LocalPlaylist
 func (q *Queries) CreatePlaylist(ctx context.Context, arg CreatePlaylistParams) (LocalPlaylist, error) {
 	row := q.db.QueryRowContext(ctx, createPlaylist,
 		arg.ID,
 		arg.UserID,
 		arg.Name,
 		arg.Description,
+		arg.ImageUrl,
 		arg.SpotifyPlaylistID,
+		arg.SnapshotID,
 		arg.IsPublic,
-		arg.SyncWithSpotify,
 	)
 	var i LocalPlaylist
 	err := row.Scan(
@@ -79,9 +84,10 @@ func (q *Queries) CreatePlaylist(ctx context.Context, arg CreatePlaylistParams) 
 		&i.UserID,
 		&i.Name,
 		&i.Description,
+		&i.ImageUrl,
 		&i.SpotifyPlaylistID,
+		&i.SnapshotID,
 		&i.IsPublic,
-		&i.SyncWithSpotify,
 		&i.LastSyncedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -115,7 +121,7 @@ func (q *Queries) GetMaxSongPosition(ctx context.Context, playlistID uuid.UUID) 
 }
 
 const getPlaylistByID = `-- name: GetPlaylistByID :one
-SELECT id, user_id, name, description, spotify_playlist_id, is_public, sync_with_spotify, last_synced_at, created_at, updated_at FROM local_playlists WHERE id = $1
+SELECT id, user_id, name, description, image_url, spotify_playlist_id, snapshot_id, is_public, last_synced_at, created_at, updated_at FROM local_playlists WHERE id = $1
 `
 
 func (q *Queries) GetPlaylistByID(ctx context.Context, id uuid.UUID) (LocalPlaylist, error) {
@@ -126,9 +132,38 @@ func (q *Queries) GetPlaylistByID(ctx context.Context, id uuid.UUID) (LocalPlayl
 		&i.UserID,
 		&i.Name,
 		&i.Description,
+		&i.ImageUrl,
 		&i.SpotifyPlaylistID,
+		&i.SnapshotID,
 		&i.IsPublic,
-		&i.SyncWithSpotify,
+		&i.LastSyncedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getPlaylistBySpotifyIDAndUserID = `-- name: GetPlaylistBySpotifyIDAndUserID :one
+SELECT id, user_id, name, description, image_url, spotify_playlist_id, snapshot_id, is_public, last_synced_at, created_at, updated_at FROM local_playlists WHERE spotify_playlist_id = $1 AND user_id = $2 ORDER BY name DESC
+`
+
+type GetPlaylistBySpotifyIDAndUserIDParams struct {
+	SpotifyPlaylistID sql.NullString
+	UserID            uuid.UUID
+}
+
+func (q *Queries) GetPlaylistBySpotifyIDAndUserID(ctx context.Context, arg GetPlaylistBySpotifyIDAndUserIDParams) (LocalPlaylist, error) {
+	row := q.db.QueryRowContext(ctx, getPlaylistBySpotifyIDAndUserID, arg.SpotifyPlaylistID, arg.UserID)
+	var i LocalPlaylist
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.Description,
+		&i.ImageUrl,
+		&i.SpotifyPlaylistID,
+		&i.SnapshotID,
+		&i.IsPublic,
 		&i.LastSyncedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -137,7 +172,7 @@ func (q *Queries) GetPlaylistByID(ctx context.Context, id uuid.UUID) (LocalPlayl
 }
 
 const getPlaylistByUserIDAndID = `-- name: GetPlaylistByUserIDAndID :one
-SELECT id, user_id, name, description, spotify_playlist_id, is_public, sync_with_spotify, last_synced_at, created_at, updated_at FROM local_playlists WHERE id = $1 AND user_id = $2
+SELECT id, user_id, name, description, image_url, spotify_playlist_id, snapshot_id, is_public, last_synced_at, created_at, updated_at FROM local_playlists WHERE id = $1 AND user_id = $2
 `
 
 type GetPlaylistByUserIDAndIDParams struct {
@@ -153,9 +188,10 @@ func (q *Queries) GetPlaylistByUserIDAndID(ctx context.Context, arg GetPlaylistB
 		&i.UserID,
 		&i.Name,
 		&i.Description,
+		&i.ImageUrl,
 		&i.SpotifyPlaylistID,
+		&i.SnapshotID,
 		&i.IsPublic,
-		&i.SyncWithSpotify,
 		&i.LastSyncedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -216,8 +252,64 @@ func (q *Queries) GetPlaylistSongs(ctx context.Context, playlistID uuid.UUID) ([
 	return items, nil
 }
 
+const getPlaylistSongsWithTrackData = `-- name: GetPlaylistSongsWithTrackData :many
+SELECT 
+    lpt.spotify_track_id,
+    lpt.position,
+    lpt.updated_at,
+    st.name AS track_name,
+    st.duration_ms AS track_duration_ms,
+    st.album_id AS track_album_id,
+    st.artist_ids AS track_artist_ids
+FROM local_playlist_tracks lpt
+JOIN spotify_tracks st ON lpt.spotify_track_id = st.id
+WHERE lpt.playlist_id = $1 
+ORDER BY lpt.position
+`
+
+type GetPlaylistSongsWithTrackDataRow struct {
+	SpotifyTrackID  string
+	Position        int32
+	UpdatedAt       time.Time
+	TrackName       string
+	TrackDurationMs int32
+	TrackAlbumID    string
+	TrackArtistIds  []string
+}
+
+func (q *Queries) GetPlaylistSongsWithTrackData(ctx context.Context, playlistID uuid.UUID) ([]GetPlaylistSongsWithTrackDataRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPlaylistSongsWithTrackData, playlistID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPlaylistSongsWithTrackDataRow
+	for rows.Next() {
+		var i GetPlaylistSongsWithTrackDataRow
+		if err := rows.Scan(
+			&i.SpotifyTrackID,
+			&i.Position,
+			&i.UpdatedAt,
+			&i.TrackName,
+			&i.TrackDurationMs,
+			&i.TrackAlbumID,
+			pq.Array(&i.TrackArtistIds),
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPlaylistsByUserID = `-- name: GetPlaylistsByUserID :many
-SELECT id, user_id, name, description, spotify_playlist_id, is_public, sync_with_spotify, last_synced_at, created_at, updated_at FROM local_playlists WHERE user_id = $1 ORDER BY created_at DESC
+SELECT id, user_id, name, description, image_url, spotify_playlist_id, snapshot_id, is_public, last_synced_at, created_at, updated_at FROM local_playlists WHERE user_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) GetPlaylistsByUserID(ctx context.Context, userID uuid.UUID) ([]LocalPlaylist, error) {
@@ -234,9 +326,10 @@ func (q *Queries) GetPlaylistsByUserID(ctx context.Context, userID uuid.UUID) ([
 			&i.UserID,
 			&i.Name,
 			&i.Description,
+			&i.ImageUrl,
 			&i.SpotifyPlaylistID,
+			&i.SnapshotID,
 			&i.IsPublic,
-			&i.SyncWithSpotify,
 			&i.LastSyncedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -270,17 +363,17 @@ func (q *Queries) RemoveSongFromPlaylist(ctx context.Context, arg RemoveSongFrom
 
 const updatePlaylist = `-- name: UpdatePlaylist :exec
 UPDATE local_playlists 
-SET name = $2, description = $3, is_public = $4, sync_with_spotify = $5, updated_at = NOW()
+SET name = $2, description = $3, image_url=$4, is_public = $5, updated_at = NOW()
 WHERE id = $1 AND user_id = $6
 `
 
 type UpdatePlaylistParams struct {
-	ID              uuid.UUID
-	Name            string
-	Description     sql.NullString
-	IsPublic        bool
-	SyncWithSpotify bool
-	UserID          uuid.UUID
+	ID          uuid.UUID
+	Name        string
+	Description sql.NullString
+	ImageUrl    sql.NullString
+	IsPublic    bool
+	UserID      uuid.UUID
 }
 
 func (q *Queries) UpdatePlaylist(ctx context.Context, arg UpdatePlaylistParams) error {
@@ -288,26 +381,10 @@ func (q *Queries) UpdatePlaylist(ctx context.Context, arg UpdatePlaylistParams) 
 		arg.ID,
 		arg.Name,
 		arg.Description,
+		arg.ImageUrl,
 		arg.IsPublic,
-		arg.SyncWithSpotify,
 		arg.UserID,
 	)
-	return err
-}
-
-const updatePlaylistSyncTime = `-- name: UpdatePlaylistSyncTime :exec
-UPDATE local_playlists 
-SET last_synced_at = NOW(), updated_at = NOW()
-WHERE id = $1 AND user_id = $2
-`
-
-type UpdatePlaylistSyncTimeParams struct {
-	ID     uuid.UUID
-	UserID uuid.UUID
-}
-
-func (q *Queries) UpdatePlaylistSyncTime(ctx context.Context, arg UpdatePlaylistSyncTimeParams) error {
-	_, err := q.db.ExecContext(ctx, updatePlaylistSyncTime, arg.ID, arg.UserID)
 	return err
 }
 

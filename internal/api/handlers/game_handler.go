@@ -25,8 +25,8 @@ type GameSession struct {
 	Score        int           `json:"score"`
 	Status       string        `json:"status"`
 	TimeLeft     int           `json:"time_left"`
-	Songs        []models.Song `json:"songs"`
-	CurrentSong  *models.Song  `json:"current_song"`
+	Songs        []models.PlaylistTrack `json:"songs"`
+	CurrentSong  *models.PlaylistTrack  `json:"current_song"`
 	Answers      []GameAnswer  `json:"answers"`
 }
 
@@ -74,7 +74,7 @@ func (h *GameHandler) GetUserPlaylists(w http.ResponseWriter, r *http.Request) {
 
 	logger.Info(r.Context(), "got user playlists", logger.F("playlist_size", len(playlists)))
 	// Convert []*models.Playlist to []models.Playlist
-	playlistsSlice := make([]models.Playlist, len(playlists))
+	playlistsSlice := make([]models.LocalPlaylist, len(playlists))
 	for i, p := range playlists {
 		playlistsSlice[i] = *p
 	}
@@ -320,7 +320,9 @@ func (h *GameHandler) renderGameResults(w http.ResponseWriter, r *http.Request, 
 		if answer.Round <= len(game.Songs) {
 			song := game.Songs[answer.Round-1]
 			songTitle = song.TrackName
-			artist = song.ArtistName
+			if len(song.ArtistIds) > 0 {
+				artist = song.ArtistIds[0] // Using artist ID for now - would need to fetch artist name in production
+			}
 		}
 
 		pointsBreakdown[i] = templates.PointEntry{
@@ -389,7 +391,7 @@ func getTimeLimit(difficulty string) int {
 	}
 }
 
-func selectRandomSongs(songs []models.Song, count int) []models.Song {
+func selectRandomSongs(songs []models.PlaylistTrack, count int) []models.PlaylistTrack {
 	// Simple random selection - in production use proper shuffling
 	if len(songs) <= count {
 		return songs
