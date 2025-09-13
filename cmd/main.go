@@ -14,7 +14,6 @@ import (
 
 	"github.com/FerNunez/NameThatSong/internal/api/handlers"
 	"github.com/FerNunez/NameThatSong/internal/services/playlist"
-	"github.com/FerNunez/NameThatSong/internal/services/songs"
 	"github.com/FerNunez/NameThatSong/internal/services/spotify"
 	"github.com/FerNunez/NameThatSong/internal/services/user"
 	"github.com/redis/go-redis/v9"
@@ -67,7 +66,6 @@ func main() {
 	passwordResetStore := repository.NewSQLPasswordResetStore(dbQueries)
 	sessionStore := repository.NewSQLSessionStore(dbQueries)
 	playlistStore := repository.NewSQLPlaylistStore(dbQueries)
-	songStore := repository.NewSQLSongStore(dbQueries)
 
 	// Email configuration and service
 	emailConfig, err := config.NewEmailConfig()
@@ -100,10 +98,8 @@ func main() {
 		fmt.Println("error creating spotify service:", err)
 		return
 	}
-	songService := songs.NewSongProvider(songStore, spotifyService)
-
 	// Playlist service
-	playlistService := playlist.NewPlaylistService(playlistStore, songService, spotifyService)
+	playlistService := playlist.NewPlaylistService(playlistStore, spotifyService)
 	// Game handler
 	gameHandler := handlers.NewGameHandler(playlistService)
 
@@ -145,7 +141,6 @@ func main() {
 			r.Get("/api/playlist/create-form", playlistHandler.ShowCreatePlaylistForm)
 			r.Post("/api/playlist/create", playlistHandler.CreateAndShowPlaylist)
 			r.Get("/api/playlist/cancel-create", playlistHandler.CancelCreatePlaylist)
-
 
 			// Game routes (integrated into modern UI)
 			r.Get("/api/game/setup", playlistHandler.ShowGameSetup)
