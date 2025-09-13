@@ -15,7 +15,7 @@ CREATE TABLE local_playlists (
 -- One-to-many: One playlist has many tracks
 CREATE TABLE local_playlist_tracks(
     playlist_id UUID REFERENCES local_playlists(id) ON DELETE CASCADE,
-    spotify_track_id TEXT REFERENCES songs(spotify_track_id) ON DELETE CASCADE,
+    spotify_track_id TEXT REFERENCES spotify_tracks(id) ON DELETE CASCADE,
     position INTEGER NOT NULL,
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     PRIMARY KEY (playlist_id, spotify_track_id),
