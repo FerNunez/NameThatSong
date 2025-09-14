@@ -65,7 +65,7 @@ func main() {
 	emailVerificationStore := repository.NewSQLEmailVerificationStore(dbQueries)
 	passwordResetStore := repository.NewSQLPasswordResetStore(dbQueries)
 	sessionStore := repository.NewSQLSessionStore(dbQueries)
-	playlistStore := repository.NewSQLPlaylistStore(dbQueries)
+	playlistStore := repository.NewSQLPlaylistStore(dbQueries, db)
 
 	// Email configuration and service
 	emailConfig, err := config.NewEmailConfig()
