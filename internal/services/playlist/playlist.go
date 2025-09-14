@@ -55,7 +55,7 @@ func (p *PlaylistProvider) CreatePlaylist(ctx context.Context, userID uuid.UUID,
 		UpdatedAt:   time.Now(),
 	}
 
-	if err := p.playlistStore.CreatePlaylist(ctx, playlist); err != nil {
+	if err := p.playlistStore.UpsertPlaylistWithTracks(ctx, playlist); err != nil {
 		logger.Error(ctx, "failed to store playlist in database",
 			logger.F("user_id", userID),
 			logger.F("playlist_id", playlist.ID),
@@ -72,10 +72,18 @@ func (p *PlaylistProvider) CreatePlaylist(ctx context.Context, userID uuid.UUID,
 }
 
 func (p *PlaylistProvider) GetUserPlaylists(ctx context.Context, userID uuid.UUID) ([]*models.LocalPlaylist, error) {
-	// TODO: To add a cache here!
-	// TODO: add logger?
+	localPlaylists, err := p.playlistStore.GetPlaylistsByUserIDWithTracks(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
 
-	return p.playlistStore.GetPlaylistsByUserID(ctx, userID)
+	localPlaylistsPtr := make([]*models.LocalPlaylist, 0, len(localPlaylists))
+	for _, p := range localPlaylists {
+		localPlaylistsPtr = append(localPlaylistsPtr, &p)
+	}
+
+	return localPlaylistsPtr, nil
+	//localPlaylistsPtr/return p.playlistStore.GetPlaylistsByUserID(ctx, userID)
 }
 
 func (p *PlaylistProvider) GetPlaylist(ctx context.Context, playlistID, userID uuid.UUID) (*models.LocalPlaylist, error) {
@@ -101,7 +109,7 @@ func (p *PlaylistProvider) UpdatePlaylist(ctx context.Context, playlistID, userI
 	playlist.SnapshotID = &req.SnapshotID
 	playlist.UpdatedAt = time.Now()
 
-	if err := p.playlistStore.UpdatePlaylist(ctx, playlist); err != nil {
+	if err := p.playlistStore.UpsertPlaylistWithTracks(ctx, playlist); err != nil {
 		return nil, fmt.Errorf("failed to update playlist: %w", err)
 	}
 
@@ -311,7 +319,7 @@ func (p *PlaylistProvider) ImportFromSpotify(ctx context.Context, userID uuid.UU
 		UpdatedAt:         time.Now(),
 	}
 
-	if err := p.playlistStore.CreatePlaylist(ctx, playlist); err != nil {
+	if err := p.playlistStore.UpsertPlaylistWithTracks(ctx, playlist); err != nil {
 		return nil, fmt.Errorf("failed to create playlist: %w", err)
 	}
 
@@ -522,8 +530,8 @@ func (p *PlaylistProvider) ImportUsersPlaylistsFromSpotify(ctx context.Context, 
 
 			logger.Debug(ctx, "local playlist ot add", logger.F("localplaylist", *newLocalPlaylist))
 
-			if err := p.playlistStore.CreatePlaylist(ctx, newLocalPlaylist); err != nil {
-				logger.Error(ctx, "couldnt store new playlist")
+			if err := p.playlistStore.UpsertPlaylistWithTracks(ctx, newLocalPlaylist); err != nil {
+				logger.Error(ctx, "couldnt store new playlist", logger.F("err", err))
 			}
 			logger.Debug(ctx, "added new local playlist", logger.F("name", newLocalPlaylist.Name))
 			localPlaylists = append(localPlaylists, *newLocalPlaylist)

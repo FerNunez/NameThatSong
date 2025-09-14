@@ -131,11 +131,11 @@ func (s *Spotify) FetchMultipleTracks(ctx context.Context, userID string, trackI
 		}
 
 		// Store in database (async to avoid blocking)
-		go func() {
-			if err := s.dataStore.StoreMultipleTracks(context.Background(), trackPointers); err != nil {
-				fmt.Printf("Warning: failed to store batch tracks in database: %v\n", err)
-			}
-		}()
+		// go func() { // FIX: concurrency removed cause foreign key dependency with playlist
+		if err := s.dataStore.StoreMultipleTracks(context.Background(), trackPointers); err != nil {
+			fmt.Printf("Warning: failed to store batch tracks in database: %v\n", err)
+		}
+		// }()
 
 		// Cache the results for fast future access
 		s.cache.SetMultipleTracks(cacheMap)
@@ -744,7 +744,6 @@ func (s *Spotify) fetchArtistFromAPI(ctx context.Context, accessToken string, ar
 
 func (s *Spotify) fetchPlaylistFromAPI(ctx context.Context, accessToken string, playlistID m.SpotifyID) (m.PlaylistData, error) {
 	baseURL := s.config.GetAPIBaseURL() + "/playlists/" + string(playlistID)
-	fmt.Println(baseURL)
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return m.PlaylistData{}, err
@@ -1216,6 +1215,7 @@ func (s *Spotify) fetchAlbumBatchFromAPI(ctx context.Context, accessToken string
 			Popularity:           albumData.Popularity,
 			ArtistIDs:            artistIDs,
 			CachedAt:             time.Now(),
+			TrackIDs:             []m.SpotifyID{}, // TODO: Think about this
 		}
 		albums = append(albums, album)
 	}

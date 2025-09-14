@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -20,7 +21,6 @@ func NewGetAuthHandler(ss spotify.SpotifyService) *GetAuthHandler {
 
 }
 func (h *GetAuthHandler) ServeHttp(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("HEEEEEEEEEY")
 	logger.Info(r.Context(), "spotify auth request initiated")
 
 	user, ok := middleware.GetUser(r.Context())
@@ -109,14 +109,17 @@ func (h *GetAuthCallbackHandler) ServeHttp(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Importing playlists from spotify
-	spotifyPlaylists, err := h.playlistService.ImportUsersPlaylistsFromSpotify(r.Context(), user.ID)
-	if err != nil {
-		logger.Info(r.Context(), "couldn't import spotify playlists into local",
-			logger.F("user_id", user.ID.String()))
-	}
-	logger.Info(r.Context(), "imported spotify playlists into local",
-		logger.F("user_id", user.ID.String()),
-		logger.F("numb imported", len(spotifyPlaylists)))
+	go func() {
+		newCtx := context.Background()
+		spotifyPlaylists, err := h.playlistService.ImportUsersPlaylistsFromSpotify(newCtx, user.ID)
+		if err != nil {
+			logger.Info(newCtx, "couldn't import spotify playlists into local",
+				logger.F("user_id", user.ID.String()))
+		}
+		logger.Info(r.Context(), "imported spotify playlists into local",
+			logger.F("user_id", user.ID.String()),
+			logger.F("numb imported", len(spotifyPlaylists)))
+	}()
 
 	http.Redirect(w, r, "/", http.StatusFound)
 }
