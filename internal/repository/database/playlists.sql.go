@@ -39,6 +39,22 @@ func (q *Queries) AddSongToPlaylist(ctx context.Context, arg AddSongToPlaylistPa
 	return i, err
 }
 
+const bulkInsertPlaylistTracks = `-- name: BulkInsertPlaylistTracks :exec
+INSERT INTO local_playlist_tracks (playlist_id, spotify_track_id, position, updated_at)
+SELECT $1, unnest($2::text[]), unnest($3::int[]), NOW()
+`
+
+type BulkInsertPlaylistTracksParams struct {
+	PlaylistID uuid.UUID
+	Column2    []string
+	Column3    []int32
+}
+
+func (q *Queries) BulkInsertPlaylistTracks(ctx context.Context, arg BulkInsertPlaylistTracksParams) error {
+	_, err := q.db.ExecContext(ctx, bulkInsertPlaylistTracks, arg.PlaylistID, pq.Array(arg.Column2), pq.Array(arg.Column3))
+	return err
+}
+
 const clearPlaylistSongs = `-- name: ClearPlaylistSongs :exec
 DELETE FROM local_playlist_tracks WHERE playlist_id = $1
 `
@@ -46,53 +62,6 @@ DELETE FROM local_playlist_tracks WHERE playlist_id = $1
 func (q *Queries) ClearPlaylistSongs(ctx context.Context, playlistID uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, clearPlaylistSongs, playlistID)
 	return err
-}
-
-const createPlaylist = `-- name: CreatePlaylist :one
-INSERT INTO local_playlists (id, user_id, name, description, image_url, spotify_playlist_id, snapshot_id, is_public, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-RETURNING id, user_id, name, description, image_url, spotify_playlist_id, snapshot_id, is_public, last_synced_at, created_at, updated_at
-`
-
-type CreatePlaylistParams struct {
-	ID                uuid.UUID
-	UserID            uuid.UUID
-	Name              string
-	Description       sql.NullString
-	ImageUrl          sql.NullString
-	SpotifyPlaylistID sql.NullString
-	SnapshotID        sql.NullString
-	IsPublic          bool
-}
-
-// Playlist operations
-// TODO: To add UPSERT LocalPlaylist
-func (q *Queries) CreatePlaylist(ctx context.Context, arg CreatePlaylistParams) (LocalPlaylist, error) {
-	row := q.db.QueryRowContext(ctx, createPlaylist,
-		arg.ID,
-		arg.UserID,
-		arg.Name,
-		arg.Description,
-		arg.ImageUrl,
-		arg.SpotifyPlaylistID,
-		arg.SnapshotID,
-		arg.IsPublic,
-	)
-	var i LocalPlaylist
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.Name,
-		&i.Description,
-		&i.ImageUrl,
-		&i.SpotifyPlaylistID,
-		&i.SnapshotID,
-		&i.IsPublic,
-		&i.LastSyncedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
 }
 
 const deletePlaylist = `-- name: DeletePlaylist :exec
@@ -141,6 +110,120 @@ func (q *Queries) GetPlaylistByID(ctx context.Context, id uuid.UUID) (LocalPlayl
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getPlaylistByIDWithTracks = `-- name: GetPlaylistByIDWithTracks :many
+SELECT
+    lp.id as playlist_id,
+    lp.user_id,
+    lp.name as playlist_name,
+    lp.description,
+    lp.image_url,
+    lp.spotify_playlist_id,
+    lp.snapshot_id,
+    lp.is_public,
+    lp.last_synced_at,
+    lp.created_at,
+    lp.updated_at,
+    -- Track data (nullable for playlists with no tracks)
+    lpt.spotify_track_id,
+    lpt.position,
+    lpt.updated_at as track_updated_at,
+    st.name as track_name,
+    st.duration_ms,
+    st.disc_number,
+    st.track_number,
+    st.popularity,
+    st.explicit,
+    st.is_local,
+    st.album_id,
+    st.artist_ids,
+    st.cached_at
+FROM local_playlists lp
+LEFT JOIN local_playlist_tracks lpt ON lp.id = lpt.playlist_id
+LEFT JOIN spotify_tracks st ON lpt.spotify_track_id = st.id
+WHERE lp.id = $1 AND lp.user_id = $2
+ORDER BY lpt.position ASC
+`
+
+type GetPlaylistByIDWithTracksParams struct {
+	ID     uuid.UUID
+	UserID uuid.UUID
+}
+
+type GetPlaylistByIDWithTracksRow struct {
+	PlaylistID        uuid.UUID
+	UserID            uuid.UUID
+	PlaylistName      string
+	Description       sql.NullString
+	ImageUrl          sql.NullString
+	SpotifyPlaylistID sql.NullString
+	SnapshotID        sql.NullString
+	IsPublic          bool
+	LastSyncedAt      sql.NullTime
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	SpotifyTrackID    sql.NullString
+	Position          sql.NullInt32
+	TrackUpdatedAt    sql.NullTime
+	TrackName         sql.NullString
+	DurationMs        sql.NullInt32
+	DiscNumber        sql.NullInt32
+	TrackNumber       sql.NullInt32
+	Popularity        sql.NullInt32
+	Explicit          sql.NullBool
+	IsLocal           sql.NullBool
+	AlbumID           sql.NullString
+	ArtistIds         []string
+	CachedAt          sql.NullTime
+}
+
+func (q *Queries) GetPlaylistByIDWithTracks(ctx context.Context, arg GetPlaylistByIDWithTracksParams) ([]GetPlaylistByIDWithTracksRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPlaylistByIDWithTracks, arg.ID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPlaylistByIDWithTracksRow
+	for rows.Next() {
+		var i GetPlaylistByIDWithTracksRow
+		if err := rows.Scan(
+			&i.PlaylistID,
+			&i.UserID,
+			&i.PlaylistName,
+			&i.Description,
+			&i.ImageUrl,
+			&i.SpotifyPlaylistID,
+			&i.SnapshotID,
+			&i.IsPublic,
+			&i.LastSyncedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.SpotifyTrackID,
+			&i.Position,
+			&i.TrackUpdatedAt,
+			&i.TrackName,
+			&i.DurationMs,
+			&i.DiscNumber,
+			&i.TrackNumber,
+			&i.Popularity,
+			&i.Explicit,
+			&i.IsLocal,
+			&i.AlbumID,
+			pq.Array(&i.ArtistIds),
+			&i.CachedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getPlaylistBySpotifyIDAndUserID = `-- name: GetPlaylistBySpotifyIDAndUserID :one
@@ -347,6 +430,115 @@ func (q *Queries) GetPlaylistsByUserID(ctx context.Context, userID uuid.UUID) ([
 	return items, nil
 }
 
+const getPlaylistsByUserIDWithTracks = `-- name: GetPlaylistsByUserIDWithTracks :many
+SELECT 
+    lp.id as playlist_id,
+    lp.user_id,
+    lp.name as playlist_name,
+    lp.description,
+    lp.image_url,
+    lp.spotify_playlist_id,
+    lp.snapshot_id,
+    lp.is_public,
+    lp.last_synced_at,
+    lp.created_at,
+    lp.updated_at,
+    -- Track data (nullable for playlists with no tracks)
+    lpt.spotify_track_id,
+    lpt.position,
+    lpt.updated_at as track_updated_at,
+    st.name as track_name,
+    st.duration_ms,
+    st.disc_number,
+    st.track_number,
+    st.popularity,
+    st.explicit,
+    st.is_local,
+    st.album_id,
+    st.artist_ids,
+    st.cached_at
+FROM local_playlists lp
+LEFT JOIN local_playlist_tracks lpt ON lp.id = lpt.playlist_id
+LEFT JOIN spotify_tracks st ON lpt.spotify_track_id = st.id
+WHERE lp.user_id = $1
+ORDER BY lp.created_at DESC, lpt.position ASC
+`
+
+type GetPlaylistsByUserIDWithTracksRow struct {
+	PlaylistID        uuid.UUID
+	UserID            uuid.UUID
+	PlaylistName      string
+	Description       sql.NullString
+	ImageUrl          sql.NullString
+	SpotifyPlaylistID sql.NullString
+	SnapshotID        sql.NullString
+	IsPublic          bool
+	LastSyncedAt      sql.NullTime
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	SpotifyTrackID    sql.NullString
+	Position          sql.NullInt32
+	TrackUpdatedAt    sql.NullTime
+	TrackName         sql.NullString
+	DurationMs        sql.NullInt32
+	DiscNumber        sql.NullInt32
+	TrackNumber       sql.NullInt32
+	Popularity        sql.NullInt32
+	Explicit          sql.NullBool
+	IsLocal           sql.NullBool
+	AlbumID           sql.NullString
+	ArtistIds         []string
+	CachedAt          sql.NullTime
+}
+
+func (q *Queries) GetPlaylistsByUserIDWithTracks(ctx context.Context, userID uuid.UUID) ([]GetPlaylistsByUserIDWithTracksRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPlaylistsByUserIDWithTracks, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPlaylistsByUserIDWithTracksRow
+	for rows.Next() {
+		var i GetPlaylistsByUserIDWithTracksRow
+		if err := rows.Scan(
+			&i.PlaylistID,
+			&i.UserID,
+			&i.PlaylistName,
+			&i.Description,
+			&i.ImageUrl,
+			&i.SpotifyPlaylistID,
+			&i.SnapshotID,
+			&i.IsPublic,
+			&i.LastSyncedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.SpotifyTrackID,
+			&i.Position,
+			&i.TrackUpdatedAt,
+			&i.TrackName,
+			&i.DurationMs,
+			&i.DiscNumber,
+			&i.TrackNumber,
+			&i.Popularity,
+			&i.Explicit,
+			&i.IsLocal,
+			&i.AlbumID,
+			pq.Array(&i.ArtistIds),
+			&i.CachedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const removeSongFromPlaylist = `-- name: RemoveSongFromPlaylist :exec
 DELETE FROM local_playlist_tracks WHERE playlist_id = $1 AND spotify_track_id = $2
 `
@@ -358,33 +550,6 @@ type RemoveSongFromPlaylistParams struct {
 
 func (q *Queries) RemoveSongFromPlaylist(ctx context.Context, arg RemoveSongFromPlaylistParams) error {
 	_, err := q.db.ExecContext(ctx, removeSongFromPlaylist, arg.PlaylistID, arg.SpotifyTrackID)
-	return err
-}
-
-const updatePlaylist = `-- name: UpdatePlaylist :exec
-UPDATE local_playlists 
-SET name = $2, description = $3, image_url=$4, is_public = $5, updated_at = NOW()
-WHERE id = $1 AND user_id = $6
-`
-
-type UpdatePlaylistParams struct {
-	ID          uuid.UUID
-	Name        string
-	Description sql.NullString
-	ImageUrl    sql.NullString
-	IsPublic    bool
-	UserID      uuid.UUID
-}
-
-func (q *Queries) UpdatePlaylist(ctx context.Context, arg UpdatePlaylistParams) error {
-	_, err := q.db.ExecContext(ctx, updatePlaylist,
-		arg.ID,
-		arg.Name,
-		arg.Description,
-		arg.ImageUrl,
-		arg.IsPublic,
-		arg.UserID,
-	)
 	return err
 }
 
@@ -401,4 +566,63 @@ type UpdateSongPositionParams struct {
 func (q *Queries) UpdateSongPosition(ctx context.Context, arg UpdateSongPositionParams) error {
 	_, err := q.db.ExecContext(ctx, updateSongPosition, arg.PlaylistID, arg.SpotifyTrackID, arg.Position)
 	return err
+}
+
+const upsertPlaylist = `-- name: UpsertPlaylist :one
+INSERT INTO local_playlists (
+    id, user_id, name, description, image_url,
+    spotify_playlist_id, snapshot_id, is_public,
+    created_at, updated_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+ON CONFLICT (id)
+DO UPDATE SET
+    name = EXCLUDED.name,
+    description = EXCLUDED.description,
+    image_url = EXCLUDED.image_url,
+    spotify_playlist_id = EXCLUDED.spotify_playlist_id,
+    snapshot_id = EXCLUDED.snapshot_id,
+    is_public = EXCLUDED.is_public,
+    updated_at = NOW()
+RETURNING id, user_id, name, description, image_url, spotify_playlist_id, snapshot_id, is_public, last_synced_at, created_at, updated_at
+`
+
+type UpsertPlaylistParams struct {
+	ID                uuid.UUID
+	UserID            uuid.UUID
+	Name              string
+	Description       sql.NullString
+	ImageUrl          sql.NullString
+	SpotifyPlaylistID sql.NullString
+	SnapshotID        sql.NullString
+	IsPublic          bool
+}
+
+// Playlist operations
+func (q *Queries) UpsertPlaylist(ctx context.Context, arg UpsertPlaylistParams) (LocalPlaylist, error) {
+	row := q.db.QueryRowContext(ctx, upsertPlaylist,
+		arg.ID,
+		arg.UserID,
+		arg.Name,
+		arg.Description,
+		arg.ImageUrl,
+		arg.SpotifyPlaylistID,
+		arg.SnapshotID,
+		arg.IsPublic,
+	)
+	var i LocalPlaylist
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.Description,
+		&i.ImageUrl,
+		&i.SpotifyPlaylistID,
+		&i.SnapshotID,
+		&i.IsPublic,
+		&i.LastSyncedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
