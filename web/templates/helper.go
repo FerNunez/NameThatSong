@@ -9,6 +9,67 @@ func TruncateString(nbShowChars int, input string) string {
 	return input[0:nbShowChars] + ".." + input[len(input)-nbShowChars:]
 }
 
+func ArtistsListString(maxNumbChars int, artistNameList []string) string {
+	if len(artistNameList) == 0 {
+		return ""
+	}
+
+	// For a single artist, truncate if needed
+	if len(artistNameList) == 1 {
+		if len(artistNameList[0]) <= maxNumbChars {
+			return artistNameList[0]
+		}
+		return TruncateString(3, artistNameList[0])
+	}
+
+	// For multiple artists, try to fit them within limit
+	// First, calculate total length including separators
+	totalLen := 0
+	for i, artist := range artistNameList {
+		totalLen += len(artist)
+		if i < len(artistNameList)-1 {
+			totalLen += 2 // for ", "
+		}
+	}
+
+	// If already within limit, return as is
+	if totalLen <= maxNumbChars {
+		return strings.Join(artistNameList, ", ")
+	}
+
+	// Otherwise, truncate from longest to shortest, preserving shorter ones
+	result := make([]string, len(artistNameList))
+	copy(result, artistNameList)
+
+	// Calculate how much we need to reduce
+	needToReduce := totalLen - maxNumbChars
+
+	// Sort indices by string length (longest first)
+	indices := make([]int, len(result))
+	for i := range indices {
+		indices[i] = i
+	}
+	sort.Slice(indices, func(i, j int) bool {
+		return len(result[indices[i]]) > len(result[indices[j]])
+	})
+
+	// Truncate longest strings until we're under the limit
+	for _, idx := range indices {
+		if needToReduce <= 0 {
+			break
+		}
+
+		originalLen := len(result[idx])
+		if originalLen > 8 { // Only truncate if longer than truncated form
+			result[idx] = TruncateString(3, result[idx])
+			newLen := len(result[idx])
+			needToReduce -= (originalLen - newLen)
+		}
+	}
+
+	return strings.Join(result, ", ")
+}
+
 func TruncateAndJoin(maxNumbChars int, artistNameList []string) string {
 	if len(artistNameList) == 0 {
 		return ""

@@ -20,30 +20,27 @@ func TestValidateCreatePlaylistRequest(t *testing.T) {
 		{
 			name: "valid create request",
 			request: models.CreatePlaylistRequest{
-				Name:            "My Test Playlist",
-				Description:     "A great playlist for testing",
-				IsPublic:        true,
-				SyncWithSpotify: false,
+				Name:        "My Test Playlist",
+				Description: "A great playlist for testing",
+				IsPublic:    true,
 			},
 			expectError: false,
 		},
 		{
 			name: "valid create request with empty description",
 			request: models.CreatePlaylistRequest{
-				Name:            "My Test Playlist",
-				Description:     "",
-				IsPublic:        false,
-				SyncWithSpotify: true,
+				Name:        "My Test Playlist",
+				Description: "",
+				IsPublic:    false,
 			},
 			expectError: false,
 		},
 		{
 			name: "invalid create request - empty name",
 			request: models.CreatePlaylistRequest{
-				Name:            "",
-				Description:     "A great playlist",
-				IsPublic:        true,
-				SyncWithSpotify: false,
+				Name:        "",
+				Description: "A great playlist",
+				IsPublic:    true,
 			},
 			expectError: true,
 			errorMsg:    "invalid name",
@@ -51,10 +48,9 @@ func TestValidateCreatePlaylistRequest(t *testing.T) {
 		{
 			name: "invalid create request - name too long",
 			request: models.CreatePlaylistRequest{
-				Name:            string(make([]byte, 101)), // 101 characters
-				Description:     "A great playlist",
-				IsPublic:        true,
-				SyncWithSpotify: false,
+				Name:        string(make([]byte, 101)), // 101 characters
+				Description: "A great playlist",
+				IsPublic:    true,
 			},
 			expectError: true,
 			errorMsg:    "invalid name",
@@ -62,10 +58,9 @@ func TestValidateCreatePlaylistRequest(t *testing.T) {
 		{
 			name: "invalid create request - description too long",
 			request: models.CreatePlaylistRequest{
-				Name:            "Valid Name",
-				Description:     string(make([]byte, 501)), // 501 characters
-				IsPublic:        true,
-				SyncWithSpotify: false,
+				Name:        "Valid Name",
+				Description: string(make([]byte, 501)), // 501 characters
+				IsPublic:    true,
 			},
 			expectError: true,
 			errorMsg:    "invalid description",
@@ -99,20 +94,18 @@ func TestValidateUpdatePlaylistRequest(t *testing.T) {
 		{
 			name: "valid update request",
 			request: models.UpdatePlaylistRequest{
-				Name:            "Updated Playlist Name",
-				Description:     "Updated description",
-				IsPublic:        false,
-				SyncWithSpotify: true,
+				Name:        "Updated Playlist Name",
+				Description: "Updated description",
+				IsPublic:    false,
 			},
 			expectError: false,
 		},
 		{
 			name: "invalid update request - empty name",
 			request: models.UpdatePlaylistRequest{
-				Name:            "",
-				Description:     "Updated description",
-				IsPublic:        false,
-				SyncWithSpotify: true,
+				Name:        "",
+				Description: "Updated description",
+				IsPublic:    false,
 			},
 			expectError: true,
 			errorMsg:    "invalid name",
@@ -147,7 +140,6 @@ func TestValidateImportPlaylistRequest(t *testing.T) {
 			name: "valid import request",
 			request: models.ImportPlaylistRequest{
 				SpotifyPlaylistID: "37i9dQZF1DXcBWIGoYBM5M",
-				SyncWithSpotify:   true,
 			},
 			expectError: false,
 		},
@@ -155,7 +147,6 @@ func TestValidateImportPlaylistRequest(t *testing.T) {
 			name: "invalid import request - empty spotify ID",
 			request: models.ImportPlaylistRequest{
 				SpotifyPlaylistID: "",
-				SyncWithSpotify:   true,
 			},
 			expectError: true,
 			errorMsg:    "invalid spotify playlist ID",
@@ -164,7 +155,6 @@ func TestValidateImportPlaylistRequest(t *testing.T) {
 			name: "invalid import request - invalid spotify ID",
 			request: models.ImportPlaylistRequest{
 				SpotifyPlaylistID: "invalid-id!",
-				SyncWithSpotify:   true,
 			},
 			expectError: true,
 			errorMsg:    "invalid spotify playlist ID",

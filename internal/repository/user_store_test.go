@@ -72,6 +72,11 @@ func (m *MockUserStore) Reset(ctx context.Context) error {
 	return args.Error(0)
 }
 
+func (m *MockUserStore) UpdateSpotifyConnectionStatus(ctx context.Context, id uuid.UUID, connected bool) error {
+	args := m.Called(ctx, id, connected)
+	return args.Error(0)
+}
+
 // Test helper functions
 func setupMockUserStore() *MockUserStore {
 	return &MockUserStore{}
