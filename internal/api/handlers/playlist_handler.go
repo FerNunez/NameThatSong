@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/FerNunez/NameThatSong/internal/api/middleware"
 	"github.com/FerNunez/NameThatSong/internal/models"
 	"github.com/FerNunez/NameThatSong/internal/pkg/logger"
+	"github.com/FerNunez/NameThatSong/internal/services/events"
 	"github.com/FerNunez/NameThatSong/internal/services/playlist"
 	"github.com/FerNunez/NameThatSong/internal/services/spotify"
 	"github.com/FerNunez/NameThatSong/web/templates"
@@ -18,11 +20,13 @@ import (
 type PlaylistHandler struct {
 	playlistService playlist.Service
 	spotifyService  spotify.SpotifyService
+	eventBus        *events.EventBus
 }
 
 func NewPlaylistHandler(playlistService playlist.Service) *PlaylistHandler {
 	return &PlaylistHandler{
 		playlistService: playlistService,
+		eventBus:        events.NewEventBus(),
 	}
 }
 
@@ -30,6 +34,7 @@ func NewPlaylistHandlerWithSpotify(playlistService playlist.Service, spotifyServ
 	return &PlaylistHandler{
 		playlistService: playlistService,
 		spotifyService:  spotifyService,
+		eventBus:        events.NewEventBus(),
 	}
 }
 
@@ -128,29 +133,51 @@ func (h *PlaylistHandler) GetSpotifyPlaylistsForImport(w http.ResponseWriter, r 
 		return
 	}
 
-	// h.playlistService.ImportPlaylistsFromSpotify()
-	// gets playlist info + all songs
-
-	h.playlistService.GetUserPlaylists(r.Context(), user.ID)
+	// Emit import started event
+	h.eventBus.Publish(events.Event{
+		Type:   events.PlaylistImportStarted,
+		UserID: user.ID,
+		Data:   map[string]interface{}{"action": "import_started"},
+	})
 
 	// Get user's Spotify playlists
 	spotifyPlaylists, err := h.spotifyService.FetchUserSpotifyPlaylistsVersion(r.Context(), user.ID.String())
 	if err != nil {
+		// Emit import failed event
+		h.eventBus.Publish(events.Event{
+			Type:   events.PlaylistImportFailed,
+			UserID: user.ID,
+			Data:   map[string]interface{}{"error": err.Error()},
+		})
+
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusOK)
 		templates.SpotifyImportError(err.Error()).Render(r.Context(), w)
 		return
 	}
 
-	for _, spotifyPlaylist := range spotifyPlaylists {
-		_, err := h.playlistService.ImportFromSpotify(r.Context(), user.ID, models.ImportPlaylistRequest{
-			SpotifyPlaylistID: string(spotifyPlaylist.ID),
-			SnapshotID:        spotifyPlaylist.SnapshotID,
-		})
-		if err != nil {
-			logger.Error(r.Context(), "Couldnt import playlist")
+	// Import playlists in background to avoid blocking the response
+	go func() {
+		importedCount := 0
+		for _, spotifyPlaylist := range spotifyPlaylists {
+			_, err := h.playlistService.ImportFromSpotify(r.Context(), user.ID, models.ImportPlaylistRequest{
+				SpotifyPlaylistID: string(spotifyPlaylist.ID),
+				SnapshotID:        spotifyPlaylist.SnapshotID,
+			})
+			if err != nil {
+				logger.Error(r.Context(), "Couldnt import playlist", logger.F("error", err))
+			} else {
+				importedCount++
+			}
 		}
-	}
+
+		// Emit import completed event
+		h.eventBus.Publish(events.Event{
+			Type:   events.PlaylistImportCompleted,
+			UserID: user.ID,
+			Data:   map[string]interface{}{"imported_count": importedCount},
+		})
+	}()
 
 	// Convert to template format - these are available for import
 	var templatePlaylists []templates.UserPlaylist
@@ -532,4 +559,71 @@ func (h *PlaylistHandler) AddToCurrentPlaylist(w http.ResponseWriter, r *http.Re
 	// Return success response with optional playlist refresh trigger
 	w.Header().Set("HX-Trigger", fmt.Sprintf(`{"trackAdded": {"trackId": "%s", "playlistId": "%s"}}`, trackID, playlistIDStr))
 	w.WriteHeader(http.StatusOK)
+}
+
+// GET /api/events/playlist-updates - Server-Sent Events for playlist updates
+func (h *PlaylistHandler) HandlePlaylistEvents(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	user, ok := middleware.GetUser(ctx)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	logger.Info(r.Context(), "SSE connection established", logger.F("user_id", user.ID))
+
+	// Set SSE headers
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	// Create user-specific event subscriber
+	subscriber := events.NewUserEventSubscriber(user.ID, h.eventBus)
+	// subscribe to Playlists Events (compleated, started, error). This return a single channel where all events are merged
+	eventChan := subscriber.SubscribeToPlaylistEvents()
+
+	// Send initial connection event
+	fmt.Fprintf(w, "event: connected\n")
+	fmt.Fprintf(w, "data: {\"status\": \"connected\"}\n\n")
+	w.(http.Flusher).Flush()
+	logger.Info(ctx, "SSE initial connection event sent", logger.F("user_id", user.ID))
+
+	// Keep connection alive and send events
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Info(ctx, "SSE connection closed by client", logger.F("user_id", user.ID))
+			return
+		case event, ok := <-eventChan:
+			if !ok {
+				logger.Info(ctx, "Event channel closed", logger.F("user_id", user.ID))
+				return
+			}
+
+			// Send event to client
+			switch event.Type {
+			case events.PlaylistImportStarted:
+				logger.Info(ctx, "Sending import_started SSE event", logger.F("user_id", user.ID))
+				fmt.Fprintf(w, "event: import_started\n")
+				fmt.Fprintf(w, "data: {\"status\": \"started\"}\n\n")
+			case events.PlaylistImportCompleted:
+				logger.Info(ctx, "Sending import_completed SSE event", logger.F("user_id", user.ID))
+				fmt.Fprintf(w, "event: import_completed\n")
+				fmt.Fprintf(w, "data: {\"status\": \"completed\"}\n\n")
+			case events.PlaylistImportFailed:
+				logger.Info(ctx, "Sending import_failed SSE event", logger.F("user_id", user.ID))
+				fmt.Fprintf(w, "event: import_failed\n")
+				fmt.Fprintf(w, "data: {\"status\": \"failed\"}\n\n")
+			}
+			w.(http.Flusher).Flush()
+
+		case <-time.After(30 * time.Second):
+			// Send heartbeat to keep connection alive
+			fmt.Fprintf(w, "event: heartbeat\n")
+			fmt.Fprintf(w, "data: {\"status\": \"alive\"}\n\n")
+			w.(http.Flusher).Flush()
+		}
+	}
 }

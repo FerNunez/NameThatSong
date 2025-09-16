@@ -133,6 +133,7 @@ func main() {
 
 			// Playlist API endpoints
 			playlistHandler := handlers.NewPlaylistHandlerWithSpotify(playlistService, spotifyService)
+			r.Get("/api/events/playlist-updates", playlistHandler.HandlePlaylistEvents)
 			r.Get("/api/import-spotify-playlists", playlistHandler.GetSpotifyPlaylistsForImport)
 			r.Get("/api/local-playlists", playlistHandler.GetLocalPlaylists)
 			r.Get("/api/spotify-playlists", playlistHandler.GetSpotifyPlaylists)

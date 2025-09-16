@@ -96,6 +96,31 @@ templ UserAvatar(avatarURL string) {
 templ Sidebar(user *models.User) {
 	<aside class="w-80 bg-forest-400 border-r border-forest-100 overflow-auto h-full">
 		if user != nil {
+			<!-- SSE Connection for playlist updates -->
+			<script>
+				// Manual SSE implementation for playlist updates
+				if (typeof window.playlistSSE === 'undefined') {
+					window.playlistSSE = new EventSource('/api/events/playlist-updates');
+
+					window.playlistSSE.onopen = function(event) {
+						console.log('SSE connection opened');
+					};
+
+					window.playlistSSE.addEventListener('import_completed', function(event) {
+						console.log('Received import_completed event:', event.data);
+						// Trigger HTMX refresh of local playlists
+						htmx.trigger('#local-playlists', 'refreshLocalPlaylists');
+					});
+
+					window.playlistSSE.addEventListener('import_started', function(event) {
+						console.log('Received import_started event:', event.data);
+					});
+
+					window.playlistSSE.onerror = function(event) {
+						console.error('SSE error:', event);
+					};
+				}
+			</script>
 			<!-- Local Playlists - Only for authenticated users -->
 			<section class="px-4 pb-4 pt-4">
 				<h3 class="text-lg font-bold mb-4 text-white">Playlists</h3>
