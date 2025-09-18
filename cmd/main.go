@@ -136,11 +136,10 @@ func main() {
 			r.Get("/api/events/playlist-updates", playlistHandler.HandlePlaylistEvents)
 			r.Get("/api/import-spotify-playlists", playlistHandler.GetSpotifyPlaylistsForImport)
 			r.Get("/api/local-playlists", playlistHandler.GetLocalPlaylists)
-			r.Get("/api/spotify-playlists", playlistHandler.GetSpotifyPlaylists)
 			r.Put("/api/spotify-playlists/{id}/update", playlistHandler.UpdateSpotifyPlaylist)
 			r.Put("/api/spotify-playlists/refresh", playlistHandler.RefreshSpotifyPlaylists)
 			r.Get("/api/playlist/create-form", playlistHandler.ShowCreatePlaylistForm)
-			r.Post("/api/playlist/create", playlistHandler.CreateAndShowPlaylist)
+			r.Post("/api/local-playlist", playlistHandler.CreateAndShowPlaylist)
 			r.Get("/api/playlist/cancel-create", playlistHandler.CancelCreatePlaylist)
 
 			// Game routes (integrated into modern UI)

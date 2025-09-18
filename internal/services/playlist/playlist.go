@@ -76,6 +76,7 @@ func (p *PlaylistProvider) GetUserPlaylists(ctx context.Context, userID uuid.UUI
 	if err != nil {
 		return nil, err
 	}
+	logger.Debug(ctx, "retreived localPlaylists for user", logger.F("user", userID), logger.F("# playlist", len(localPlaylists)))
 
 	localPlaylistsPtr := make([]*models.LocalPlaylist, 0, len(localPlaylists))
 	for _, p := range localPlaylists {

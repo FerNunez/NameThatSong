@@ -60,65 +60,33 @@ func (h *PlaylistHandler) GetLocalPlaylists(w http.ResponseWriter, r *http.Reque
 
 	// Convert to template format - these are local playlists
 	var templatePlaylists []templates.UserPlaylist
-	for _, playlist := range localPlaylists {
+	for _, p := range localPlaylists {
 
 		var imgUrl string
-		if playlist.ImageURL == nil {
+		if p.ImageURL == nil {
 			imgUrl = ""
 		} else {
-			imgUrl = *playlist.ImageURL
+			imgUrl = *p.ImageURL
+		}
+		var spotifyID string
+		if p.SpotifyPlaylistID == nil {
+			spotifyID = ""
+		} else {
+			spotifyID = *p.SpotifyPlaylistID
 		}
 
 		templatePlaylists = append(templatePlaylists, templates.UserPlaylist{
-			ID:         playlist.ID.String(),
-			Name:       playlist.Name,
-			TrackCount: len(playlist.Tracks),
-			IsSpotify:  playlist.SpotifyPlaylistID != nil,
-			SpotifyID:  *playlist.SpotifyPlaylistID,
+			ID:         p.ID.String(),
+			Name:       p.Name,
+			TrackCount: len(p.Tracks),
+			IsSpotify:  p.SpotifyPlaylistID != nil,
+			SpotifyID:  spotifyID,
 			ImageURL:   imgUrl,
 		})
 	}
 
 	w.Header().Set("Content-Type", "text/html")
 	templates.LocalPlaylistsList(templatePlaylists).Render(r.Context(), w)
-}
-
-// GET /api/spotify-playlists - Get user's Spotify playlists for display
-func (h *PlaylistHandler) GetSpotifyPlaylists(w http.ResponseWriter, r *http.Request) {
-	logger.Info(r.Context(), "fetching spotify playlists for display")
-
-	user, ok := middleware.GetUser(r.Context())
-	if !ok {
-		w.Header().Set("Content-Type", "text/html")
-		w.WriteHeader(http.StatusUnauthorized)
-		templates.SpotifyPlaylistsList([]templates.UserPlaylist{}).Render(r.Context(), w)
-		return
-	}
-
-	localPlaylists, err := h.playlistService.GetUserPlaylists(r.Context(), user.ID)
-	if err != nil {
-		logger.Error(r.Context(), "couldnt fetch localplaylsits")
-		w.Header().Set("Content-Type", "text/html")
-		w.WriteHeader(http.StatusInternalServerError)
-		templates.SpotifyPlaylistsList([]templates.UserPlaylist{}).Render(r.Context(), w)
-		return
-	}
-
-	// Convert to template format - these are Spotify playlists for viewing
-	var templatePlaylists []templates.UserPlaylist
-	for _, playlist := range localPlaylists {
-		templatePlaylists = append(templatePlaylists, templates.UserPlaylist{
-			ID:         playlist.ID.String(),
-			Name:       playlist.Name,
-			TrackCount: len(playlist.Tracks),
-			IsSpotify:  playlist.SnapshotID != nil,
-			SpotifyID:  *playlist.SpotifyPlaylistID,
-			ImageURL:   *playlist.ImageURL,
-		})
-	}
-
-	w.Header().Set("Content-Type", "text/html")
-	templates.SpotifyPlaylistsList(templatePlaylists).Render(r.Context(), w)
 }
 
 // GET /api/import-spotify-playlists - Get available Spotify playlists for import
@@ -268,9 +236,12 @@ func (h *PlaylistHandler) CreateAndShowPlaylist(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	logger.Debug(r.Context(), "CreateAndShowPlaylist")
+
 	name := r.FormValue("name")
 	description := r.FormValue("description")
 	isPublic := r.FormValue("is_public") == "on"
+	logger.Debug(r.Context(), "CreateAndShowPlaylist with", logger.F("name", name), logger.F("description", description), logger.F("is_public", isPublic))
 
 	// Create playlist request
 	req := models.CreatePlaylistRequest{
