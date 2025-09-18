@@ -124,30 +124,22 @@ templ Sidebar(user *models.User) {
 			<!-- Local Playlists - Only for authenticated users -->
 			<section class="px-4 pb-4 pt-4">
 				<h3 class="text-lg font-bold mb-4 text-white">Playlists</h3>
-				<div
-					id="local-playlists"
-					class="space-y-2"
-					hx-get="/api/local-playlists"
-					hx-trigger="load, refreshLocalPlaylists from:body, trackAdded from:body"
-					hx-target="this"
-				>
-					@PlaylistsLoading()
-				</div>
+				<!-- TODO: Fix this endpoint to refresh/reimport playlist" -->
 				<button
-					class="mt-2 text-accent text-sm hover:text-green-400 transition-colors"
+					class="mt-2 p-1 text-accent text-sm hover:text-green-400 transition-colors"
 					hx-get="/api/spotify-playlists"
 					hx-target="#spotify-playlists"
 					hx-trigger="click"
 				>
 					Refresh Spotify PlayLists
 				</button>
-			</section>
-			<!--Spotify Playlists - Only for authenticated users -->
-			<section class="px-4 pb-6">
-				<h3 class="text-lg font-bold mb-4 text-white">Spotify Playlists</h3>
+				<!-- This gets swapped by LocalPlaylistsList() when /api/local-playlist is hit -->
 				<div
-					id="spotify-playlists"
+					id="local-playlists"
 					class="space-y-2"
+					hx-get="/api/local-playlists"
+					hx-trigger="load, refreshLocalPlaylists from:body, trackAdded from:body"
+					hx-target="this"
 				>
 					@PlaylistsLoading()
 				</div>
