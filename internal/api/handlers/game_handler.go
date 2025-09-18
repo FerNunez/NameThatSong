@@ -16,18 +16,18 @@ import (
 var activeGames = make(map[string]*GameSession)
 
 type GameSession struct {
-	ID           string        `json:"id"`
-	UserID       string        `json:"user_id"`
-	PlaylistID   string        `json:"playlist_id"`
-	Difficulty   string        `json:"difficulty"`
-	TotalRounds  int           `json:"total_rounds"`
-	CurrentRound int           `json:"current_round"`
-	Score        int           `json:"score"`
-	Status       string        `json:"status"`
-	TimeLeft     int           `json:"time_left"`
+	ID           string                 `json:"id"`
+	UserID       string                 `json:"user_id"`
+	PlaylistID   string                 `json:"playlist_id"`
+	Difficulty   string                 `json:"difficulty"`
+	TotalRounds  int                    `json:"total_rounds"`
+	CurrentRound int                    `json:"current_round"`
+	Score        int                    `json:"score"`
+	Status       string                 `json:"status"`
+	TimeLeft     int                    `json:"time_left"`
 	Songs        []models.PlaylistTrack `json:"songs"`
 	CurrentSong  *models.PlaylistTrack  `json:"current_song"`
-	Answers      []GameAnswer  `json:"answers"`
+	Answers      []GameAnswer           `json:"answers"`
 }
 
 type GameAnswer struct {
@@ -373,11 +373,6 @@ func (h *GameHandler) showAnswerFeedback(w http.ResponseWriter, r *http.Request,
 }
 
 // Utility functions
-func generateGameID() string {
-	// Simple ID generation - in production use proper UUID
-	return "game_" + strconv.FormatInt(int64(len(activeGames)+1), 10)
-}
-
 func getTimeLimit(difficulty string) int {
 	switch difficulty {
 	case "easy":
@@ -389,14 +384,6 @@ func getTimeLimit(difficulty string) int {
 	default:
 		return 20
 	}
-}
-
-func selectRandomSongs(songs []models.PlaylistTrack, count int) []models.PlaylistTrack {
-	// Simple random selection - in production use proper shuffling
-	if len(songs) <= count {
-		return songs
-	}
-	return songs[:count]
 }
 
 func checkAnswer(userAnswer, correctAnswer string) bool {

@@ -1294,4 +1294,3 @@ func TestUserService_Logout(t *testing.T) {
 		sessionStore.AssertExpectations(t)
 	})
 }
-

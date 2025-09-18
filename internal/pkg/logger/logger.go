@@ -84,10 +84,10 @@ func (s *SimpleLogger) log(ctx context.Context, level LogLevel, msg string, fiel
 	}
 
 	timestamp := time.Now().Format("15:04:05")
-	
+
 	// Build the log message
 	logMsg := fmt.Sprintf("[%s] %s: %s", timestamp, level, msg)
-	
+
 	// Add context information if available
 	if ctx != nil {
 		if userID := ctx.Value("user_id"); userID != nil {
@@ -97,7 +97,7 @@ func (s *SimpleLogger) log(ctx context.Context, level LogLevel, msg string, fiel
 			logMsg += fmt.Sprintf(" | request_id=%v", requestID)
 		}
 	}
-	
+
 	// Add fields
 	if len(fields) > 0 {
 		logMsg += " |"
@@ -105,7 +105,7 @@ func (s *SimpleLogger) log(ctx context.Context, level LogLevel, msg string, fiel
 			logMsg += fmt.Sprintf(" %s=%v", field.Key, field.Value)
 		}
 	}
-	
+
 	fmt.Println(logMsg)
 }
 

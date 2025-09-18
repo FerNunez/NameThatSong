@@ -46,4 +46,3 @@ type EmailService interface {
 	SendWelcomeEmail(ctx context.Context, email, displayName string) error
 	SendPasswordResetConfirmation(ctx context.Context, email, displayName string) error
 }
-

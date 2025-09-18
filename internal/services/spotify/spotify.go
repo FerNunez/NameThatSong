@@ -54,7 +54,7 @@ func NewSpotifyService(
 	if redisClient != nil {
 		spotifyCache = cache.NewRedisSpotifyCache(redisClient)
 	} else {
-		return nil, fmt.Errorf("Redis client is required for caching")
+		return nil, fmt.Errorf("redis client is required for caching")
 	}
 
 	//TODO: add better client config?

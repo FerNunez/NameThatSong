@@ -80,4 +80,3 @@ func fromDbPRT(dbPrt *database.PasswordResetToken) *models.PasswordResetToken {
 		CreatedAt: dbPrt.CreatedAt,
 	}
 }
-

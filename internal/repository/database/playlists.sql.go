@@ -50,6 +50,7 @@ type BulkInsertPlaylistTracksParams struct {
 	Column3    []int32
 }
 
+// ['track1', 'track2'] and [1, 2], it will create two rows with the corresponding track/position pairs
 func (q *Queries) BulkInsertPlaylistTracks(ctx context.Context, arg BulkInsertPlaylistTracksParams) error {
 	_, err := q.db.ExecContext(ctx, bulkInsertPlaylistTracks, arg.PlaylistID, pq.Array(arg.Column2), pq.Array(arg.Column3))
 	return err

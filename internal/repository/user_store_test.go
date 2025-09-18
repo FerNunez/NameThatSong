@@ -103,7 +103,7 @@ func TestUserStoreInterface_Create(t *testing.T) {
 	t.Run("successful user creation", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockUserStore()
-		
+
 		email := "test@example.com"
 		hashedPassword := "$2a$10$hashedpassword"
 		expectedUser := createTestUser()
@@ -128,7 +128,7 @@ func TestUserStoreInterface_Create(t *testing.T) {
 	t.Run("creation with database error", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockUserStore()
-		
+
 		email := "test@example.com"
 		hashedPassword := "$2a$10$hashedpassword"
 		expectedError := errors.New("database connection error")
@@ -153,7 +153,7 @@ func TestUserStoreInterface_GetByEmail(t *testing.T) {
 	t.Run("successful user retrieval by email", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockUserStore()
-		
+
 		email := "test@example.com"
 		expectedUser := createTestUser()
 		expectedUser.Email = email
@@ -175,7 +175,7 @@ func TestUserStoreInterface_GetByEmail(t *testing.T) {
 	t.Run("user not found", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockUserStore()
-		
+
 		email := "nonexistent@example.com"
 		expectedError := errors.New("user not found")
 
@@ -199,7 +199,7 @@ func TestUserStoreInterface_GetByID(t *testing.T) {
 	t.Run("successful user retrieval by ID", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockUserStore()
-		
+
 		userID := uuid.New()
 		expectedUser := createTestUser()
 		expectedUser.ID = userID
@@ -220,7 +220,7 @@ func TestUserStoreInterface_GetByID(t *testing.T) {
 	t.Run("user not found by ID", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockUserStore()
-		
+
 		userID := uuid.New()
 		expectedError := errors.New("user not found")
 
@@ -244,7 +244,7 @@ func TestUserStoreInterface_UpdatePasswordByID(t *testing.T) {
 	t.Run("successful password update", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockUserStore()
-		
+
 		userID := uuid.New()
 		newHashedPassword := "$2a$10$newhash"
 
@@ -262,7 +262,7 @@ func TestUserStoreInterface_UpdatePasswordByID(t *testing.T) {
 	t.Run("password update with database error", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockUserStore()
-		
+
 		userID := uuid.New()
 		newHashedPassword := "$2a$10$newhash"
 		expectedError := errors.New("database error")
@@ -286,7 +286,7 @@ func TestUserStoreInterface_UpdateProfileByID(t *testing.T) {
 	t.Run("successful profile update", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockUserStore()
-		
+
 		userID := uuid.New()
 		displayName := "Updated Name"
 		avatarURL := "https://example.com/avatar.jpg"
@@ -305,7 +305,7 @@ func TestUserStoreInterface_UpdateProfileByID(t *testing.T) {
 	t.Run("profile update with database error", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockUserStore()
-		
+
 		userID := uuid.New()
 		displayName := "Updated Name"
 		avatarURL := "https://example.com/avatar.jpg"
@@ -330,7 +330,7 @@ func TestUserStoreInterface_VerifyUserEmail(t *testing.T) {
 	t.Run("successful email verification", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockUserStore()
-		
+
 		userID := uuid.New()
 
 		// Mock expectation
@@ -347,7 +347,7 @@ func TestUserStoreInterface_VerifyUserEmail(t *testing.T) {
 	t.Run("email verification with database error", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockUserStore()
-		
+
 		userID := uuid.New()
 		expectedError := errors.New("database error")
 
@@ -370,7 +370,7 @@ func TestUserStoreInterface_UpdateLastLogin(t *testing.T) {
 	t.Run("successful last login update", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockUserStore()
-		
+
 		userID := uuid.New()
 
 		// Mock expectation
@@ -391,7 +391,7 @@ func TestUserStoreInterface_Delete(t *testing.T) {
 	t.Run("successful user deletion", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockUserStore()
-		
+
 		userID := uuid.New()
 
 		// Mock expectation
@@ -408,7 +408,7 @@ func TestUserStoreInterface_Delete(t *testing.T) {
 	t.Run("deletion with database error", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockUserStore()
-		
+
 		userID := uuid.New()
 		expectedError := errors.New("database error")
 
@@ -446,7 +446,7 @@ func TestUserStoreInterface_Reset(t *testing.T) {
 	t.Run("reset with database error", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockUserStore()
-		
+
 		expectedError := errors.New("database error")
 
 		// Mock expectation
@@ -468,10 +468,10 @@ func TestUserStoreInterface_Implementation(t *testing.T) {
 		// Setup
 		var userStore repository.UserStore
 		mockStore := setupMockUserStore()
-		
+
 		// Execute - this should compile if the interface is implemented correctly
 		userStore = mockStore
-		
+
 		// Verify
 		assert.NotNil(t, userStore)
 		assert.IsType(t, &MockUserStore{}, userStore)

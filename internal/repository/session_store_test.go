@@ -72,7 +72,7 @@ func TestUserSessionStoreInterface_Create(t *testing.T) {
 	t.Run("successful session creation", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockSessionStore()
-		
+
 		userID := uuid.New()
 		ttl := 24 * time.Hour
 		expectedSession := createTestSession(userID)
@@ -96,7 +96,7 @@ func TestUserSessionStoreInterface_Create(t *testing.T) {
 	t.Run("session creation with database error", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockSessionStore()
-		
+
 		userID := uuid.New()
 		ttl := 24 * time.Hour
 		expectedError := errors.New("database connection error")
@@ -117,7 +117,7 @@ func TestUserSessionStoreInterface_Create(t *testing.T) {
 	t.Run("session creation with different TTL values", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockSessionStore()
-		
+
 		userID := uuid.New()
 		ttl := 1 * time.Hour
 		expectedSession := createTestSession(userID)
@@ -143,7 +143,7 @@ func TestUserSessionStoreInterface_Get(t *testing.T) {
 	t.Run("successful session retrieval", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockSessionStore()
-		
+
 		userID := uuid.New()
 		sessionID := uuid.New().String()
 		expectedSession := createTestSession(userID)
@@ -166,7 +166,7 @@ func TestUserSessionStoreInterface_Get(t *testing.T) {
 	t.Run("session not found", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockSessionStore()
-		
+
 		sessionID := "nonexistent-session"
 		expectedError := errors.New("session not found")
 
@@ -186,7 +186,7 @@ func TestUserSessionStoreInterface_Get(t *testing.T) {
 	t.Run("session retrieval with database error", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockSessionStore()
-		
+
 		sessionID := uuid.New().String()
 		expectedError := errors.New("database connection error")
 
@@ -210,7 +210,7 @@ func TestUserSessionStoreInterface_Revoke(t *testing.T) {
 	t.Run("successful session revocation", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockSessionStore()
-		
+
 		sessionID := uuid.New().String()
 
 		// Mock expectation
@@ -227,7 +227,7 @@ func TestUserSessionStoreInterface_Revoke(t *testing.T) {
 	t.Run("revoke nonexistent session", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockSessionStore()
-		
+
 		sessionID := "nonexistent-session"
 		expectedError := errors.New("session not found")
 
@@ -246,7 +246,7 @@ func TestUserSessionStoreInterface_Revoke(t *testing.T) {
 	t.Run("revoke with database error", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockSessionStore()
-		
+
 		sessionID := uuid.New().String()
 		expectedError := errors.New("database error")
 
@@ -269,7 +269,7 @@ func TestUserSessionStoreInterface_RevokeAllSessions(t *testing.T) {
 	t.Run("successful revocation of all user sessions", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockSessionStore()
-		
+
 		userID := uuid.New()
 
 		// Mock expectation
@@ -286,7 +286,7 @@ func TestUserSessionStoreInterface_RevokeAllSessions(t *testing.T) {
 	t.Run("revoke all sessions for nonexistent user", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockSessionStore()
-		
+
 		userID := uuid.New()
 		expectedError := errors.New("user not found")
 
@@ -305,7 +305,7 @@ func TestUserSessionStoreInterface_RevokeAllSessions(t *testing.T) {
 	t.Run("revoke all sessions with database error", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockSessionStore()
-		
+
 		userID := uuid.New()
 		expectedError := errors.New("database error")
 
@@ -328,7 +328,7 @@ func TestUserSessionStoreInterface_Delete(t *testing.T) {
 	t.Run("successful session deletion", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockSessionStore()
-		
+
 		sessionID := uuid.New().String()
 
 		// Mock expectation
@@ -345,7 +345,7 @@ func TestUserSessionStoreInterface_Delete(t *testing.T) {
 	t.Run("delete nonexistent session", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockSessionStore()
-		
+
 		sessionID := "nonexistent-session"
 		expectedError := errors.New("session not found")
 
@@ -364,7 +364,7 @@ func TestUserSessionStoreInterface_Delete(t *testing.T) {
 	t.Run("delete with database error", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockSessionStore()
-		
+
 		sessionID := uuid.New().String()
 		expectedError := errors.New("database error")
 
@@ -388,31 +388,31 @@ func TestUserSessionStoreInterface_SessionLifecycle(t *testing.T) {
 	t.Run("complete session lifecycle", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockSessionStore()
-		
+
 		userID := uuid.New()
 		ttl := 24 * time.Hour
-		
+
 		// Create session
 		expectedSession := createTestSession(userID)
 		mockStore.On("Create", ctx, userID, ttl).Return(expectedSession, nil)
-		
+
 		session, err := mockStore.Create(ctx, userID, ttl)
 		assert.NoError(t, err)
 		assert.NotNil(t, session)
-		
+
 		// Get session
 		mockStore.On("Get", ctx, session.ID).Return(session, nil)
-		
+
 		retrievedSession, err := mockStore.Get(ctx, session.ID)
 		assert.NoError(t, err)
 		assert.Equal(t, session.ID, retrievedSession.ID)
-		
+
 		// Revoke session
 		mockStore.On("Revoke", ctx, session.ID).Return(nil)
-		
+
 		err = mockStore.Revoke(ctx, session.ID)
 		assert.NoError(t, err)
-		
+
 		// Verify all expectations
 		mockStore.AssertExpectations(t)
 	})
@@ -420,21 +420,21 @@ func TestUserSessionStoreInterface_SessionLifecycle(t *testing.T) {
 	t.Run("session expiration handling", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockSessionStore()
-		
+
 		userID := uuid.New()
 		sessionID := uuid.New().String()
-		
+
 		// Create expired session
 		expiredSession := createTestSession(userID)
 		expiredSession.ID = sessionID
 		expiredSession.ExpiresAt = time.Now().Add(-1 * time.Hour) // Expired
-		
+
 		// Mock expectation
 		mockStore.On("Get", ctx, sessionID).Return(expiredSession, nil)
-		
+
 		// Execute
 		result, err := mockStore.Get(ctx, sessionID)
-		
+
 		// Verify - store should return expired session (validation happens at service level)
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
@@ -445,22 +445,22 @@ func TestUserSessionStoreInterface_SessionLifecycle(t *testing.T) {
 	t.Run("revoked session handling", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockSessionStore()
-		
+
 		userID := uuid.New()
 		sessionID := uuid.New().String()
-		
+
 		// Create revoked session
 		revokedAt := time.Now().Add(-1 * time.Hour)
 		revokedSession := createTestSession(userID)
 		revokedSession.ID = sessionID
 		revokedSession.RevokedAt = &revokedAt
-		
+
 		// Mock expectation
 		mockStore.On("Get", ctx, sessionID).Return(revokedSession, nil)
-		
+
 		// Execute
 		result, err := mockStore.Get(ctx, sessionID)
-		
+
 		// Verify - store should return revoked session (validation happens at service level)
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
@@ -476,22 +476,22 @@ func TestUserSessionStoreInterface_ConcurrentSessions(t *testing.T) {
 	t.Run("multiple sessions for same user", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockSessionStore()
-		
+
 		userID := uuid.New()
 		ttl := 24 * time.Hour
-		
+
 		// Create multiple sessions
 		session1 := createTestSession(userID)
 		session2 := createTestSession(userID)
 		session2.ID = uuid.New().String()
-		
+
 		mockStore.On("Create", ctx, userID, ttl).Return(session1, nil).Once()
 		mockStore.On("Create", ctx, userID, ttl).Return(session2, nil).Once()
-		
+
 		// Execute
 		result1, err1 := mockStore.Create(ctx, userID, ttl)
 		result2, err2 := mockStore.Create(ctx, userID, ttl)
-		
+
 		// Verify
 		assert.NoError(t, err1)
 		assert.NoError(t, err2)
@@ -504,15 +504,15 @@ func TestUserSessionStoreInterface_ConcurrentSessions(t *testing.T) {
 	t.Run("revoke all sessions for user with multiple sessions", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockSessionStore()
-		
+
 		userID := uuid.New()
-		
+
 		// Mock expectation - should revoke all sessions
 		mockStore.On("RevokeAllSessions", ctx, userID).Return(nil)
-		
+
 		// Execute
 		err := mockStore.RevokeAllSessions(ctx, userID)
-		
+
 		// Verify
 		assert.NoError(t, err)
 		mockStore.AssertExpectations(t)
@@ -525,10 +525,10 @@ func TestUserSessionStoreInterface_Implementation(t *testing.T) {
 		// Setup
 		var sessionStore repository.UserSessionStore
 		mockStore := setupMockSessionStore()
-		
+
 		// Execute - this should compile if the interface is implemented correctly
 		sessionStore = mockStore
-		
+
 		// Verify
 		assert.NotNil(t, sessionStore)
 		assert.IsType(t, &MockUserSessionStore{}, sessionStore)
@@ -542,17 +542,17 @@ func TestUserSessionStoreInterface_EdgeCases(t *testing.T) {
 	t.Run("create session with zero TTL", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockSessionStore()
-		
+
 		userID := uuid.New()
 		ttl := 0 * time.Second
-		
+
 		// Mock expectation - should handle zero TTL gracefully
 		expectedError := errors.New("invalid TTL")
 		mockStore.On("Create", ctx, userID, ttl).Return(nil, expectedError)
-		
+
 		// Execute
 		result, err := mockStore.Create(ctx, userID, ttl)
-		
+
 		// Verify
 		assert.Error(t, err)
 		assert.Nil(t, result)
@@ -563,17 +563,17 @@ func TestUserSessionStoreInterface_EdgeCases(t *testing.T) {
 	t.Run("create session with negative TTL", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockSessionStore()
-		
+
 		userID := uuid.New()
 		ttl := -1 * time.Hour
-		
+
 		// Mock expectation - should handle negative TTL gracefully
 		expectedError := errors.New("invalid TTL")
 		mockStore.On("Create", ctx, userID, ttl).Return(nil, expectedError)
-		
+
 		// Execute
 		result, err := mockStore.Create(ctx, userID, ttl)
-		
+
 		// Verify
 		assert.Error(t, err)
 		assert.Nil(t, result)
@@ -584,20 +584,20 @@ func TestUserSessionStoreInterface_EdgeCases(t *testing.T) {
 	t.Run("operations with empty session ID", func(t *testing.T) {
 		// Setup
 		mockStore := setupMockSessionStore()
-		
+
 		emptySessionID := ""
 		expectedError := errors.New("invalid session ID")
-		
+
 		// Mock expectations
 		mockStore.On("Get", ctx, emptySessionID).Return(nil, expectedError)
 		mockStore.On("Revoke", ctx, emptySessionID).Return(expectedError)
 		mockStore.On("Delete", ctx, emptySessionID).Return(expectedError)
-		
+
 		// Execute
 		result, err1 := mockStore.Get(ctx, emptySessionID)
 		err2 := mockStore.Revoke(ctx, emptySessionID)
 		err3 := mockStore.Delete(ctx, emptySessionID)
-		
+
 		// Verify
 		assert.Error(t, err1)
 		assert.Error(t, err2)

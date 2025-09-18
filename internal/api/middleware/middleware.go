@@ -24,7 +24,9 @@ func NewAuthMiddleware(userService user.UserService, sessionCookieName string) *
 	}
 }
 
-var UserKey string = "user"
+type contextKey string
+
+const UserKey contextKey = "user"
 
 // Gets Cookie -> Validates session and gets user from UserService
 func (m *AuthMiddleware) AddUserToCtxt(next http.Handler) http.Handler {
@@ -44,7 +46,7 @@ func (m *AuthMiddleware) AddUserToCtxt(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		
+
 		splitValue := strings.Split(string(decodedValue), ":")
 		if len(splitValue) != 2 {
 			logger.Warn(r.Context(), "invalid session cookie format, clearing cookie")
@@ -55,11 +57,11 @@ func (m *AuthMiddleware) AddUserToCtxt(next http.Handler) http.Handler {
 
 		sessionID := splitValue[0]
 		expectedUserID := splitValue[1]
-		
+
 		logger.Debug(r.Context(), "validating session from cookie",
 			logger.F("session_id", sessionID),
 			logger.F("expected_user_id", expectedUserID))
-		
+
 		// Use UserService to validate session and get user
 		user, err := m.userService.ValidateSession(r.Context(), sessionID)
 		if err != nil {
@@ -84,7 +86,7 @@ func (m *AuthMiddleware) AddUserToCtxt(next http.Handler) http.Handler {
 		logger.Debug(r.Context(), "session validation successful, user added to context",
 			logger.F("user_id", user.ID.String()),
 			logger.F("session_id", sessionID))
-		
+
 		ctx := context.WithValue(r.Context(), UserKey, user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})

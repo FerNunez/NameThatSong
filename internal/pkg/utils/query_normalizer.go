@@ -21,7 +21,7 @@ const (
 var (
 	// multipleSpacesRegex matches multiple consecutive whitespace characters
 	multipleSpacesRegex = regexp.MustCompile(`\s+`)
-	
+
 	// punctuationRegex matches ALL punctuation and symbols (keeps only letters, numbers, spaces)
 	punctuationRegex = regexp.MustCompile(`[^\w\s]+`)
 )
@@ -101,16 +101,16 @@ func removeAccents(s string) string {
 // IsValidSearchQuery checks if a query is valid for searching after normalization
 func IsValidSearchQuery(query string) bool {
 	normalized := NormalizeSearchQuery(query)
-	
+
 	// Consider invalid if empty after normalization
 	if normalized == "" {
 		return false
 	}
-	
+
 	// Consider invalid if only whitespace or punctuation
 	if strings.TrimSpace(punctuationRegex.ReplaceAllString(normalized, "")) == "" {
 		return false
 	}
-	
+
 	return true
 }

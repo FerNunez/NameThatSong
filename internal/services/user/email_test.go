@@ -30,8 +30,8 @@ func TestNewEmailService(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "nil config",
-			config: nil,
+			name:        "nil config",
+			config:      nil,
 			expectError: true,
 			errorMsg:    "email config is required",
 		},
@@ -74,7 +74,6 @@ func TestNewEmailService(t *testing.T) {
 		})
 	}
 }
-
 
 func TestEmailTemplateIntegration(t *testing.T) {
 	config := &config.EmailConfig{
@@ -125,4 +124,3 @@ func TestEmailTemplateIntegration(t *testing.T) {
 		}
 	})
 }
-

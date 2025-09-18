@@ -63,4 +63,3 @@ func (c *SpotifyConfig) GetTokenURL() string {
 func (c *SpotifyConfig) GetAPIBaseURL() string {
 	return c.BaseURL
 }
-

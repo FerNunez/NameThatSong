@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -29,10 +30,10 @@ func main() {
 	// Initialize logger
 	logLevel := logger.GetLogLevelFromEnv()
 	logger.Init(logLevel)
-	logger.Info(nil, "starting NameThatSong application",
+	logger.Info(context.Background(), "starting NameThatSong application",
 		logger.F("log_level", logLevel))
 
-	err := godotenv.Load()
+	_ = godotenv.Load()
 
 	// Redis
 	// TODO: check TLS/SSL
@@ -51,13 +52,13 @@ func main() {
 	}
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
-		logger.Error(nil, "failed to open database connection",
+		logger.Error(context.TODO(), "failed to open database connection",
 			logger.F("error", err),
 			logger.F("db_url", dbURL))
 		log.Fatalf("Error opening db: %v", err)
 		return
 	}
-	logger.Info(nil, "database connection established",
+	logger.Info(context.TODO(), "database connection established",
 		logger.F("db_url", dbURL))
 	// Db and Stores
 	dbQueries := database.New(db)

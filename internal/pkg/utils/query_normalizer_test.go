@@ -149,14 +149,14 @@ func TestSanitizeForCacheKey(t *testing.T) {
 func TestSanitizeForCacheKey_LongQuery(t *testing.T) {
 	// Create a query longer than MaxCacheKeyLength
 	longQuery := strings.Repeat("very long query ", 20) // Should be > 250 chars
-	
+
 	result := SanitizeForCacheKey(longQuery)
-	
+
 	// Should be hashed and start with "hash_"
 	if !strings.HasPrefix(result, "hash_") {
 		t.Errorf("Expected long query to be hashed with 'hash_' prefix, got: %s", result)
 	}
-	
+
 	// Should be a reasonable length (32 hex chars + "hash_" = 37 chars)
 	if len(result) != 37 {
 		t.Errorf("Expected hashed query to be 37 characters, got: %d", len(result))
@@ -301,7 +301,7 @@ func TestRemoveAccents(t *testing.T) {
 func BenchmarkNormalizeSearchQuery(b *testing.B) {
 	query := "  The Rolling Stones - Paint It Black (Live)!!!  "
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		NormalizeSearchQuery(query)
 	}
@@ -310,7 +310,7 @@ func BenchmarkNormalizeSearchQuery(b *testing.B) {
 func BenchmarkSanitizeForCacheKey(b *testing.B) {
 	query := "the rolling stones paint it black live"
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		SanitizeForCacheKey(query)
 	}
@@ -319,7 +319,7 @@ func BenchmarkSanitizeForCacheKey(b *testing.B) {
 func BenchmarkNormalizeAndSanitizeQuery(b *testing.B) {
 	query := "  The Rolling Stones - Paint It Black (Live)!!!  "
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		NormalizeAndSanitizeQuery(query)
 	}

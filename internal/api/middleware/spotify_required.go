@@ -24,7 +24,7 @@ func RequireSpotifyConnection(next http.Handler) http.Handler {
 		if !user.SpotifyConnected {
 			logger.Info(r.Context(), "spotify required middleware: user not connected to spotify",
 				logger.F("user_id", user.ID.String()))
-			
+
 			// For HTMX requests, redirect via header
 			if r.Header.Get("HX-Request") == "true" {
 				w.Header().Set("HX-Redirect", "/connect-spotify")
@@ -37,7 +37,7 @@ func RequireSpotifyConnection(next http.Handler) http.Handler {
 
 		logger.Debug(r.Context(), "spotify required middleware: user has spotify connection",
 			logger.F("user_id", user.ID.String()))
-		
+
 		next.ServeHTTP(w, r)
 	})
 }

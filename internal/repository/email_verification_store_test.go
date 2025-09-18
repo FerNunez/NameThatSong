@@ -68,7 +68,7 @@ func TestEmailVerificationStore_Create(t *testing.T) {
 
 	t.Run("successful token creation", func(t *testing.T) {
 		mockStore := &MockEmailVerificationStore{}
-		
+
 		userID := uuid.New()
 		token := "verification-token-123"
 		expiresAt := time.Now().Add(10 * time.Minute)
@@ -90,7 +90,7 @@ func TestEmailVerificationStore_Create(t *testing.T) {
 
 	t.Run("create with database error", func(t *testing.T) {
 		mockStore := &MockEmailVerificationStore{}
-		
+
 		userID := uuid.New()
 		token := "verification-token-123"
 		expiresAt := time.Now().Add(10 * time.Minute)
@@ -112,7 +112,7 @@ func TestEmailVerificationStore_GetByToken(t *testing.T) {
 
 	t.Run("successful token retrieval", func(t *testing.T) {
 		mockStore := &MockEmailVerificationStore{}
-		
+
 		token := "verification-token-123"
 		expectedToken := createTestEmailVerificationToken(uuid.New())
 		expectedToken.Token = token
@@ -129,7 +129,7 @@ func TestEmailVerificationStore_GetByToken(t *testing.T) {
 
 	t.Run("token not found", func(t *testing.T) {
 		mockStore := &MockEmailVerificationStore{}
-		
+
 		token := "nonexistent-token"
 		expectedError := errors.New("token not found")
 
@@ -149,7 +149,7 @@ func TestEmailVerificationStore_MarkAsUsed(t *testing.T) {
 
 	t.Run("successful mark as used", func(t *testing.T) {
 		mockStore := &MockEmailVerificationStore{}
-		
+
 		token := "verification-token-123"
 
 		mockStore.On("MarkAsUsed", ctx, token).Return(nil)
@@ -162,7 +162,7 @@ func TestEmailVerificationStore_MarkAsUsed(t *testing.T) {
 
 	t.Run("mark as used with database error", func(t *testing.T) {
 		mockStore := &MockEmailVerificationStore{}
-		
+
 		token := "verification-token-123"
 		expectedError := errors.New("database error")
 
@@ -192,7 +192,7 @@ func TestEmailVerificationStore_CleanupExpired(t *testing.T) {
 
 	t.Run("cleanup with database error", func(t *testing.T) {
 		mockStore := &MockEmailVerificationStore{}
-		
+
 		expectedError := errors.New("database error")
 
 		mockStore.On("CleanupExpired", ctx).Return(expectedError)
@@ -209,9 +209,9 @@ func TestEmailVerificationStore_Interface(t *testing.T) {
 	t.Run("mock implements EmailVerificationStore interface", func(t *testing.T) {
 		var store repository.EmailVerificationStore
 		mockStore := &MockEmailVerificationStore{}
-		
+
 		store = mockStore
-		
+
 		assert.NotNil(t, store)
 		assert.IsType(t, &MockEmailVerificationStore{}, store)
 	})

@@ -112,7 +112,7 @@ func (s *Spotify) TokenExchange(ctx context.Context, userID, code, receivedState
 func (s *Spotify) refreshToken(ctx context.Context, refreshToken string) (TokenResponse, error) {
 	logger.Debug(ctx, "making token refresh request to Spotify",
 		logger.F("has_refresh_token", refreshToken != ""))
-	
+
 	data := url.Values{}
 	data.Set("grant_type", "refresh_token")
 	data.Set("refresh_token", refreshToken)
@@ -165,7 +165,7 @@ func (s *Spotify) refreshToken(ctx context.Context, refreshToken string) (TokenR
 func (s *Spotify) GetValidToken(ctx context.Context, userID string) (string, error) {
 	logger.Debug(ctx, "retrieving valid token for user",
 		logger.F("user_id", userID))
-	
+
 	// Get token from storage
 	token, err := s.tokenStore.Get(ctx, userID)
 	if err != nil {
@@ -178,7 +178,7 @@ func (s *Spotify) GetValidToken(ctx context.Context, userID string) (string, err
 	// Check if token is still valid
 	now := time.Now()
 	timeUntilExpiry := token.ExpiresAt.Sub(now)
-	
+
 	if now.Before(token.ExpiresAt) {
 		logger.Debug(ctx, "using existing valid token",
 			logger.F("user_id", userID),
@@ -192,7 +192,7 @@ func (s *Spotify) GetValidToken(ctx context.Context, userID string) (string, err
 		logger.F("user_id", userID),
 		logger.F("expired_at", token.ExpiresAt),
 		logger.F("expired_since_minutes", int(timeUntilExpiry.Abs().Minutes())))
-	
+
 	newTokens, err := s.refreshToken(ctx, token.RefreshToken)
 	if err != nil {
 		logger.Error(ctx, "failed to refresh token",

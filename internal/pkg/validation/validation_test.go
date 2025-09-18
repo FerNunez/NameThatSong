@@ -222,7 +222,7 @@ func TestValidatePlaylistNameTrimming(t *testing.T) {
 func TestValidateSpotifyIDTrimming(t *testing.T) {
 	// Test that whitespace is properly trimmed
 	validID := "4iV5W9uYEdYUVa79Axb7Rh"
-	
+
 	tests := []struct {
 		name  string
 		input string

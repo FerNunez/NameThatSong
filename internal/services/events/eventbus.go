@@ -124,4 +124,3 @@ func (ues *UserEventSubscriber) SubscribeToPlaylistEvents() <-chan Event {
 
 	return eventChan
 }
-

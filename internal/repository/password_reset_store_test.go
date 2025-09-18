@@ -73,7 +73,7 @@ func TestPasswordResetStore_Create(t *testing.T) {
 
 	t.Run("successful token creation", func(t *testing.T) {
 		mockStore := &MockPasswordResetStore{}
-		
+
 		userID := uuid.New()
 		token := "reset-token-123"
 		expiresAt := time.Now().Add(10 * time.Minute)
@@ -95,7 +95,7 @@ func TestPasswordResetStore_Create(t *testing.T) {
 
 	t.Run("create with database error", func(t *testing.T) {
 		mockStore := &MockPasswordResetStore{}
-		
+
 		userID := uuid.New()
 		token := "reset-token-123"
 		expiresAt := time.Now().Add(10 * time.Minute)
@@ -117,7 +117,7 @@ func TestPasswordResetStore_GetByToken(t *testing.T) {
 
 	t.Run("successful token retrieval", func(t *testing.T) {
 		mockStore := &MockPasswordResetStore{}
-		
+
 		token := "reset-token-123"
 		expectedToken := createTestPasswordResetToken(uuid.New())
 		expectedToken.Token = token
@@ -134,7 +134,7 @@ func TestPasswordResetStore_GetByToken(t *testing.T) {
 
 	t.Run("token not found", func(t *testing.T) {
 		mockStore := &MockPasswordResetStore{}
-		
+
 		token := "nonexistent-token"
 		expectedError := errors.New("token not found")
 
@@ -154,7 +154,7 @@ func TestPasswordResetStore_MarkAsUsed(t *testing.T) {
 
 	t.Run("successful mark as used", func(t *testing.T) {
 		mockStore := &MockPasswordResetStore{}
-		
+
 		token := "reset-token-123"
 
 		mockStore.On("MarkAsUsed", ctx, token).Return(nil)
@@ -167,7 +167,7 @@ func TestPasswordResetStore_MarkAsUsed(t *testing.T) {
 
 	t.Run("mark as used with database error", func(t *testing.T) {
 		mockStore := &MockPasswordResetStore{}
-		
+
 		token := "reset-token-123"
 		expectedError := errors.New("database error")
 
@@ -186,7 +186,7 @@ func TestPasswordResetStore_DeleteByID(t *testing.T) {
 
 	t.Run("successful deletion", func(t *testing.T) {
 		mockStore := &MockPasswordResetStore{}
-		
+
 		tokenID := uuid.New()
 
 		mockStore.On("DeleteByID", ctx, tokenID).Return(nil)
@@ -199,7 +199,7 @@ func TestPasswordResetStore_DeleteByID(t *testing.T) {
 
 	t.Run("deletion with database error", func(t *testing.T) {
 		mockStore := &MockPasswordResetStore{}
-		
+
 		tokenID := uuid.New()
 		expectedError := errors.New("database error")
 
@@ -229,7 +229,7 @@ func TestPasswordResetStore_CleanupExpired(t *testing.T) {
 
 	t.Run("cleanup with database error", func(t *testing.T) {
 		mockStore := &MockPasswordResetStore{}
-		
+
 		expectedError := errors.New("database error")
 
 		mockStore.On("CleanupExpired", ctx).Return(expectedError)
@@ -246,9 +246,9 @@ func TestPasswordResetStore_Interface(t *testing.T) {
 	t.Run("mock implements PasswordResetStore interface", func(t *testing.T) {
 		var store repository.PasswordResetStore
 		mockStore := &MockPasswordResetStore{}
-		
+
 		store = mockStore
-		
+
 		assert.NotNil(t, store)
 		assert.IsType(t, &MockPasswordResetStore{}, store)
 	})
