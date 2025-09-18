@@ -381,19 +381,28 @@ templ LocalPlaylistsList(playlists []UserPlaylist) {
 templ LocalPlaylistItem(playlist UserPlaylist) {
 	<a
 		href="#"
-		class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-forest-300 transition-colors group cursor-pointer"
+		class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors group cursor-pointer relative hover:bg-forest-300"
 		hx-get={ "/api/playlist/" + playlist.ID + "/songs" }
 		hx-target="#playlist-songs-container"
 		hx-swap="innerHTML"
 	>
-		<div class="w-10 h-10 bg-forest-200 rounded-lg flex items-center justify-center group-hover:bg-forest-100">
-			<img src={ playlist.ImageURL } alt={ playlist.Name } class="w-full h-full object-cover"/>
-		</div>
-		<div class="flex-1 min-w-0">
-			<span class="text-white font-medium truncate block">{ playlist.Name }</span>
-			<span class="text-forest-50 text-sm">{ strconv.Itoa(playlist.TrackCount) } songs</span>
-		</div>
+		@playlistItemContent(playlist, playlist.IsSpotify || playlist.SpotifyID != "")
 	</a>
+}
+
+templ playlistItemContent(playlist UserPlaylist, isSpotify bool) {
+	<div class="w-10 h-10 bg-forest-200 rounded-lg flex items-center justify-center group-hover:bg-forest-100 relative">
+		<img src={ playlist.ImageURL } alt={ playlist.Name } class="w-full h-full object-cover rounded-lg"/>
+	</div>
+	<div class="flex-1 min-w-0">
+		<span class="text-white font-medium truncate block">{ playlist.Name }</span>
+		<span class="text-forest-50 text-sm">{ strconv.Itoa(playlist.TrackCount) } songs</span>
+	</div>
+	if isSpotify {
+		<div class="text-green-400 opacity-60 group-hover:opacity-100 transition-opacity">
+			@SpotifyIcon()
+		</div>
+	}
 }
 
 templ NoLocalPlaylistsFound() {
