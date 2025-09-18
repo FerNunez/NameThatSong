@@ -97,6 +97,7 @@ func (h *PlaylistHandler) GetSpotifyPlaylistsForImport(w http.ResponseWriter, r 
 	if !ok {
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusUnauthorized)
+
 		templates.UserPlaylistsList([]templates.UserPlaylist{}).Render(r.Context(), w)
 		return
 	}
@@ -207,7 +208,6 @@ func (h *PlaylistHandler) UpdateSpotifyPlaylist(w http.ResponseWriter, r *http.R
 // PUT /api/spotify-playlists/refresh - Refresh all Spotify playlists
 func (h *PlaylistHandler) RefreshSpotifyPlaylists(w http.ResponseWriter, r *http.Request) {
 	// This is essentially the same as GetSpotifyPlaylists but as a PUT endpoint
-	h.GetSpotifyPlaylists(w, r)
 }
 
 // GET /api/playlist/create-form - Show playlist creation form

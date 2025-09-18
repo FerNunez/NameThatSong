@@ -162,6 +162,10 @@ func main() {
 			// Playlist context and track addition routes
 			r.Get("/api/set-playlist-context", playlistHandler.SetPlaylistContext)
 			r.Post("/api/add-to-current-playlist", playlistHandler.AddToCurrentPlaylist)
+
+			// Actions from user
+			actionHandler := handlers.NewActionHandler(spotifyService)
+			r.Post("/api/track/{id}/play", actionHandler.PlayTrackHandler)
 		})
 
 	})

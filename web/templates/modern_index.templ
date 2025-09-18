@@ -318,9 +318,9 @@ templ PlaylistSongItem(song PlaylistSong, index int) {
 			<button
 				class="p-2 text-forest-50 hover:text-white hover:bg-forest-100 rounded transition-colors"
 				title="Play song"
-				hx-post="/api/play-track"
+				hx-post={ "/api/track/" + song.ID + "/play" }
 				hx-swap="none"
-				hx-vals={ `{"trackId": "` + song.ID + `"}` }
+				hx-vals={ `{"TODO": "` + song.ID + `"}` }
 			>
 				@PlayIcon()
 			</button>
