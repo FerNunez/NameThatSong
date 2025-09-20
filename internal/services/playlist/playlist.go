@@ -9,6 +9,7 @@ import (
 	"github.com/FerNunez/NameThatSong/internal/pkg/logger"
 	"github.com/FerNunez/NameThatSong/internal/pkg/validation"
 	"github.com/FerNunez/NameThatSong/internal/repository"
+	"github.com/FerNunez/NameThatSong/internal/services/events"
 	"github.com/FerNunez/NameThatSong/internal/services/spotify"
 	"github.com/google/uuid"
 )
@@ -16,6 +17,7 @@ import (
 type PlaylistProvider struct {
 	playlistStore  repository.PlaylistStore
 	spotifyService spotify.SpotifyService
+	eventBus       *events.EventBus
 }
 
 func NewPlaylistService(
@@ -23,8 +25,9 @@ func NewPlaylistService(
 	spotifyService spotify.SpotifyService,
 ) Service {
 	return &PlaylistProvider{
-		playlistStore,
-		spotifyService,
+		playlistStore:  playlistStore,
+		spotifyService: spotifyService,
+		eventBus:       events.GetGlobalEventBus(),
 	}
 }
 
@@ -68,6 +71,16 @@ func (p *PlaylistProvider) CreatePlaylist(ctx context.Context, userID uuid.UUID,
 		logger.F("user_id", userID),
 		logger.F("playlist_id", playlist.ID),
 		logger.F("name", req.Name))
+
+	// Emit playlist created event
+	p.eventBus.Publish(events.Event{
+		Type:   events.PlaylistCreated,
+		UserID: userID,
+		Data: map[string]any{
+			"playlist_id": playlist.ID.String(),
+		},
+	})
+
 	return playlist, nil
 }
 
@@ -114,6 +127,15 @@ func (p *PlaylistProvider) UpdatePlaylist(ctx context.Context, playlistID, userI
 		return nil, fmt.Errorf("failed to update playlist: %w", err)
 	}
 
+	// Emit playlist updated event
+	p.eventBus.Publish(events.Event{
+		Type:   events.PlaylistUpdated,
+		UserID: userID,
+		Data: map[string]any{
+			"playlist_id": playlist.ID.String(),
+		},
+	})
+
 	return playlist, nil
 }
 
@@ -129,7 +151,7 @@ func (p *PlaylistProvider) AddSongToPlaylist(ctx context.Context, userID string,
 	}
 
 	// Ensure track exists in spotify_tracks table (3-tier caching will handle this)
-	_, err := p.spotifyService.FetchTrack(ctx, userID, models.SpotifyID(req.SpotifyTrackID))
+	track, err := p.spotifyService.FetchTrack(ctx, userID, models.SpotifyID(req.SpotifyTrackID))
 	if err != nil {
 		return fmt.Errorf("couldn't fetch track from Spotify: %w", err)
 	}
@@ -138,7 +160,31 @@ func (p *PlaylistProvider) AddSongToPlaylist(ctx context.Context, userID string,
 	if err != nil {
 		return err
 	}
-	return p.playlistStore.AddSongToPlaylist(ctx, playlistID, req.SpotifyTrackID, len(songIDs))
+
+	err = p.playlistStore.AddSongToPlaylist(ctx, playlistID, req.SpotifyTrackID, len(songIDs))
+	if err != nil {
+		return err
+	}
+
+	// Convert userID string to UUID
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		logger.Error(ctx, "failed to parse user ID", logger.F("user_id", userID), logger.F("error", err))
+		return nil // Don't fail the operation, just skip the event
+	}
+
+	// Emit song added event
+	p.eventBus.Publish(events.Event{
+		Type:   events.PlaylistSongAdded,
+		UserID: userUUID,
+		Data: map[string]any{
+			"playlist_id": playlistID.String(),
+			"track_id":    track.Name,
+			"track_name":  track.ID,
+		},
+	})
+
+	return nil
 }
 
 func (p *PlaylistProvider) GetPlaylistSongs(ctx context.Context, userID string, playlistID uuid.UUID) ([]*models.PlaylistTrack, error) {
@@ -255,7 +301,22 @@ func (p *PlaylistProvider) RemoveSongFromPlaylist(ctx context.Context, playlistI
 		return fmt.Errorf("playlist not found: %w", err)
 	}
 
-	return p.playlistStore.RemoveSongFromPlaylist(ctx, playlistID, spotifyTrackID)
+	err = p.playlistStore.RemoveSongFromPlaylist(ctx, playlistID, spotifyTrackID)
+	if err != nil {
+		return err
+	}
+
+	// Emit song removed event
+	p.eventBus.Publish(events.Event{
+		Type:   events.PlaylistSongRemoved,
+		UserID: userID,
+		Data: map[string]any{
+			"playlist_id":      playlistID.String(),
+			"spotify_track_id": spotifyTrackID,
+		},
+	})
+
+	return nil
 }
 
 // func (p *Playlist) ReorderPlaylistSongs(ctx context.Context, playlistID, userID uuid.UUID, req models.ReorderSongsRequest) error {
@@ -330,6 +391,16 @@ func (p *PlaylistProvider) ImportFromSpotify(ctx context.Context, userID uuid.UU
 			return nil, err
 		}
 	}
+
+	// Emit playlist sync completed event (since import includes all tracks)
+	p.eventBus.Publish(events.Event{
+		Type:   events.PlaylistSyncCompleted,
+		UserID: userID,
+		Data: map[string]any{
+			"playlist_id":   playlist.ID.String(),
+			"playlist_name": playlist.Name,
+		},
+	})
 
 	return playlist, nil
 }
@@ -536,6 +607,15 @@ func (p *PlaylistProvider) ImportUsersPlaylistsFromSpotify(ctx context.Context, 
 			}
 			logger.Debug(ctx, "added new local playlist", logger.F("name", newLocalPlaylist.Name))
 			localPlaylists = append(localPlaylists, *newLocalPlaylist)
+
+			// publish event that song
+			p.eventBus.Publish(events.Event{
+				Type:   events.PlaylistImportCompleted,
+				UserID: userID,
+				Data: map[string]any{
+					"playlist_id": newLocalPlaylist.ID.String(),
+				},
+			})
 		}
 	}
 

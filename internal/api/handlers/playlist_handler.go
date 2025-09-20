@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -113,25 +115,22 @@ func (h *PlaylistHandler) GetSpotifyPlaylistsForImport(w http.ResponseWriter, r 
 
 	// Import playlists in background to avoid blocking the response
 	go func() {
+		// Use background context to avoid cancellation when HTTP request completes
+		ctx := context.Background()
 		importedCount := 0
 		for _, spotifyPlaylist := range spotifyPlaylists {
-			_, err := h.playlistService.ImportFromSpotify(r.Context(), user.ID, models.ImportPlaylistRequest{
+			_, err := h.playlistService.ImportFromSpotify(ctx, user.ID, models.ImportPlaylistRequest{
 				SpotifyPlaylistID: string(spotifyPlaylist.ID),
 				SnapshotID:        spotifyPlaylist.SnapshotID,
 			})
 			if err != nil {
-				logger.Error(r.Context(), "Couldnt import playlist", logger.F("error", err))
+				logger.Error(ctx, "Couldnt import playlist", logger.F("error", err))
 			} else {
 				importedCount++
 			}
 		}
 
-		// Emit import completed event
-		h.eventBus.Publish(events.Event{
-			Type:   events.PlaylistImportCompleted,
-			UserID: user.ID,
-			Data:   map[string]interface{}{"imported_count": importedCount},
-		})
+		// Import completed - events will be emitted by service layer
 	}()
 
 	// Convert to template format - these are available for import
@@ -522,6 +521,13 @@ func (h *PlaylistHandler) AddToCurrentPlaylist(w http.ResponseWriter, r *http.Re
 func (h *PlaylistHandler) HandlePlaylistEvents(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
+	// Add panic recovery for production safety
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Error(ctx, "SSE handler panic recovered", logger.F("panic", r))
+		}
+	}()
+
 	user, ok := middleware.GetUser(ctx)
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -530,21 +536,27 @@ func (h *PlaylistHandler) HandlePlaylistEvents(w http.ResponseWriter, r *http.Re
 
 	logger.Info(r.Context(), "SSE connection established", logger.F("user_id", user.ID))
 
+	// Check if ResponseWriter supports flushing
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
 	// Set SSE headers
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	// Create user-specific event subscriber
-	subscriber := events.NewUserEventSubscriber(user.ID, h.eventBus)
-	// subscribe to Playlists Events (compleated, started, error). This return a single channel where all events are merged
-	eventChan := subscriber.SubscribeToPlaylistEvents()
+	// Subscribe to all playlist events for this user
+	eventChan := h.eventBus.SubscribeUser(user.ID)
+	defer h.eventBus.UnsubscribeUser(user.ID, eventChan) // Clean up on exit
 
 	// Send initial connection event
 	fmt.Fprintf(w, "event: connected\n")
 	fmt.Fprintf(w, "data: {\"status\": \"connected\"}\n\n")
-	w.(http.Flusher).Flush()
+	flusher.Flush()
 	logger.Info(ctx, "SSE initial connection event sent", logger.F("user_id", user.ID))
 
 	// Keep connection alive and send events
@@ -561,26 +573,60 @@ func (h *PlaylistHandler) HandlePlaylistEvents(w http.ResponseWriter, r *http.Re
 
 			// Send event to client
 			switch event.Type {
-			case events.PlaylistImportStarted:
-				logger.Info(ctx, "Sending import_started SSE event", logger.F("user_id", user.ID))
-				fmt.Fprintf(w, "event: import_started\n")
-				fmt.Fprintf(w, "data: {\"status\": \"started\"}\n\n")
 			case events.PlaylistImportCompleted:
-				logger.Info(ctx, "Sending import_completed SSE event", logger.F("user_id", user.ID))
-				fmt.Fprintf(w, "event: import_completed\n")
-				fmt.Fprintf(w, "data: {\"status\": \"completed\"}\n\n")
-			case events.PlaylistImportFailed:
-				logger.Info(ctx, "Sending import_failed SSE event", logger.F("user_id", user.ID))
-				fmt.Fprintf(w, "event: import_failed\n")
-				fmt.Fprintf(w, "data: {\"status\": \"failed\"}\n\n")
+				logger.Info(ctx, "Sending playlist_created SSE event", logger.F("user_id", user.ID))
+				if dataBytes, err := json.Marshal(map[string]any{"status": "created", "data": event.Data}); err == nil {
+					fmt.Fprintf(w, "event: playlist_created\n")
+					fmt.Fprintf(w, "data: %s\n\n", dataBytes)
+				}
+			// case events.PlaylistImportCompleted:
+			// 	logger.Info(ctx, "Sending import_completed SSE event", logger.F("user_id", user.ID))
+			// 	fmt.Fprintf(w, "event: import_completed\n")
+			// 	fmt.Fprintf(w, "data: {\"status\": \"completed\"}\n\n")
+			case events.PlaylistCreated:
+				logger.Info(ctx, "Sending playlist_created SSE event", logger.F("user_id", user.ID))
+				if dataBytes, err := json.Marshal(map[string]any{"data": event.Data}); err == nil {
+					fmt.Fprintf(w, "event: playlist_created\n")
+					fmt.Fprintf(w, "%s\n\n", dataBytes)
+				}
+			case events.PlaylistUpdated:
+				logger.Info(ctx, "Sending playlist_updated SSE event", logger.F("user_id", user.ID))
+				if dataBytes, err := json.Marshal(map[string]any{"data": event.Data}); err == nil {
+					fmt.Fprintf(w, "event: playlist_updated\n")
+					fmt.Fprintf(w, "%s\n\n", dataBytes)
+				}
+			case events.PlaylistDeleted:
+				logger.Info(ctx, "Sending playlist_deleted SSE event", logger.F("user_id", user.ID))
+				if dataBytes, err := json.Marshal(map[string]any{"data": event.Data}); err == nil {
+					fmt.Fprintf(w, "event: playlist_deleted\n")
+					fmt.Fprintf(w, "%s\n\n", dataBytes)
+				}
+			case events.PlaylistSongAdded:
+				logger.Info(ctx, "Sending playlist_song_added SSE event", logger.F("user_id", user.ID))
+				if dataBytes, err := json.Marshal(map[string]any{"data": event.Data}); err == nil {
+					fmt.Fprintf(w, "event: playlist_song_added\n")
+					fmt.Fprintf(w, "%s\n\n", dataBytes)
+				}
+			case events.PlaylistSongRemoved:
+				logger.Info(ctx, "Sending playlist_song_removed SSE event", logger.F("user_id", user.ID))
+				if dataBytes, err := json.Marshal(map[string]any{"data": event.Data}); err == nil {
+					fmt.Fprintf(w, "event: playlist_song_removed\n")
+					fmt.Fprintf(w, "%s\n\n", dataBytes)
+				}
+			case events.PlaylistSyncCompleted:
+				logger.Info(ctx, "Sending playlist_sync_completed SSE event", logger.F("user_id", user.ID))
+				if dataBytes, err := json.Marshal(map[string]any{"data": event.Data}); err == nil {
+					fmt.Fprintf(w, "event: playlist_sync_completed\n")
+					fmt.Fprintf(w, "%s\n\n", dataBytes)
+				}
 			}
-			w.(http.Flusher).Flush()
+			flusher.Flush()
 
 		case <-time.After(30 * time.Second):
 			// Send heartbeat to keep connection alive
 			fmt.Fprintf(w, "event: heartbeat\n")
 			fmt.Fprintf(w, "data: {\"status\": \"alive\"}\n\n")
-			w.(http.Flusher).Flush()
+			flusher.Flush()
 		}
 	}
 }

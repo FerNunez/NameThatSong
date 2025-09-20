@@ -106,12 +106,71 @@ templ Sidebar(user *models.User) {
 						console.log('SSE connection opened');
 					};
 
+					// Import events
 					window.playlistSSE.addEventListener('import_completed', function(event) {
 						console.log('Received import_completed event:', event.data);
 						// Trigger HTMX refresh of local playlists
 						htmx.trigger('#local-playlists', 'refreshLocalPlaylists');
 					});
 
+					// Playlist CRUD events
+					window.playlistSSE.addEventListener('playlist_created', function(event) {
+						console.log('Received playlist_created event:', event.data);
+						// Refresh the local playlists sidebar
+						htmx.trigger('#local-playlists', 'refreshLocalPlaylists');
+					});
+
+					window.playlistSSE.addEventListener('playlist_updated', function(event) {
+						console.log('Received playlist_updated event:', event.data);
+						// Refresh the local playlists sidebar
+						htmx.trigger('#local-playlists', 'refreshLocalPlaylists');
+					});
+
+					window.playlistSSE.addEventListener('playlist_deleted', function(event) {
+						console.log('Received playlist_deleted event:', event.data);
+						// Refresh the local playlists sidebar
+						htmx.trigger('#local-playlists', 'refreshLocalPlaylists');
+					});
+
+					// Song events
+					window.playlistSSE.addEventListener('playlist_song_added', function(event) {
+						console.log('Received playlist_song_added event:', event.data);
+						// Refresh local playlists and current playlist view if visible
+						htmx.trigger('#local-playlists', 'refreshLocalPlaylists');
+
+						// If we're viewing a playlist details page, refresh that too
+						const playlistDetailsElement = document.querySelector('[id^="playlist-details"]');
+						if (playlistDetailsElement) {
+							const data = JSON.parse(event.data);
+							const currentPlaylistId = playlistDetailsElement.getAttribute('data-playlist-id');
+							if (currentPlaylistId && data.data && data.data.playlist_id === currentPlaylistId) {
+								// Refresh the current playlist view
+								htmx.trigger(playlistDetailsElement, 'refreshPlaylistDetails');
+							}
+						}
+					});
+
+					window.playlistSSE.addEventListener('playlist_song_removed', function(event) {
+						console.log('Received playlist_song_removed event:', event.data);
+						// Refresh local playlists and current playlist view if visible
+						htmx.trigger('#local-playlists', 'refreshLocalPlaylists');
+
+						// If we're viewing a playlist details page, refresh that too
+						const playlistDetailsElement = document.querySelector('[id^="playlist-details"]');
+						if (playlistDetailsElement) {
+							const data = JSON.parse(event.data);
+							const currentPlaylistId = playlistDetailsElement.getAttribute('data-playlist-id');
+							if (currentPlaylistId && data.data && data.data.playlist_id === currentPlaylistId) {
+								// Refresh the current playlist view
+								htmx.trigger(playlistDetailsElement, 'refreshPlaylistDetails');
+							}
+						}
+					});
+
+					window.playlistSSE.addEventListener('playlist_sync_completed', function(event) {
+						console.log('Received playlist_sync_completed event:', event.data);
+						// Refresh the local playlists sidebar
+						htmx.trigger('#local-playlists', 'refreshLocalPlaylists');
 					});
 
 					window.playlistSSE.onerror = function(event) {
