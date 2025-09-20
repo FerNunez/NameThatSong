@@ -115,42 +115,18 @@ func (h *GetAuthCallbackHandler) ServeHttp(w http.ResponseWriter, r *http.Reques
 	go func() {
 		newCtx := context.Background()
 
-		// Emit import started event
-		logger.Info(newCtx, "Publishing playlist import started event", logger.F("user_id", user.ID.String()))
-		h.eventBus.Publish(events.Event{
-			Type:   events.PlaylistImportStarted,
-			UserID: user.ID,
-			Data:   map[string]interface{}{"action": "initial_import_started"},
-		})
-
+		logger.Info(newCtx, "Starting initial playlist import", logger.F("user_id", user.ID.String()))
 		spotifyPlaylists, err := h.playlistService.ImportUsersPlaylistsFromSpotify(newCtx, user.ID)
 		if err != nil {
 			logger.Info(newCtx, "couldn't import spotify playlists into local",
 				logger.F("user_id", user.ID.String()),
 				logger.F("error", err))
-
-			// Emit import failed event
-			h.eventBus.Publish(events.Event{
-				Type:   events.PlaylistImportFailed,
-				UserID: user.ID,
-				Data:   map[string]interface{}{"error": err.Error()},
-			})
 			return
 		}
 
 		logger.Info(newCtx, "imported spotify playlists into local",
 			logger.F("user_id", user.ID.String()),
 			logger.F("numb imported", len(spotifyPlaylists)))
-
-		// Emit import completed event
-		logger.Info(newCtx, "Publishing playlist import completed event",
-			logger.F("user_id", user.ID.String()),
-			logger.F("imported_count", len(spotifyPlaylists)))
-		h.eventBus.Publish(events.Event{
-			Type:   events.PlaylistImportCompleted,
-			UserID: user.ID,
-			Data:   map[string]interface{}{"imported_count": len(spotifyPlaylists)},
-		})
 	}()
 
 	http.Redirect(w, r, "/", http.StatusFound)

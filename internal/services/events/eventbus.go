@@ -9,9 +9,7 @@ import (
 type EventType string
 
 const (
-	PlaylistImportStarted   EventType = "playlist_import_started"
 	PlaylistImportCompleted EventType = "playlist_import_completed"
-	PlaylistImportFailed    EventType = "playlist_import_failed"
 )
 
 type Event struct {

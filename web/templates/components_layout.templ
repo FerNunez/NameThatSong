@@ -112,8 +112,6 @@ templ Sidebar(user *models.User) {
 						htmx.trigger('#local-playlists', 'refreshLocalPlaylists');
 					});
 
-					window.playlistSSE.addEventListener('import_started', function(event) {
-						console.log('Received import_started event:', event.data);
 					});
 
 					window.playlistSSE.onerror = function(event) {

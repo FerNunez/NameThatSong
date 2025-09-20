@@ -102,23 +102,9 @@ func (h *PlaylistHandler) GetSpotifyPlaylistsForImport(w http.ResponseWriter, r 
 		return
 	}
 
-	// Emit import started event
-	h.eventBus.Publish(events.Event{
-		Type:   events.PlaylistImportStarted,
-		UserID: user.ID,
-		Data:   map[string]interface{}{"action": "import_started"},
-	})
-
 	// Get user's Spotify playlists
 	spotifyPlaylists, err := h.spotifyService.FetchUserSpotifyPlaylistsVersion(r.Context(), user.ID.String())
 	if err != nil {
-		// Emit import failed event
-		h.eventBus.Publish(events.Event{
-			Type:   events.PlaylistImportFailed,
-			UserID: user.ID,
-			Data:   map[string]interface{}{"error": err.Error()},
-		})
-
 		w.Header().Set("Content-Type", "text/html")
 		w.WriteHeader(http.StatusOK)
 		templates.SpotifyImportError(err.Error()).Render(r.Context(), w)
