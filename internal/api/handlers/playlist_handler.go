@@ -575,49 +575,45 @@ func (h *PlaylistHandler) HandlePlaylistEvents(w http.ResponseWriter, r *http.Re
 			switch event.Type {
 			case events.PlaylistImportCompleted:
 				logger.Info(ctx, "Sending playlist_created SSE event", logger.F("user_id", user.ID))
-				if dataBytes, err := json.Marshal(map[string]any{"status": "created", "data": event.Data}); err == nil {
+				if dataBytes, err := json.Marshal(event.Data); err == nil {
 					fmt.Fprintf(w, "event: playlist_created\n")
 					fmt.Fprintf(w, "data: %s\n\n", dataBytes)
 				}
-			// case events.PlaylistImportCompleted:
-			// 	logger.Info(ctx, "Sending import_completed SSE event", logger.F("user_id", user.ID))
-			// 	fmt.Fprintf(w, "event: import_completed\n")
-			// 	fmt.Fprintf(w, "data: {\"status\": \"completed\"}\n\n")
 			case events.PlaylistCreated:
 				logger.Info(ctx, "Sending playlist_created SSE event", logger.F("user_id", user.ID))
-				if dataBytes, err := json.Marshal(map[string]any{"data": event.Data}); err == nil {
+				if dataBytes, err := json.Marshal(event.Data); err == nil {
 					fmt.Fprintf(w, "event: playlist_created\n")
-					fmt.Fprintf(w, "%s\n\n", dataBytes)
+					fmt.Fprintf(w, "data: %s\n\n", dataBytes)
 				}
 			case events.PlaylistUpdated:
 				logger.Info(ctx, "Sending playlist_updated SSE event", logger.F("user_id", user.ID))
-				if dataBytes, err := json.Marshal(map[string]any{"data": event.Data}); err == nil {
+				if dataBytes, err := json.Marshal(event.Data); err == nil {
 					fmt.Fprintf(w, "event: playlist_updated\n")
-					fmt.Fprintf(w, "%s\n\n", dataBytes)
+					fmt.Fprintf(w, "data: %s\n\n", dataBytes)
 				}
 			case events.PlaylistDeleted:
 				logger.Info(ctx, "Sending playlist_deleted SSE event", logger.F("user_id", user.ID))
-				if dataBytes, err := json.Marshal(map[string]any{"data": event.Data}); err == nil {
+				if dataBytes, err := json.Marshal(event.Data); err == nil {
 					fmt.Fprintf(w, "event: playlist_deleted\n")
-					fmt.Fprintf(w, "%s\n\n", dataBytes)
+					fmt.Fprintf(w, "data: %s\n\n", dataBytes)
 				}
 			case events.PlaylistSongAdded:
 				logger.Info(ctx, "Sending playlist_song_added SSE event", logger.F("user_id", user.ID))
-				if dataBytes, err := json.Marshal(map[string]any{"data": event.Data}); err == nil {
+				if dataBytes, err := json.Marshal(event.Data); err == nil {
 					fmt.Fprintf(w, "event: playlist_song_added\n")
-					fmt.Fprintf(w, "%s\n\n", dataBytes)
+					fmt.Fprintf(w, "data: %s\n\n", dataBytes)
 				}
 			case events.PlaylistSongRemoved:
 				logger.Info(ctx, "Sending playlist_song_removed SSE event", logger.F("user_id", user.ID))
-				if dataBytes, err := json.Marshal(map[string]any{"data": event.Data}); err == nil {
+				if dataBytes, err := json.Marshal(event.Data); err == nil {
 					fmt.Fprintf(w, "event: playlist_song_removed\n")
-					fmt.Fprintf(w, "%s\n\n", dataBytes)
+					fmt.Fprintf(w, "data: %s\n\n", dataBytes)
 				}
 			case events.PlaylistSyncCompleted:
 				logger.Info(ctx, "Sending playlist_sync_completed SSE event", logger.F("user_id", user.ID))
-				if dataBytes, err := json.Marshal(map[string]any{"data": event.Data}); err == nil {
+				if dataBytes, err := json.Marshal(event.Data); err == nil {
 					fmt.Fprintf(w, "event: playlist_sync_completed\n")
-					fmt.Fprintf(w, "%s\n\n", dataBytes)
+					fmt.Fprintf(w, "data: %s\n\n", dataBytes)
 				}
 			}
 			flusher.Flush()
